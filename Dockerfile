@@ -11,6 +11,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 # Bundle app source
+# force rebuild v2
 COPY . .
 
 # Expose the health check port from src/app.js
