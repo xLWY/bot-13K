@@ -252,6 +252,15 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
         followUp: async (options) => {
             const payload = normalizeReplyPayload(options);
             return await message.channel.send(payload);
+        },
+        deleteReply: async () => {
+            if (replyMessage && replyMessage.deletable) {
+                await replyMessage.delete();
+            }
+        },
+        fetchReply: async () => replyMessage,
+        showModal: async () => {
+            throw new Error('Modals are not supported for prefix commands — please use the `/` slash command version for this.');
         }
     };
 
