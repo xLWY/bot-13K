@@ -464,14 +464,18 @@ export async function closeTicket(channel, closer, reason = 'Aucun motif prÃ©c
       logger.warn(`Could not update user permissions for closed ticket: ${permError.message}`);
     }
 
-    const ticketMessage = await findTicketEmbedMessage(channel);
+try {
+      const ticketMessage = await findTicketEmbedMessage(channel);
 
-    if (ticketMessage) {
-      const updatedEmbed = buildTicketEmbed({ ticketData, guild: channel.guild, ticketNumber: ticketData.ticketNumber });
-      await ticketMessage.edit({
-        embeds: [updatedEmbed],
-        components: [],
-      });
+      if (ticketMessage) {
+        const updatedEmbed = buildTicketEmbed({ ticketData, guild: channel.guild, ticketNumber: ticketData.ticketNumber });
+        await ticketMessage.edit({
+          embeds: [updatedEmbed],
+          components: [],
+        });
+      }
+    } catch (embedEditError) {
+      logger.warn(`Could not refresh ticket embed message on close: ${embedEditError.message}`);
     }
 
     const closeEmbed = createEmbed({
@@ -494,7 +498,11 @@ export async function closeTicket(channel, closer, reason = 'Aucun motif prÃ©c
         .setEmoji('ðŸ—‘ï¸'),
     );
 
-    await channel.send({ embeds: [closeEmbed], components: [controlRow] });
+    try {
+      await channel.send({ embeds: [closeEmbed], components: [controlRow] });
+    } catch (closeSendError) {
+      logger.warn(`Could not send close embed in ticket ${channel.id}: ${closeSendError.message}`);
+    }
 
     await logTicketEvent({
       client: channel.client,
@@ -526,14 +534,15 @@ export async function closeTicket(channel, closer, reason = 'Aucun motif prÃ©c
     logger.error('Error closing ticket:', {
       guildId: channel?.guild?.id,
       channelId: channel?.id,
-      userId: closer?.id,
+userId: closer?.id,
       error: typedError.message,
       errorCode: typedError.context?.errorCode
     });
     return {
       success: false,
       error: typedError.userMessage || typedError.message,
-      errorCode: typedError.context?.errorCode
+      errorCode: typedError.context?.errorCode,
+      debug: typedError.message
     };
   }
 }
