@@ -80,13 +80,8 @@ class TitanBot extends Client {
       await this.loadHandlers();
       startupLog('Handlers loaded');
 
-      startupLog(
-        `Ticket handlers: ${this.buttons.has('create_ticket_direct') ? '✅ create_ticket_direct registered' : '⚠️ create_ticket_direct MISSING — tickets panel buttons will not work'}`
-      );
-      startupLog(
-        `Ticket handlers: ${this.buttons.has('create_ticket_modal') ? '✅ create_ticket_modal registered' : '⚠️ create_ticket_modal MISSING'}`
-      );
-      
+      await this.autoregisterTicketHandlers();
+
       startupLog('Logging into Discord...');
       await this.login(this.config.bot.token);
       startupLog('Discord login successful');
@@ -304,6 +299,59 @@ class TitanBot extends Client {
         }
       }
     }
+  }
+
+  async autoregisterTicketHandlers() {
+    try {
+      const ticketButtons = await import('./handlers/ticketButtons.js');
+      const buttonHandlers = [
+        ticketButtons.createTicketHandler,
+        ticketButtons.createTicketDirectHandler,
+        ticketButtons.createTicketModalHandler,
+        ticketButtons.closeTicketHandler,
+        ticketButtons.closeTicketModalHandler,
+        ticketButtons.claimTicketHandler,
+        ticketButtons.priorityTicketHandler,
+        ticketButtons.pinTicketHandler,
+        ticketButtons.unclaimTicketHandler,
+        ticketButtons.reopenTicketHandler,
+        ticketButtons.deleteTicketHandler,
+      ];
+
+      let registered = 0;
+      for (const handler of buttonHandlers) {
+        if (handler && handler.name && handler.execute && !this.buttons.has(handler.name)) {
+          this.buttons.set(handler.name, handler);
+          registered += 1;
+        }
+      }
+
+      const selectModule = await import('./interactions/selectMenus/ticket.js');
+      const selectHandler = selectModule.default;
+      if (selectHandler && selectHandler.name && selectHandler.execute && !this.selectMenus.has(selectHandler.name)) {
+        this.selectMenus.set(selectHandler.name, selectHandler);
+        registered += 1;
+      }
+
+      const modalModule = await import('./interactions/modals/ticket.js');
+      for (const modalHandler of modalModule.default) {
+        if (modalHandler && modalHandler.name && modalHandler.execute && !this.modals.has(modalHandler.name)) {
+          this.modals.set(modalHandler.name, modalHandler);
+          registered += 1;
+        }
+      }
+
+      startupLog(`Ticket handlers auto-registered (${registered} new)`);
+    } catch (error) {
+      logger.error('Ticket handlers auto-registration failed:', error);
+    }
+
+    startupLog(
+      `Ticket handlers: ${this.buttons.has('create_ticket_direct') ? '✅ create_ticket_direct registered' : '⚠️ create_ticket_direct MISSING — tickets panel buttons will not work'}`
+    );
+    startupLog(
+      `Ticket handlers: ${this.buttons.has('create_ticket_modal') ? '✅ create_ticket_modal registered' : '⚠️ create_ticket_modal MISSING'}`
+    );
   }
 
   async registerCommands() {
