@@ -222,6 +222,7 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
         memberPermissions: message.member?.permissions ?? new PermissionsBitField(),
         options: optionsAccessor,
         isChatInputCommand: () => true,
+        isPrefixCommand: () => true,
         isAutocomplete: () => false,
         isButton: () => false,
         isStringSelectMenu: () => false,

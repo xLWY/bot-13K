@@ -20,14 +20,18 @@ export default {
   category: "moderation",
 
   async execute(interaction, config, client) {
-    const deferSuccess = await InteractionHelper.safeDefer(interaction);
-    if (!deferSuccess) {
-      logger.warn(`Purge interaction defer failed`, {
-        userId: interaction.user.id,
-        guildId: interaction.guildId,
-        commandName: 'clear'
-      });
-      return;
+    const isPrefix = interaction.isPrefixCommand?.() === true;
+
+    if (!isPrefix) {
+      const deferSuccess = await InteractionHelper.safeDefer(interaction);
+      if (!deferSuccess) {
+        logger.warn(`Purge interaction defer failed`, {
+          userId: interaction.user.id,
+          guildId: interaction.guildId,
+          commandName: 'clear'
+        });
+        return;
+      }
     }
 
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages))
@@ -69,11 +73,11 @@ export default {
         });
       }
 
+      const fetched = await channel.messages.fetch({ limit: amount + 1 });
       const ownReply = await interaction.fetchReply().catch(() => null);
-      const extra = ownReply && ownReply.id !== interaction.id ? 2 : 1;
-      const fetched = await channel.messages.fetch({ limit: amount + extra });
-      fetched.delete(interaction.id);
-      if (ownReply) fetched.delete(ownReply.id);
+      if (!isPrefix) {
+        fetched.delete(ownReply?.id || interaction.id);
+      }
       const deleted = await channel.bulkDelete(fetched, true);
       const deletedCount = deleted.size;
 
@@ -109,18 +113,20 @@ export default {
         }
       });
 
-      await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          successEmbed(`🗑️ Deleted ${deletedCount} messages in ${channel}.`),
-        ],
-flags: MessageFlags.Ephemeral,
-      });
+      if (!isPrefix) {
+        await InteractionHelper.safeEditReply(interaction, {
+          embeds: [
+            successEmbed(`🗑️ Deleted ${deletedCount} messages in ${channel}.`),
+          ],
+        flags: MessageFlags.Ephemeral,
+        });
 
-      setTimeout(() => {
-        interaction.deleteReply().catch(err => 
-          logger.debug('Failed to auto-delete purge response:', err)
-        );
-      }, 3000);
+        setTimeout(() => {
+          interaction.deleteReply().catch(err => 
+            logger.debug('Failed to auto-delete purge response:', err)
+          );
+        }, 3000);
+      }
     } catch (error) {
       logger.error('Purge command error:', error);
       await InteractionHelper.safeEditReply(interaction, {
