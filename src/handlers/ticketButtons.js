@@ -168,26 +168,26 @@ export const createTicketDirectHandler = {
       const typeId = interaction.customId.split(':')[1] || 'support';
       const type = getTicketTypeForGuild(config, typeId);
 
-      const modal = new ModalBuilder()
-        .setCustomId(`create_ticket_modal:${typeId}`)
-        .setTitle(`${type.emoji} ${type.label}`);
+      const result = await createTicket(interaction.guild, interaction.member, {
+        type: type.id,
+      });
 
-      const reasonInput = new TextInputBuilder()
-        .setCustomId('reason')
-        .setLabel('Votre demande')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder(`Décrivez votre demande : ${type.description.toLowerCase()}…`)
-        .setRequired(true)
-        .setMaxLength(1000);
+      if (result.success) {
+        return await interaction.reply({
+          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
+          flags: MessageFlags.Ephemeral,
+        });
+      }
 
-      modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
-
-      return await interaction.showModal(modal);
+      return await interaction.reply({
+        embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
+        flags: MessageFlags.Ephemeral,
+      });
     } catch (error) {
-      logger.error('Error opening ticket type modal:', error);
+      logger.error('Error creating ticket:', error);
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de création de ticket.')],
+          embeds: [errorEmbed('Erreur', 'Impossible de créer le ticket.')],
           flags: MessageFlags.Ephemeral,
         });
       }

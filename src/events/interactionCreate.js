@@ -114,26 +114,26 @@ async function fallbackTicketButton(interaction, client) {
       });
     }
 
-    const modal = new ModalBuilder()
-      .setCustomId(`create_ticket_modal:${typeId}`)
-      .setTitle(`${type.emoji} ${type.label}`);
+    const result = await createTicketFallback(interaction.guild, interaction.member, {
+      type: type.id,
+    });
 
-    const reasonInput = new TextInputBuilder()
-      .setCustomId('reason')
-      .setLabel('Votre demande')
-      .setStyle(TextInputStyle.Paragraph)
-      .setPlaceholder(`Décrivez votre demande : ${type.description.toLowerCase()}…`)
-      .setRequired(true)
-      .setMaxLength(1000);
+    if (result.success) {
+      return await interaction.reply({
+        embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
 
-    modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
-
-    return await interaction.showModal(modal);
+    return await interaction.reply({
+      embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
+      flags: MessageFlags.Ephemeral,
+    });
   } catch (error) {
     logger.error('Fallback ticket button failed:', error);
     try {
       await interaction.reply({
-        embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de création de ticket.')],
+        embeds: [errorEmbed('Erreur', 'Impossible de créer le ticket.')],
         flags: MessageFlags.Ephemeral,
       });
     } catch (_) { /* interaction already responded */ }
@@ -298,9 +298,12 @@ async function fallbackTicketSelect(interaction, client) {
   try {
     if (!interaction.inGuild()) return;
 
+    const eligibility = await fallbackEligibility(interaction, client);
+    if (!eligibility.ok) return;
+
     const typeId = interaction.values?.[0] || 'support';
-    const guildConfig = await getGuildConfig(client, interaction.guildId);
-    const type = getTicketTypeForGuild(guildConfig, typeId);
+    const { config } = eligibility;
+    const type = getTicketTypeForGuild(config, typeId);
 
     if (!type) {
       return await interaction.reply({
@@ -309,26 +312,26 @@ async function fallbackTicketSelect(interaction, client) {
       });
     }
 
-    const modal = new ModalBuilder()
-      .setCustomId(`create_ticket_modal:${typeId}`)
-      .setTitle(`${type.emoji} ${type.label}`);
+    const result = await createTicketFallback(interaction.guild, interaction.member, {
+      type: type.id,
+    });
 
-    const reasonInput = new TextInputBuilder()
-      .setCustomId('reason')
-      .setLabel('Votre demande')
-      .setStyle(TextInputStyle.Paragraph)
-      .setPlaceholder(`Décrivez votre demande : ${type.description.toLowerCase()}…`)
-      .setRequired(true)
-      .setMaxLength(1000);
+    if (result.success) {
+      return await interaction.reply({
+        embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
 
-    modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
-
-    return await interaction.showModal(modal);
+    return await interaction.reply({
+      embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
+      flags: MessageFlags.Ephemeral,
+    });
   } catch (error) {
     logger.error('Fallback ticket select failed:', error);
     try {
       await interaction.reply({
-        embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de création de ticket.')],
+        embeds: [errorEmbed('Erreur', 'Impossible de créer le ticket.')],
         flags: MessageFlags.Ephemeral,
       });
     } catch (_) { /* fallback already answered */ }
