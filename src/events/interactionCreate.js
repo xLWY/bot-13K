@@ -155,7 +155,7 @@ async function fallbackTicketModal(interaction, client) {
     }
 
     return await interaction.reply({
-      embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.')],
+      embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
       flags: MessageFlags.Ephemeral,
     });
   } catch (error) {

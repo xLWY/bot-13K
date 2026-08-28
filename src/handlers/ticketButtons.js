@@ -218,7 +218,7 @@ export const createTicketModalHandler = {
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.')],
+          embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
           flags: MessageFlags.Ephemeral,
         });
       }

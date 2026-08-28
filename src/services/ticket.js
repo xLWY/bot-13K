@@ -209,7 +209,9 @@ export async function getUserTicketCount(guildId, userId) {
 
 export async function createTicket(guild, member, options = {}) {
   const typeId = options.type || 'support';
-  const reason = options.reason || 'Aucun motif prÃ©cisÃ©.';
+  const reason = options.reason || 'Aucun motif précisé.';
+  let channelCreated = false;
+  let channel = null;
   try {
     const config = await getGuildConfig(guild.client, guild.id);
     const type = getTicketTypeForGuild(config, typeId);
@@ -255,7 +257,7 @@ export async function createTicket(guild, member, options = {}) {
       PermissionFlagsBits.AddReactions,
     ];
 
-    const channel = await guild.channels.create({
+channel = await guild.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
       parent: category?.id,
@@ -263,6 +265,10 @@ export async function createTicket(guild, member, options = {}) {
         {
           id: guild.id,
           deny: [PermissionFlagsBits.ViewChannel],
+        },
+        {
+          id: guild.client.user.id,
+          allow: allowPerms,
         },
         {
           id: member.id,
@@ -278,6 +284,7 @@ export async function createTicket(guild, member, options = {}) {
           : []),
       ],
     });
+    channelCreated = true;
 
     const ticketData = {
       id: channel.id,
@@ -326,13 +333,13 @@ export async function createTicket(guild, member, options = {}) {
       },
     });
 
-    return { success: true, channel, ticketData };
+return { success: true, channel, ticketData };
   } catch (error) {
     const typedError = ensureTypedServiceError(error, {
       service: 'ticketService',
       operation: 'createTicket',
       message: 'Ticket operation failed: createTicket',
-      userMessage: 'Impossible de crÃ©er le ticket. RÃ©essayez dans un instant.',
+      userMessage: 'Impossible de créer le ticket. Réessayez dans un instant.',
       context: { guildId: guild?.id, userId: member?.id }
     });
     logger.error('Error creating ticket:', {
@@ -341,11 +348,24 @@ export async function createTicket(guild, member, options = {}) {
       error: typedError.message,
       errorCode: typedError.context?.errorCode
     });
+
+    if (channelCreated && channel && channel.deletable) {
+      try {
+        await channel.delete('Échec de la création du ticket');
+      } catch (cleanupError) {
+        logger.warn('Failed to clean up empty ticket channel:', {
+          channelId: channel.id,
+          error: cleanupError.message
+        });
+      }
+    }
+
     return {
       success: false,
       error: typedError.userMessage || typedError.message,
-      errorCode: typedError.context?.errorCode
-    };
+      errorCode: typedError.context?.errorCode,
+      debug: typedError.message
+};
   }
 }
 
