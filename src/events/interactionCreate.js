@@ -84,6 +84,7 @@ async function fallbackTicketButton(interaction, client) {
         title: '🎫 Nouveau ticket',
         description: 'Choisissez le type de ticket que vous souhaitez ouvrir.',
         color: 0x3498db,
+        footer: { text: 'TF v4' },
       };
 
       const typeSelect = new StringSelectMenuBuilder()
@@ -128,14 +129,14 @@ async function fallbackTicketButton(interaction, client) {
     }
 
     return await interaction.reply({
-      embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
+      embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
       flags: MessageFlags.Ephemeral,
     });
   } catch (error) {
     logger.error('Fallback ticket button failed:', error);
     try {
       await interaction.reply({
-        embeds: [errorEmbed('Erreur', 'Impossible de créer le ticket.')],
+        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
         flags: MessageFlags.Ephemeral,
       });
     } catch (_) { /* interaction already responded */ }
@@ -272,14 +273,14 @@ async function fallbackTicketModal(interaction, client) {
     }
 
     return await interaction.reply({
-      embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
+      embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
       flags: MessageFlags.Ephemeral,
     });
   } catch (error) {
     logger.error('Fallback ticket modal failed:', error);
     try {
       await interaction.reply({
-        embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la création de votre ticket.')],
+        embeds: [errorEmbed('Erreur', 'TF v4 — Une erreur est survenue lors de la création de votre ticket.')],
         flags: MessageFlags.Ephemeral,
       });
     } catch (_) { /* fallback already answered */ }
@@ -426,7 +427,7 @@ async function deleteTicketFallback(interaction) {
     logger.error('Fallback deleteTicket failed:', detail);
     try {
       await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'Impossible de supprimer le ticket.' + `\n\n\`${detail}\``)],
+        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de supprimer le ticket.' + `\n\n\`${detail}\``)],
       });
     } catch (_) {}
   }
@@ -508,7 +509,7 @@ async function reopenTicketFallback(interaction) {
     logger.error('Fallback reopenTicket failed:', detail);
     try {
       await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'Impossible de rouvrir le ticket.' + `\n\n\`${detail}\``)],
+        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de rouvrir le ticket.' + `\n\n\`${detail}\``)],
       });
     } catch (_) {}
   }
@@ -529,13 +530,13 @@ async function fallbackTicketClose(interaction, client) {
     }
 
     return await interaction.editReply({
-      embeds: [errorEmbed('Erreur', result.error || 'Impossible de fermer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
+      embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de fermer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
     });
   } catch (error) {
     logger.error('Fallback ticket close failed:', error);
     try {
       await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'Impossible de fermer le ticket.')],
+        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de fermer le ticket.')],
       });
     } catch (_) { /* fallback already answered */ }
   }
@@ -571,14 +572,14 @@ async function fallbackTicketSelect(interaction, client) {
     }
 
     return await interaction.reply({
-      embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
+      embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
       flags: MessageFlags.Ephemeral,
     });
   } catch (error) {
     logger.error('Fallback ticket select failed:', error);
     try {
       await interaction.reply({
-        embeds: [errorEmbed('Erreur', 'Impossible de créer le ticket.')],
+        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
         flags: MessageFlags.Ephemeral,
       });
     } catch (_) { /* fallback already answered */ }
