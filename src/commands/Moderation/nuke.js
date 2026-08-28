@@ -41,10 +41,10 @@ export default {
         const confirmButtons = getConfirmationButtons('nuke');
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
-                createEmbed(
-                    '💣 Nuke This Channel?',
-                    `This will **delete and recreate** ${channel} with the exact same settings (permissions, topic, category, slowmode...). All messages in it will be permanently lost.\n\nThis action cannot be undone.`
-                ).setColor(getColor('warning'))
+                createEmbed({
+                    title: '💣 Nuke This Channel?',
+                    description: `This will **delete and recreate** ${channel} with the exact same settings (permissions, topic, category, slowmode...). All messages in it will be permanently lost.\n\nThis action cannot be undone.`
+                }).setColor(getColor('warning'))
             ],
             components: [confirmButtons]
         });
@@ -74,7 +74,10 @@ export default {
 
         try {
             await collected.update({
-                embeds: [createEmbed('💣 Nuking...', 'Recreating the channel, one moment.').setColor(getColor('warning'))],
+                embeds: [createEmbed({
+                    title: '💣 Nuking...',
+                    description: 'Recreating the channel, one moment.'
+                }).setColor(getColor('warning'))],
                 components: []
             });
         } catch (error) {
