@@ -69,8 +69,11 @@ export default {
         });
       }
 
-      const fetched = await channel.messages.fetch({ limit: amount + 1 });
+      const ownReply = await interaction.fetchReply().catch(() => null);
+      const extra = ownReply && ownReply.id !== interaction.id ? 2 : 1;
+      const fetched = await channel.messages.fetch({ limit: amount + extra });
       fetched.delete(interaction.id);
+      if (ownReply) fetched.delete(ownReply.id);
       const deleted = await channel.bulkDelete(fetched, true);
       const deletedCount = deleted.size;
 

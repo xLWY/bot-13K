@@ -65,7 +65,8 @@ export default {
                 }
             });
 
-            await newChannel.send(`💥 Channel nuked successfully, ${interaction.user}!`);
+            const nukeMessage = await newChannel.send(`💥 Channel nuked successfully, ${interaction.user}!`);
+            setTimeout(() => nukeMessage.delete().catch(() => {}), 3000);
         } catch (error) {
             logger.error('Nuke command error:', error);
             try {
