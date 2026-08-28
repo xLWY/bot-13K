@@ -173,32 +173,35 @@ export function validateWinnerCount(winnerCount) {
 
 export function createGiveawayEmbed(giveaway, status, winners = []) {
     try {
-        const statusEmoji = status === 'ended' ? '🎉' : status === 'reroll' ? '🔄' : '🎉';
         const isEnded = status === 'ended' || status === 'reroll';
+        const statusEmoji = status === 'reroll' ? '🔄' : isEnded ? '🏁' : '🎉';
         const color = isEnded ? getColor('giveaway.ended') : getColor('giveaway.active');
-        
+        const prize = giveaway.prize || 'Concours mystère !';
+
         const embed = new EmbedBuilder()
-            .setTitle(`${statusEmoji} ${giveaway.prize}`)
-            .setDescription('React with the button below to enter!')
+            .setTitle(isEnded ? (status === 'reroll' ? '🔄 Concours Re-tiré' : '🏁 Concours Terminé') : '🎉 Concours en Cours')
+            .setDescription(`**🎁 ${prize}**`)
             .setColor(color)
             .addFields(
-                { name: '👤 Hosted by', value: `<@${giveaway.hostId}>`, inline: true },
-                { name: '🏆 Winners', value: giveaway.winnerCount.toString(), inline: true },
-                { name: '👥 Entries', value: giveaway.participants?.length?.toString() || '0', inline: true }
+                { name: '👑 Organisé par', value: `<@${giveaway.hostId}>`, inline: true },
+                { name: '👥 Participants', value: `${giveaway.participants?.length || giveaway.participantCount || 0}`, inline: true },
+                { name: '🏆 Gagnant(s)', value: `${giveaway.winnerCount || 1}`, inline: true }
             );
 
         if (isEnded) {
-            const winnerDisplay = winners.length > 0 
+            const winnerDisplay = winners.length > 0
                 ? winners.map(id => `<@${id}>`).join(', ')
-                : 'No valid entries';
-            embed.addFields({ name: '🎯 Winners', value: winnerDisplay, inline: false });
+                : 'Aucune participation valide';
+            embed.addFields({ name: '🎊 Gagnant(s)', value: winnerDisplay, inline: false });
+            embed.setFooter({ text: 'Merci d\'avoir participé !' });
         } else {
             const endTime = giveaway.endsAt || giveaway.endTime;
-            embed.addFields({ name: '⏰ Ends', value: `<t:${Math.floor(endTime / 1000)}:R>`, inline: false });
+            embed.addFields({ name: '⏰ Se termine', value: `<t:${Math.floor(endTime / 1000)}:R>`, inline: false });
+            embed.setFooter({ text: 'Cliquez sur le bouton ci-dessous pour participer !' });
         }
 
         embed.setTimestamp();
-        
+
         return embed;
     } catch (error) {
         logger.error('Error creating giveaway embed:', error);
@@ -224,12 +227,12 @@ export function createGiveawayButtons(ended = false) {
             row.addComponents(
                 new ButtonBuilder()
                     .setCustomId('giveaway_reroll')
-                    .setLabel('🎲 Reroll')
+                    .setLabel('🎲 Re-tirer')
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(false),
                 new ButtonBuilder()
                     .setCustomId('giveaway_view')
-                    .setLabel('👁️ View Winners')
+                    .setLabel('👁️ Voir les gagnants')
                     .setStyle(ButtonStyle.Primary)
                     .setDisabled(false)
             );
@@ -237,13 +240,8 @@ export function createGiveawayButtons(ended = false) {
             row.addComponents(
                 new ButtonBuilder()
                     .setCustomId('giveaway_join')
-                    .setLabel('🎉 Join')
+                    .setLabel('🎉 Rejoindre')
                     .setStyle(ButtonStyle.Primary)
-                    .setDisabled(false),
-                new ButtonBuilder()
-                    .setCustomId('giveaway_end')
-                    .setLabel('🛑 End')
-                    .setStyle(ButtonStyle.Danger)
                     .setDisabled(false)
             );
         }
@@ -477,7 +475,7 @@ export async function checkGiveaways(client) {
         }
 
         if (winners.length > 0) {
-          const winnerAnnouncement = `🎉 Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**! Please contact <@${giveaway.hostId}> to claim your prize.`;
+          const winnerAnnouncement = `🎉 Félicitations ${winners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Contacte <@${giveaway.hostId}> pour récupérer ton lot. 🎁`;
           const winnerPingMsg = await channel.send({ content: winnerAnnouncement });
           giveaway.winnerPingMessageId = winnerPingMsg.id;
           await markGiveawayEnded(client, giveawayId, giveaway);
@@ -493,17 +491,17 @@ export async function checkGiveaways(client) {
                 channelId: channel.id,
                 fields: [
                   {
-                    name: '🎁 Prize',
-                    value: giveaway.prize || 'Mystery Prize!',
+                    name: '🎁 Prix',
+                    value: giveaway.prize || 'Concours mystère !',
                     inline: true
                   },
                   {
-                    name: '🏆 Winners',
+                    name: '🏆 Gagnants',
                     value: winners.map(id => `<@${id}>`).join(', '),
                     inline: false
                   },
                   {
-                    name: '👥 Entries',
+                    name: '👥 Participants',
                     value: participants.length.toString(),
                     inline: true
                   }
@@ -514,7 +512,7 @@ export async function checkGiveaways(client) {
             logger.debug('Error logging giveaway winner:', error);
           }
         } else {
-          await channel.send({ content: `The giveaway for **${giveaway.prize}** has ended with no valid entries.` });
+          await channel.send({ content: `Le concours pour **${giveaway.prize || 'Concours mystère'}** est terminé sans participation valide.` });
         }
 
         logger.info(`Ended giveaway ${messageId} in guild ${guildId}`);

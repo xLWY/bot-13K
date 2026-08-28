@@ -129,7 +129,7 @@ export default {
             const newRow = createGiveawayButtons(true);
 
             await message.edit({
-                content: "🎉 **GIVEAWAY ENDED** 🎉",
+                content: "🏁 **CONCOURS TERMINÉ** 🏁",
                 embeds: [newEmbed],
                 components: [newRow],
             });
@@ -140,7 +140,7 @@ export default {
                     .map((id) => `<@${id}>`)
                     .join(", ");
                 const winnerPingMsg = await channel.send({
-                    content: `🎉 CONGRATULATIONS ${winnerMentions}! You won the **${updatedGiveaway.prize}** giveaway! Please contact the host <@${updatedGiveaway.hostId}> to claim your prize.`,
+                    content: `🎉 Félicitations ${winnerMentions} ! Tu as gagné le concours **${updatedGiveaway.prize || 'Concours mystère'}** ! Contacte <@${updatedGiveaway.hostId}> pour récupérer ton lot. 🎁`,
                 });
                 updatedGiveaway.winnerPingMessageId = winnerPingMsg.id;
                 await saveGiveaway(interaction.client, interaction.guildId, updatedGiveaway);
@@ -159,17 +159,17 @@ export default {
                             userId: interaction.user.id,
                             fields: [
                                 {
-                                    name: '🎁 Prize',
-                                    value: updatedGiveaway.prize || 'Mystery Prize!',
+                                    name: '🎁 Prix',
+                                    value: updatedGiveaway.prize || 'Concours mystère !',
                                     inline: true
                                 },
                                 {
-                                    name: '🏆 Winners',
+                                    name: '🏆 Gagnants',
                                     value: winnerMentions,
                                     inline: false
                                 },
                                 {
-                                    name: '👥 Entries',
+                                    name: '👥 Participants',
                                     value: endResult.participantCount.toString(),
                                     inline: true
                                 }
@@ -181,7 +181,7 @@ export default {
                 }
             } else {
                 await channel.send({
-                    content: `The giveaway for **${updatedGiveaway.prize}** has ended with no valid entries.`,
+                    content: `Le concours pour **${updatedGiveaway.prize || 'Concours mystère'}** est terminé sans participation valide.`,
                 });
                 logger.info(`Giveaway ended with no winners: ${messageId}`);
             }
@@ -191,8 +191,8 @@ export default {
             return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "Giveaway Ended ✅",
-                        `Successfully ended the giveaway for **${updatedGiveaway.prize}** in ${channel}. Selected ${winners.length} winner(s) from ${endResult.participantCount} entries.`,
+                        "Concours terminé ✅",
+                        `Le concours **${updatedGiveaway.prize || 'Concours mystère'}** est terminé dans ${channel}. ${winners.length} gagnant(s) sélectionné(s) parmi ${endResult.participantCount} participant(s).`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,

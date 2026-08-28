@@ -117,7 +117,7 @@ export default {
             
             
             const giveawayMessage = await targetChannel.send({
-                content: "🎉 **NEW GIVEAWAY** 🎉",
+                content: "🎉 **NOUVEAU CONCOURS** 🎉",
                 embeds: [embed],
                 components: [row],
             });
@@ -146,22 +146,22 @@ export default {
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prize',
+                                name: '🎁 Prix',
                                 value: prizeName,
                                 inline: true
                             },
                             {
-                                name: '🏆 Winners',
+                                name: '🏆 Gagnants',
                                 value: winnerCount.toString(),
                                 inline: true
                             },
                             {
-                                name: '⏰ Duration',
+                                name: '⏰ Durée',
                                 value: durationString,
                                 inline: true
                             },
                             {
-                                name: '📍 Channel',
+                                name: '📍 Salon',
                                 value: targetChannel.toString(),
                                 inline: true
                             }
@@ -178,8 +178,8 @@ export default {
             await InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
-                        `Giveaway Started! 🎉`,
-                        `A new giveaway for **${prizeName}** has been started in ${targetChannel} and will end in **${durationString}**.`,
+                        `Concours lancé ! 🎉`,
+                        `Un nouveau concours pour **${prizeName}** a été lancé dans ${targetChannel} et se termine dans **${durationString}**.`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,

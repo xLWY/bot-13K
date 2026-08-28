@@ -24,17 +24,11 @@ export const giveawayJoinHandler = {
     customId: 'giveaway_join',
     async execute(interaction, client) {
         try {
-            
+            // Silent acknowledgement: no message is shown to the user when joining.
+            await interaction.deferUpdate();
+
             if (isUserRateLimited(interaction.user.id, interaction.message.id)) {
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            'Rate Limited',
-                            'Please wait a moment before interacting with this giveaway again.'
-                        )
-                    ],
-                    flags: MessageFlags.Ephemeral
-                });
+                return;
             }
 
             recordUserInteraction(interaction.user.id, interaction.message.id);
@@ -45,12 +39,7 @@ export const giveawayJoinHandler = {
                 const giveaway = guildGiveaways.find(g => g.messageId === interaction.message.id);
 
                 if (!giveaway) {
-                    throw new TitanBotError(
-                        'Giveaway not found in database',
-                        ErrorTypes.VALIDATION,
-                        'This giveaway is no longer active.',
-                        { messageId: interaction.message.id, guildId: interaction.guildId }
-                    );
+                    return;
                 }
 
                 // Double check end status inside lock
@@ -58,15 +47,7 @@ export const giveawayJoinHandler = {
                 const endedByFlag = giveaway.ended || giveaway.isEnded;
 
                 if (endedByTime || endedByFlag) {
-                    return interaction.reply({
-                        embeds: [
-                            errorEmbed(
-                                'Giveaway Ended',
-                                'This giveaway has already ended.'
-                            )
-                        ],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return;
                 }
 
                 const participants = giveaway.participants || [];
@@ -74,15 +55,7 @@ export const giveawayJoinHandler = {
 
                 // Check if user already joined
                 if (participants.includes(userId)) {
-                    return interaction.reply({
-                        embeds: [
-                            errorEmbed(
-                                'Already Entered',
-                                'You have already entered this giveaway! 🎉'
-                            )
-                        ],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return;
                 }
 
                 // Atomically update participants
@@ -93,23 +66,13 @@ export const giveawayJoinHandler = {
 
                 logger.debug(`User ${interaction.user.tag} joined giveaway ${interaction.message.id}`);
 
-                // Send response
+                // Refresh the embed so the participant count stays up to date
                 const updatedEmbed = createGiveawayEmbed(giveaway, 'active');
                 const updatedRow = createGiveawayButtons(false);
 
                 await interaction.message.edit({
                     embeds: [updatedEmbed],
                     components: [updatedRow]
-                });
-
-                await interaction.reply({
-                    embeds: [
-                        successEmbed(
-                            'Success! You have entered the giveaway! 🎉',
-                            `Good luck! There are now ${participants.length} entry/entries.`
-                        )
-                    ],
-                    flags: MessageFlags.Ephemeral
                 });
             });
         } catch (error) {
@@ -188,10 +151,21 @@ export const giveawayEndHandler = {
             const updatedRow = createGiveawayButtons(true);
 
             await interaction.message.edit({
-                content: '🎉 **GIVEAWAY ENDED** 🎉',
+                content: '🏁 **CONCOURS TERMINÉ** 🏁',
                 embeds: [updatedEmbed],
                 components: [updatedRow]
             });
+
+            if (winners.length > 0) {
+                const winnerPing = `🎉 Félicitations ${winners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Contacte <@${giveaway.hostId}> pour récupérer ton lot. 🎁`;
+                const pingMsg = await interaction.channel.send({ content: winnerPing });
+                giveaway.winnerPingMessageId = pingMsg.id;
+                await saveGiveaway(client, interaction.guildId, giveaway);
+            } else {
+                await interaction.channel.send({
+                    content: `Le concours pour **${giveaway.prize || 'Concours mystère'}** est terminé sans participation valide.`
+                });
+            }
 
             
             try {
@@ -205,19 +179,19 @@ export const giveawayEndHandler = {
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prize',
-                                value: giveaway.prize || 'Mystery Prize!',
+                                name: '🎁 Prix',
+                                value: giveaway.prize || 'Concours mystère !',
                                 inline: true
                             },
                             {
-                                name: '🏆 Winners',
+                                name: '🏆 Gagnants',
                                 value: winners.length > 0 
                                     ? winners.map(id => `<@${id}>`).join(', ')
-                                    : 'No valid entries',
+                                    : 'Aucune participation valide',
                                 inline: false
                             },
                             {
-                                name: '👥 Total Entries',
+                                name: '👥 Participants',
                                 value: participants.length.toString(),
                                 inline: true
                             }
@@ -322,10 +296,15 @@ export const giveawayRerollHandler = {
             const updatedRow = createGiveawayButtons(true);
 
             await interaction.message.edit({
-                content: '🔄 **GIVEAWAY REROLLED** 🔄',
+                content: '🔄 **CONCOURS RE-TIRÉ** 🔄',
                 embeds: [updatedEmbed],
                 components: [updatedRow]
             });
+
+            const rerollPing = `🔄 Nouveau tirage ! Félicitations ${newWinners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Contacte <@${giveaway.hostId}> pour récupérer ton lot. 🎁`;
+            const pingMsg = await interaction.channel.send({ content: rerollPing });
+            giveaway.winnerPingMessageId = pingMsg.id;
+            await saveGiveaway(client, interaction.guildId, giveaway);
 
             
             try {
@@ -339,17 +318,17 @@ export const giveawayRerollHandler = {
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prize',
-                                value: giveaway.prize || 'Mystery Prize!',
+                                name: '🎁 Prix',
+                                value: giveaway.prize || 'Concours mystère !',
                                 inline: true
                             },
                             {
-                                name: '🏆 New Winners',
+                                name: '🏆 Nouveaux gagnants',
                                 value: newWinners.map(id => `<@${id}>`).join(', '),
                                 inline: false
                             },
                             {
-                                name: '👥 Total Entries',
+                                name: '👥 Participants',
                                 value: participants.length.toString(),
                                 inline: true
                             }
