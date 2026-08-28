@@ -95,29 +95,20 @@ export const createTicketHandler = {
         }).catch(() => {});
       }
 
-      const typeEmbed = createEmbed({
-        title: '🎫 Nouveau ticket',
-        description: 'Choisissez le type de ticket que vous souhaitez ouvrir.',
-        color: 'info',
-        footer: { text: 'TF v4' },
+      const type = getTicketTypeForGuild(config, 'support');
+
+      const result = await createTicket(interaction.guild, interaction.member, {
+        type: type.id,
       });
 
-      const typeSelect = new StringSelectMenuBuilder()
-        .setCustomId('ticket_type_select')
-        .setPlaceholder('Sélectionnez un type de ticket…')
-        .addOptions(
-          resolveTicketTypes(config).map((type) =>
-            new StringSelectMenuOptionBuilder()
-              .setLabel(type.label)
-              .setDescription(type.description)
-              .setValue(type.id)
-              .setEmoji(type.emoji),
-          ),
-        );
+      if (result.success) {
+        return await interaction.editReply({
+          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
+        }).catch(() => {});
+      }
 
       return await interaction.editReply({
-        embeds: [typeEmbed],
-        components: [new ActionRowBuilder().addComponents(typeSelect)],
+        embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
       }).catch(() => {});
     } catch (error) {
       logger.error('Error opening ticket type menu:', error);
@@ -169,7 +160,7 @@ export const createTicketDirectHandler = {
 
       if (result.success) {
         return await interaction.editReply({
-          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
+          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
         }).catch(() => {});
       }
 
@@ -204,7 +195,7 @@ export const createTicketModalHandler = {
 
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
+          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
         });
       } else {
         await interaction.editReply({

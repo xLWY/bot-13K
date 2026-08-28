@@ -31,7 +31,7 @@ const ticketTypeSelectHandler = {
 
       if (result.success) {
         return await interaction.editReply({
-          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
+          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
         }).catch(() => {});
       }
 

@@ -184,9 +184,12 @@ async function updateLivePanel(client, guild, config) {
             .setTitle('🎫 Centre d\'aide')
             .setDescription(config.ticketPanelMessage || DEFAULT_PANEL_MESSAGE)
             .setColor(getColor('info'))
-            .setFooter({ text: 'Choisissez un bouton ci-dessous pour ouvrir un ticket' });
+            .setFooter({ text: 'Cliquez sur le bouton ci-dessous pour ouvrir un ticket' });
 
-        await panelMsg.edit({ embeds: [updatedEmbed], components: buildTicketTypeButtons(resolveTicketTypes(config)) });
+        await panelMsg.edit({
+            embeds: [updatedEmbed],
+            components: buildTicketTypeButtons(config.ticketButtonLabel || 'Ouvrir un ticket'),
+        });
         return true;
     } catch (error) {
         logger.warn('Failed to update live ticket panel:', error.message);

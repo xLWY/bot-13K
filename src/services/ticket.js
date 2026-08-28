@@ -148,22 +148,16 @@ function buildTicketButtons(ticketData) {
   return rows;
 }
 
-export function buildTicketTypeButtons(types = resolveTicketTypes()) {
-  const rows = [];
-  for (let i = 0; i < types.length; i += 5) {
-    rows.push(
-      new ActionRowBuilder().addComponents(
-        types.slice(i, i + 5).map((type) =>
-          new ButtonBuilder()
-            .setCustomId(`create_ticket_direct:${type.id}`)
-            .setLabel(type.label)
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji(type.emoji),
-        ),
-      ),
-    );
-  }
-  return rows;
+export function buildTicketTypeButtons(label = 'Ouvrir un ticket') {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('create_ticket')
+        .setLabel(label)
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('🎫'),
+    ),
+  ];
 }
 
 // â”€â”€â”€ Counts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
