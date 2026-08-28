@@ -158,6 +158,7 @@ class TitanBot extends Client {
         status: 'healthy',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
+        build: 'TF-v5-single-button',
         database: {
           connected: dbStatus.connectionType !== 'none',
           degraded: dbStatus.isDegraded,
@@ -174,7 +175,8 @@ class TitanBot extends Client {
       if (isReady) {
         return res.status(200).json({
           ready: true,
-          message: 'Bot is ready'
+          message: 'Bot is ready',
+          build: 'TF-v5-single-button'
         });
       }
 
@@ -188,6 +190,7 @@ class TitanBot extends Client {
       res.status(200).json({ 
         message: 'TitanBot System Online',
         version: '2.0.0',
+        build: 'TF-v5-single-button',
         timestamp: new Date().toISOString()
       });
     });
