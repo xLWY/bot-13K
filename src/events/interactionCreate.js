@@ -5,7 +5,6 @@ import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 import { handleEmbedBuilderButtons, handleEmbedBuilderModals } from '../handlers/interactionHandlers/embedBuilderButtons.js';
 import { handleInteractionError, createError, ErrorTypes } from '../utils/errorHandler.js';
-import { MessageTemplates } from '../utils/messageTemplates.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { createInteractionTraceContext, runWithTraceContext } from '../utils/traceContext.js';
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
@@ -376,25 +375,16 @@ export default {
           traceId: interactionTraceContext.traceId,
           interactionId: interaction.id,
           guildId: interaction.guildId,
-          userId: interaction.user?.id
+          userId: interaction.user?.id,
+          customId: interaction.customId,
+          interactionType: interaction.type
         });
 
         try {
-          const ephemeralErrorMessage = {
-            embeds: [MessageTemplates.ERRORS.DATABASE_ERROR('processing your interaction')],
-            flags: MessageFlags.Ephemeral
-          };
-          const editErrorMessage = {
-            embeds: [MessageTemplates.ERRORS.DATABASE_ERROR('processing your interaction')]
-          };
-
-          if (interaction.deferred) {
-            await interaction.editReply(editErrorMessage);
-          } else if (interaction.replied) {
-            await interaction.followUp(ephemeralErrorMessage);
-          } else {
-            await interaction.reply(ephemeralErrorMessage);
-          }
+          await handleInteractionError(interaction, error, withTraceContext({
+            type: 'unhandled',
+            event: 'interaction.unhandled_error'
+          }, interactionTraceContext));
         } catch (replyError) {
           logger.error('Failed to send fallback error response:', {
             event: 'interaction.error_response_failed',
@@ -402,6 +392,33 @@ export default {
             error: replyError,
             traceId: interactionTraceContext.traceId
           });
+
+          try {
+            const genericEmbed = {
+              embeds: [{
+                title: '❓ Erreur inattendue',
+                description: 'Une erreur inattendue est survenue. Merci de réessayer dans un instant.',
+                color: 0xE74C3C,
+                timestamp: new Date().toISOString()
+              }],
+              flags: MessageFlags.Ephemeral
+            };
+
+            if (interaction.deferred) {
+              await interaction.editReply({ embeds: genericEmbed.embeds });
+            } else if (interaction.replied) {
+              await interaction.followUp(genericEmbed);
+            } else {
+              await interaction.reply(genericEmbed);
+            }
+          } catch (finalError) {
+            logger.error('Final fallback reply failed:', {
+              event: 'interaction.error_response_double_failed',
+              errorCode: 'INTERACTION_ERROR_RESPONSE_DOUBLE_FAILED',
+              error: finalError,
+              traceId: interactionTraceContext.traceId
+            });
+          }
         }
       }
     });

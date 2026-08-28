@@ -108,48 +108,48 @@ export function categorizeError(error) {
 
 const UserMessages = {
     [ErrorTypes.VALIDATION]: {
-        default: "Please check your input and try again.",
-        missing_required: "You're missing some required information. Please check the command options.",
-        invalid_format: "The format you provided is incorrect. Please try again."
+        default: "Veuillez vérifier votre saisie et réessayer.",
+        missing_required: "Il manque des informations obligatoires. Vérifiez les options de la commande.",
+        invalid_format: "Le format fourni est incorrect. Réessayez."
     },
     [ErrorTypes.PERMISSION]: {
-        default: "I don't have permission to do that. Please check my server permissions.",
-        user_permission: "You don't have permission to use this command.",
-        bot_permission: "I need additional permissions to perform this action."
+        default: "Je n'ai pas la permission de faire cela. Vérifiez mes permissions sur le serveur.",
+        user_permission: "Vous n'avez pas la permission d'utiliser cette commande.",
+        bot_permission: "J'ai besoin de permissions supplémentaires pour effectuer cette action."
     },
     [ErrorTypes.CONFIGURATION]: {
-        default: "Something is not configured correctly. Please contact an administrator.",
-        missing_config: "This feature hasn't been set up yet. Please contact an administrator.",
-        invalid_config: "The configuration is invalid. Please contact an administrator."
+        default: "Quelque chose n'est pas correctement configuré. Contactez un administrateur.",
+        missing_config: "Cette fonctionnalité n'a pas encore été configurée. Contactez un administrateur.",
+        invalid_config: "La configuration est invalide. Contactez un administrateur."
     },
     [ErrorTypes.DATABASE]: {
-        default: "I'm having trouble with my database. Please try again in a moment.",
-        connection_failed: "I'm having trouble connecting to my database. Please try again later.",
-        timeout: "The operation took too long. Please try again."
+        default: "J'ai un problème avec ma base de données. Réessayez dans un instant.",
+        connection_failed: "J'ai du mal à me connecter à ma base de données. Réessayez plus tard.",
+        timeout: "L'opération a pris trop de temps. Réessayez."
     },
     [ErrorTypes.NETWORK]: {
-        default: "I'm having network issues. Please try again in a moment.",
-        timeout: "The request timed out. Please try again.",
-        unreachable: "I can't reach the service right now. Please try again later."
+        default: "J'ai des problèmes de réseau. Réessayez dans un instant.",
+        timeout: "La requête a expiré. Réessayez.",
+        unreachable: "Je n'arrive pas à joindre le service pour le moment. Réessayez plus tard."
     },
     [ErrorTypes.DISCORD_API]: {
-        default: "I'm having trouble with Discord. Please try again in a moment.",
-        rate_limit: "You're doing that too much. Please wait a moment and try again.",
-        forbidden: "I'm not allowed to do that. Please check my permissions."
+        default: "J'ai un souci avec Discord. Réessayez dans un instant.",
+        rate_limit: "Vous allez trop vite. Patientez un instant avant de réessayer.",
+        forbidden: "Je n'ai pas le droit de faire cela. Vérifiez mes permissions."
     },
     [ErrorTypes.USER_INPUT]: {
-        default: "There was an issue with your request. Please try again.",
-        invalid_user: "I couldn't find that user. Please check the user mention or ID.",
-        invalid_channel: "I couldn't find that channel. Please check the channel mention or ID."
+        default: "Il y a un problème avec votre demande. Réessayez.",
+        invalid_user: "Je n'ai pas trouvé cet utilisateur. Vérifiez la mention ou l'ID.",
+        invalid_channel: "Je n'ai pas trouvé ce salon. Vérifiez la mention ou l'ID."
     },
     [ErrorTypes.RATE_LIMIT]: {
-        default: "You're doing that too much. Please wait a moment and try again.",
-        command_cooldown: "This command is on cooldown. Please wait before using it again.",
-        global_rate_limit: "You're being rate limited by Discord. Please wait a moment."
+        default: "Vous allez trop vite. Patientez un moment avant de réessayer.",
+        command_cooldown: "Cette commande est en temps de recharge. Patientez avant de réessayer.",
+        global_rate_limit: "Discord vous limite actuellement. Patientez un moment."
     },
     [ErrorTypes.UNKNOWN]: {
-        default: "Something went wrong. Please try again in a moment.",
-        unexpected: "An unexpected error occurred. Please try again later."
+        default: "Quelque chose s'est mal passé. Réessayez dans un instant.",
+        unexpected: "Une erreur inattendue est survenue. Réessayez plus tard."
     }
 };
 
@@ -322,15 +322,15 @@ export async function handleInteractionError(interaction, error, context = {}) {
 
 function getErrorTitle(errorType) {
     const titles = {
-        [ErrorTypes.VALIDATION]: "❌ Invalid Input",
-        [ErrorTypes.PERMISSION]: "🚫 Permission Denied",
-        [ErrorTypes.CONFIGURATION]: "⚙️ Configuration Error",
-        [ErrorTypes.DATABASE]: "🗄️ Database Error",
-        [ErrorTypes.NETWORK]: "🌐 Network Error",
-        [ErrorTypes.DISCORD_API]: "🔌 API Error",
-        [ErrorTypes.USER_INPUT]: "💬 Input Error",
-        [ErrorTypes.RATE_LIMIT]: "⏱️ Slow Down!",
-        [ErrorTypes.UNKNOWN]: "❓ Unexpected Error"
+        [ErrorTypes.VALIDATION]: "❌ Entrée invalide",
+        [ErrorTypes.PERMISSION]: "🚫 Permission refusée",
+        [ErrorTypes.CONFIGURATION]: "⚙️ Erreur de configuration",
+        [ErrorTypes.DATABASE]: "🗄️ Erreur de base de données",
+        [ErrorTypes.NETWORK]: "🌐 Erreur réseau",
+        [ErrorTypes.DISCORD_API]: "🔌 Erreur API Discord",
+        [ErrorTypes.USER_INPUT]: "💬 Erreur de saisie",
+        [ErrorTypes.RATE_LIMIT]: "⏱️ Trop rapide !",
+        [ErrorTypes.UNKNOWN]: "❓ Erreur inattendue"
     };
     
     return titles[errorType] || titles[ErrorTypes.UNKNOWN];
