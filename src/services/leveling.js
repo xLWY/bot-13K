@@ -12,7 +12,7 @@ import { addXp } from './xpSystem.js';
 
 const BASE_XP = 100;
 const XP_MULTIPLIER = 1.5;
-const MAX_LEVEL = 1000;
+export const MAX_LEVEL = 1000;
 const MIN_LEVEL = 0;
 
 
