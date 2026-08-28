@@ -6,11 +6,11 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("userinfo")
-    .setDescription("Get detailed information about a user")
+    .setDescription("Obtenir des informations détaillées sur un utilisateur")
     .addUserOption((option) =>
       option
         .setName("target")
-        .setDescription("The user to inspect (defaults to you)"),
+        .setDescription("L'utilisateur à inspecter (par défaut vous-même)"),
     ),
 
   async execute(interaction) {

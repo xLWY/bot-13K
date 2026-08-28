@@ -7,12 +7,12 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("avatar")
-    .setDescription("Display a user's avatar image")
+    .setDescription("Afficher l'image de profil d'un utilisateur")
     .addUserOption((option) =>
       option
         .setName("target")
         .setDescription(
-          "The user whose avatar you want to see (defaults to you)",
+          "L'utilisateur dont vous voulez voir l'avatar (par défaut vous-même)",
         ),
     ),
 

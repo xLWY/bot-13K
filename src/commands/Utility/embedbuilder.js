@@ -8,7 +8,7 @@ import { BotConfig } from '../../config/bot.js';
 export default {
   data: new SlashCommandBuilder()
     .setName('embedbuilder')
-    .setDescription('Create custom Discord embeds with an interactive builder')
+    .setDescription('Créer des embeds Discord personnalisés avec un constructeur interactif')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {

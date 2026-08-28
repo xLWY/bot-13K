@@ -8,7 +8,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('wipedata')
-        .setDescription('Delete all your personal data from the bot (irreversible)'),
+        .setDescription('Supprimer toutes vos données personnelles du bot (irréversible)'),
 
     async execute(interaction, guildConfig, client) {
         try {
