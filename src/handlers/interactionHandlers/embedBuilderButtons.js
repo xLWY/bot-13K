@@ -192,98 +192,130 @@ export async function handleEmbedBuilderButtons(interaction, client) {
 }
 
 async function showTitleModal(interaction) {
-  const modal = new ModalBuilder()
-    .setCustomId('embed_title_modal')
-    .setTitle('Définir Titre de l\'Embed');
+  try {
+    const modal = new ModalBuilder()
+      .setCustomId('embed_title_modal')
+      .setTitle('Définir Titre de l\'Embed');
 
-  const titleInput = new TextInputBuilder()
-    .setCustomId('embed_title')
-    .setLabel('Titre de l\'Embed')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('Entrez votre titre ici')
-    .setMaxLength(256)
-    .setRequired(false);
+    const titleInput = new TextInputBuilder()
+      .setCustomId('embed_title')
+      .setLabel('Titre de l\'Embed')
+      .setStyle(TextInputStyle.Short)
+      .setPlaceholder('Entrez votre titre ici')
+      .setMaxLength(256)
+      .setRequired(false);
 
-  const firstActionRow = new ActionRowBuilder().addComponents(titleInput);
-  modal.addComponents(firstActionRow);
+    const firstActionRow = new ActionRowBuilder().addComponents(titleInput);
+    modal.addComponents(firstActionRow);
 
-  await interaction.showModal(modal);
+    await interaction.showModal(modal);
+  } catch (error) {
+    logger.error('Error showing title modal:', error);
+    throw error;
+  }
 }
 
 async function showDescriptionModal(interaction) {
-  const modal = new ModalBuilder()
-    .setCustomId('embed_desc_modal')
-    .setTitle('Définir Description de l\'Embed');
+  try {
+    const modal = new ModalBuilder()
+      .setCustomId('embed_desc_modal')
+      .setTitle('Définir Description de l\'Embed');
 
-  const descInput = new TextInputBuilder()
-    .setCustomId('embed_desc')
-    .setLabel('Description de l\'Embed')
-    .setStyle(TextInputStyle.Paragraph)
-    .setPlaceholder('Entrez votre description ici')
-    .setMaxLength(4096)
-    .setRequired(false);
+    const descInput = new TextInputBuilder()
+      .setCustomId('embed_desc')
+      .setLabel('Description de l\'Embed')
+      .setStyle(TextInputStyle.Short)
+      .setPlaceholder('Entrez votre description ici')
+      .setMaxLength(4096)
+      .setRequired(false);
 
-  const firstActionRow = new ActionRowBuilder().addComponents(descInput);
-  modal.addComponents(firstActionRow);
+    const firstActionRow = new ActionRowBuilder().addComponents(descInput);
+    modal.addComponents(firstActionRow);
 
-  await interaction.showModal(modal);
+    await interaction.showModal(modal);
+  } catch (error) {
+    logger.error('Error showing description modal:', error);
+    throw error;
+  }
 }
 
 async function showColorModal(interaction) {
-  const modal = new ModalBuilder()
-    .setCustomId('embed_color_modal')
-    .setTitle('Définir Couleur de l\'Embed');
+  try {
+    await interaction.update({
+      content: '🎨 Veuillez entrer votre couleur...',
+      embeds: [],
+      components: []
+    });
 
-  const colorInput = new TextInputBuilder()
-    .setCustomId('embed_color')
-    .setLabel('Couleur (code hex ou décimal)')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('ex: #00ff00 ou 65280')
-    .setMaxLength(20)
-    .setRequired(false);
+    const modal = new ModalBuilder()
+      .setCustomId('embed_color_modal')
+      .setTitle('Définir Couleur de l\'Embed');
 
-  const firstActionRow = new ActionRowBuilder().addComponents(colorInput);
-  modal.addComponents(firstActionRow);
+    const colorInput = new TextInputBuilder()
+      .setCustomId('embed_color')
+      .setLabel('Couleur (code hex ou décimal)')
+      .setStyle(TextInputStyle.Short)
+      .setPlaceholder('ex: #00ff00 ou 65280')
+      .setMaxLength(20)
+      .setRequired(false);
 
-  await interaction.showModal(modal);
+    const firstActionRow = new ActionRowBuilder().addComponents(colorInput);
+    modal.addComponents(firstActionRow);
+
+    await interaction.showModal(modal);
+  } catch (error) {
+    logger.error('Error showing color modal:', error);
+    throw error;
+  }
 }
 
 async function showFieldModal(interaction) {
-  const modal = new ModalBuilder()
-    .setCustomId('embed_field_modal')
-    .setTitle('Ajouter un Champ à l\'Embed');
+  try {
+    await interaction.update({
+      content: '📊 Veuillez entrer les informations du champ...',
+      embeds: [],
+      components: []
+    });
 
-  const nameInput = new TextInputBuilder()
-    .setCustomId('field_name')
-    .setLabel('Nom du Champ')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('Nom du champ')
-    .setMaxLength(256)
-    .setRequired(true);
+    const modal = new ModalBuilder()
+      .setCustomId('embed_field_modal')
+      .setTitle('Ajouter un Champ à l\'Embed');
 
-  const valueInput = new TextInputBuilder()
-    .setCustomId('field_value')
-    .setLabel('Valeur du Champ')
-    .setStyle(TextInputStyle.Paragraph)
-    .setPlaceholder('Valeur du champ')
-    .setMaxLength(1024)
-    .setRequired(true);
+    const nameInput = new TextInputBuilder()
+      .setCustomId('field_name')
+      .setLabel('Nom du Champ')
+      .setStyle(TextInputStyle.Short)
+      .setPlaceholder('Nom du champ')
+      .setMaxLength(256)
+      .setRequired(true);
 
-  const inlineInput = new TextInputBuilder()
-    .setCustomId('field_inline')
-    .setLabel('En ligne? (true/false)')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('true ou false')
-    .setMaxLength(5)
-    .setRequired(false)
-    .setValue('false');
+    const valueInput = new TextInputBuilder()
+      .setCustomId('field_value')
+      .setLabel('Valeur du Champ')
+      .setStyle(TextInputStyle.Paragraph)
+      .setPlaceholder('Valeur du champ')
+      .setMaxLength(1024)
+      .setRequired(true);
 
-  const firstActionRow = new ActionRowBuilder().addComponents(nameInput);
-  const secondActionRow = new ActionRowBuilder().addComponents(valueInput);
-  const thirdActionRow = new ActionRowBuilder().addComponents(inlineInput);
+    const inlineInput = new TextInputBuilder()
+      .setCustomId('field_inline')
+      .setLabel('En ligne? (true/false)')
+      .setStyle(TextInputStyle.Short)
+      .setPlaceholder('true ou false')
+      .setMaxLength(5)
+      .setRequired(false)
+      .setValue('false');
 
-  modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
-  await interaction.showModal(modal);
+    const firstActionRow = new ActionRowBuilder().addComponents(nameInput);
+    const secondActionRow = new ActionRowBuilder().addComponents(valueInput);
+    const thirdActionRow = new ActionRowBuilder().addComponents(inlineInput);
+
+    modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
+    await interaction.showModal(modal);
+  } catch (error) {
+    logger.error('Error showing field modal:', error);
+    throw error;
+  }
 }
 
 async function showImageModal(interaction) {
