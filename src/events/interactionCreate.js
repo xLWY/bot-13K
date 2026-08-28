@@ -15,7 +15,7 @@ import {
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { errorEmbed, successEmbed, createEmbed } from '../utils/embeds.js';
-import { saveTicketData, getTicketData, incrementTicketCounter } from '../utils/database.js';
+import { saveTicketData, getTicketData, deleteTicketData, incrementTicketCounter } from '../utils/database.js';
 import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 import { handleEmbedBuilderButtons, handleEmbedBuilderModals } from '../handlers/interactionHandlers/embedBuilderButtons.js';
@@ -27,7 +27,7 @@ import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abusePr
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { getUserTicketCount, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
 
-logger.info('[TicketFallback] v3 chargé — création + fermeture autonomes, boutons simplifiés.');
+logger.info('[TicketFallback] v4 chargé — création + fermeture + suppression + réouverture autonomes.');
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -395,6 +395,125 @@ async function closeTicketFallback(channel, closer) {
   }
 }
 
+async function deleteTicketFallback(interaction) {
+  const channel = interaction.channel;
+  try {
+    if (!channel) return;
+    if (!interaction.inGuild()) return;
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
+
+    const ticketData = await getTicketData(channel.guild.id, channel.id);
+    if (ticketData) {
+      ticketData.status = 'deleted';
+      ticketData.deletedBy = interaction.member.id;
+      ticketData.deletedAt = new Date().toISOString();
+      await saveTicketData(channel.guild.id, channel.id, ticketData);
+      await deleteTicketData(channel.guild.id, channel.id).catch(() => {});
+    }
+
+    await interaction.editReply({
+      embeds: [successEmbed('Le ticket va être supprimé.', '✅ Ticket Supprimé')],
+    });
+
+    setTimeout(async () => {
+      try {
+        await channel.delete('Ticket supprimé');
+      } catch (_) {}
+    }, 800);
+  } catch (error) {
+    const detail = error?.message || String(error);
+    logger.error('Fallback deleteTicket failed:', detail);
+    try {
+      await interaction.editReply({
+        embeds: [errorEmbed('Erreur', 'Impossible de supprimer le ticket.' + `\n\n\`${detail}\``)],
+      });
+    } catch (_) {}
+  }
+}
+
+async function reopenTicketFallback(interaction) {
+  const channel = interaction.channel;
+  try {
+    if (!channel) return;
+    if (!interaction.inGuild()) return;
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
+
+    const ticketData = await getTicketData(channel.guild.id, channel.id);
+    if (!ticketData) {
+      return await interaction.editReply({
+        embeds: [errorEmbed('Erreur', "Ce canal n'est pas un ticket.")],
+      });
+    }
+    if (ticketData.status !== 'closed') {
+      return await interaction.editReply({
+        embeds: [errorEmbed('Erreur', 'Ce ticket n'est pas fermé.')],
+      });
+    }
+
+    const ticketNumber = ticketData.ticketNumber || '';
+
+    ticketData.status = 'open';
+    ticketData.claimedBy = null;
+    ticketData.openedAt = new Date().toISOString();
+    await saveTicketData(channel.guild.id, channel.id, ticketData);
+
+    try {
+      await channel.permissionOverwrites.edit(interaction.member.id, {
+        ViewChannel: true,
+        SendMessages: true,
+      });
+    } catch (_) {}
+
+    try {
+      const config = await getGuildConfig(channel.client, channel.guild.id);
+      const openCategoryId = config.ticketCategoryId || null;
+      if (openCategoryId && channel.parentId !== openCategoryId) {
+        const openCategory =
+          channel.guild.channels.cache.get(openCategoryId) ||
+          (await channel.guild.channels.fetch(openCategoryId).catch(() => null));
+        if (openCategory?.type === ChannelType.GuildCategory) {
+          await channel.setParent(openCategoryId, { lockPermissions: false });
+        }
+      }
+    } catch (_) {}
+
+    try {
+      await channel.send({
+        embeds: [
+          createEmbed({
+            title: ticketNumber ? `🎫 Ticket #${ticketNumber}` : '🎫 Ticket Réouvert',
+            description: `☎️ Ce ticket a été **rouvert** par ${interaction.member}.`,
+            color: 'info',
+          }),
+        ],
+        components: [
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('ticket_close')
+              .setLabel('Fermer')
+              .setStyle(ButtonStyle.Danger)
+              .setEmoji('🔒'),
+          ),
+        ],
+      });
+    } catch (_) {}
+
+    await interaction.editReply({
+      embeds: [successEmbed('Le ticket a été rouvert.', '☎️ Ticket Rouvert')],
+    });
+  } catch (error) {
+    const detail = error?.message || String(error);
+    logger.error('Fallback reopenTicket failed:', detail);
+    try {
+      await interaction.editReply({
+        embeds: [errorEmbed('Erreur', 'Impossible de rouvrir le ticket.' + `\n\n\`${detail}\``)],
+      });
+    } catch (_) {}
+  }
+}
+
 async function fallbackTicketClose(interaction, client) {
   try {
     if (!interaction.inGuild()) return;
@@ -701,6 +820,24 @@ export default {
               } catch (_) {
                 logger.warn('Fallback ticket close reply failed:', {
                   event: 'interaction.button.close_fallback_failed',
+                  traceId: interactionTraceContext.traceId
+                });
+              }
+            } else if (interaction.customId === 'ticket_delete') {
+              try {
+                await deleteTicketFallback(interaction);
+              } catch (_) {
+                logger.warn('Fallback ticket delete reply failed:', {
+                  event: 'interaction.button.delete_fallback_failed',
+                  traceId: interactionTraceContext.traceId
+                });
+              }
+            } else if (interaction.customId === 'ticket_reopen') {
+              try {
+                await reopenTicketFallback(interaction);
+              } catch (_) {
+                logger.warn('Fallback ticket reopen reply failed:', {
+                  event: 'interaction.button.reopen_fallback_failed',
                   traceId: interactionTraceContext.traceId
                 });
               }
