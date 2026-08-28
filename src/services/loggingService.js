@@ -26,6 +26,12 @@ const EVENT_TYPES = {
   
   LEVELING_LEVELUP: 'leveling.levelup',
   LEVELING_MILESTONE: 'leveling.milestone',
+  LEVELING_XP_CHANGE: 'leveling.xpchange',
+  LEVELING_LEVEL_CHANGE: 'leveling.levelchange',
+  LEVELING_CONFIG_UPDATE: 'leveling.configupdate',
+  
+  
+  CONFIGURATION_CHANGE: 'configuration.change',
   
   
   MESSAGE_DELETE: 'message.delete',
@@ -73,6 +79,10 @@ const EVENT_COLORS = {
   'ticket.delete': 0x8b0000,
   'leveling.levelup': 0x00ff00,
   'leveling.milestone': 0xFFD700,
+  'leveling.xpchange': 0x00ff99,
+  'leveling.levelchange': 0x9b59b6,
+  'leveling.configupdate': 0x3498db,
+  'configuration.change': 0xFEE75C,
   'message.delete': 0x8b0000,
   'message.edit': 0xFFA500,
   'message.bulkdelete': 0xFF0000,
@@ -108,6 +118,10 @@ const EVENT_ICONS = {
   'ticket.delete': '🗑️',
   'leveling.levelup': '📈',
   'leveling.milestone': '🏆',
+  'leveling.xpchange': '⭐',
+  'leveling.levelchange': '🔺',
+  'leveling.configupdate': '⚙️',
+  'configuration.change': '🔧',
   'message.delete': '❌',
   'message.edit': '✏️',
   'message.bulkdelete': '🗑️',

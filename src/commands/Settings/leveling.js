@@ -11,6 +11,7 @@ import {
     setUserLevel,
     MAX_LEVEL
 } from '../../services/leveling.js';
+import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 import { errorEmbed, successEmbed, infoEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -163,10 +164,21 @@ export default {
                 case 'setchannel': {
                     const channel = interaction.options.getChannel('channel');
                     const leveling = await getLevelingConfig(client, guildId);
+                    const oldChannelId = leveling.levelUpChannel;
                     leveling.levelUpChannel = channel.id;
                     await saveLevelingConfig(client, guildId, leveling);
 
                     logger.info(`[Leveling] Set level-up channel to ${channel.id} in ${interaction.guild.id} by ${interaction.user.tag}`);
+                    await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_CONFIG_UPDATE, {
+                        userId: interaction.user.id,
+                        title: '⚙️ Leveling Channel Updated',
+                        description: `Level-up notifications will now be sent to ${channel}.`,
+                        fields: [
+                            { name: 'Old Channel', value: oldChannelId ? `<#${oldChannelId}>` : 'None', inline: true },
+                            { name: 'New Channel', value: `${channel}`, inline: true },
+                            { name: 'By', value: `${interaction.user}`, inline: true }
+                        ]
+                    });
                     return InteractionHelper.safeEditReply(interaction, {
                         embeds: [successEmbed(`Level-up notifications will now be sent to ${channel}.`, '📈 Leveling Channel')],
                         flags: MessageFlags.Ephemeral
@@ -178,6 +190,13 @@ export default {
                     const leveling = await getLevelingConfig(client, guildId);
                     leveling.enabled = subcommand === 'enable';
                     await saveLevelingConfig(client, guildId, leveling);
+
+                    await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_CONFIG_UPDATE, {
+                        userId: interaction.user.id,
+                        title: subcommand === 'enable' ? '📈 Leveling Enabled' : '📈 Leveling Disabled',
+                        description: `The leveling system is now **${subcommand === 'enable' ? 'enabled' : 'disabled'}** for this server.`,
+                        fields: [{ name: 'By', value: `${interaction.user}`, inline: true }]
+                    });
 
                     return InteractionHelper.safeEditReply(interaction, {
                         embeds: [successEmbed(
@@ -193,6 +212,13 @@ export default {
                     const leveling = await getLevelingConfig(client, guildId);
                     leveling.announceLevelUp = enabled;
                     await saveLevelingConfig(client, guildId, leveling);
+
+                    await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_CONFIG_UPDATE, {
+                        userId: interaction.user.id,
+                        title: enabled ? '📈 Level-up Notifications On' : '📈 Level-up Notifications Off',
+                        description: `Level-up announcements are now **${enabled ? 'enabled' : 'disabled'}**.`,
+                        fields: [{ name: 'By', value: `${interaction.user}`, inline: true }]
+                    });
 
                     return InteractionHelper.safeEditReply(interaction, {
                         embeds: [successEmbed(
@@ -217,6 +243,17 @@ export default {
                     leveling.xpRange = { min, max };
                     await saveLevelingConfig(client, guildId, leveling);
 
+                    await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_CONFIG_UPDATE, {
+                        userId: interaction.user.id,
+                        title: '⚙️ XP Range Updated',
+                        description: `Each valid message now grants between **${min}** and **${max}** XP.`,
+                        fields: [
+                            { name: 'Min XP', value: `${min}`, inline: true },
+                            { name: 'Max XP', value: `${max}`, inline: true },
+                            { name: 'By', value: `${interaction.user}`, inline: true }
+                        ]
+                    });
+
                     return InteractionHelper.safeEditReply(interaction, {
                         embeds: [successEmbed(`Each valid message now grants between **${min}** and **${max}** XP.`, '📈 XP Range')],
                         flags: MessageFlags.Ephemeral
@@ -228,6 +265,13 @@ export default {
                     const leveling = await getLevelingConfig(client, guildId);
                     leveling.xpCooldown = seconds;
                     await saveLevelingConfig(client, guildId, leveling);
+
+                    await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_CONFIG_UPDATE, {
+                        userId: interaction.user.id,
+                        title: '⚙️ XP Cooldown Updated',
+                        description: `A user can now gain XP every **${seconds}** second(s).`,
+                        fields: [{ name: 'By', value: `${interaction.user}`, inline: true }]
+                    });
 
                     return InteractionHelper.safeEditReply(interaction, {
                         embeds: [successEmbed(`A user can now gain XP every **${seconds}** second(s).`, '📈 Cooldown')],
@@ -247,6 +291,7 @@ export default {
 
                     const amount = interaction.options.getInteger('xp');
                     const data = await getUserLevelData(client, guildId, target.id);
+                    const previousTotal = data.totalXp;
                     const delta = subcommand === 'add' ? amount : -amount;
                     data.totalXp = Math.max(0, data.totalXp + delta);
 
@@ -256,6 +301,18 @@ export default {
                     await saveUserLevelData(client, guildId, target.id, data);
 
                     const xpNeeded = getXpForLevel(data.level + 1);
+                    await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_XP_CHANGE, {
+                        userId: interaction.user.id,
+                        title: subcommand === 'add' ? '⭐ XP Added' : '⭐ XP Removed',
+                        description: `${subcommand === 'add' ? 'Added' : 'Removed'} **${amount} XP** ${subcommand === 'add' ? 'to' : 'from'} ${target}.`,
+                        fields: [
+                            { name: 'User', value: `${target}`, inline: true },
+                            { name: 'Amount', value: `${subcommand === 'add' ? '+' : '-'}${amount} XP`, inline: true },
+                            { name: 'Total XP', value: `${previousTotal} → ${data.totalXp}`, inline: true },
+                            { name: 'By', value: `${interaction.user}`, inline: true }
+                        ]
+                    });
+
                     return InteractionHelper.safeEditReply(interaction, {
                         embeds: [successEmbed(
                             `${subcommand === 'add' ? 'Added' : 'Removed'} **${amount} XP** ${subcommand === 'add' ? 'to' : 'from'} ${target}.\nNow: level **${data.level}**, **${data.totalXp} total XP** (${data.xp}/${xpNeeded} XP to next level).`,
@@ -277,6 +334,18 @@ export default {
                     const newLevel = interaction.options.getInteger('level');
                     const data = await setUserLevel(client, guildId, target.id, newLevel);
 
+                    await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_LEVEL_CHANGE, {
+                        userId: interaction.user.id,
+                        title: '🔺 Level Set',
+                        description: `${target} was set to level **${newLevel}**.`,
+                        fields: [
+                            { name: 'User', value: `${target}`, inline: true },
+                            { name: 'New Level', value: `${data.level}`, inline: true },
+                            { name: 'Total XP', value: `${data.totalXp}`, inline: true },
+                            { name: 'By', value: `${interaction.user}`, inline: true }
+                        ]
+                    });
+
                     return InteractionHelper.safeEditReply(interaction, {
                         embeds: [successEmbed(`${target} is now level **${data.level}** (**${data.totalXp} total XP**).`, '📈 Level Set')],
                         flags: MessageFlags.Ephemeral
@@ -297,6 +366,19 @@ export default {
                     const data = subcommand === 'addlevel'
                         ? await addLevels(client, guildId, target.id, levels)
                         : await removeLevels(client, guildId, target.id, levels);
+
+                    await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_LEVEL_CHANGE, {
+                        userId: interaction.user.id,
+                        title: subcommand === 'addlevel' ? '🔺 Levels Added' : '🔺 Levels Removed',
+                        description: `${subcommand === 'addlevel' ? 'Added' : 'Removed'} **${levels} level(s)** ${subcommand === 'addlevel' ? 'to' : 'from'} ${target}.`,
+                        fields: [
+                            { name: 'User', value: `${target}`, inline: true },
+                            { name: 'Levels', value: `${subcommand === 'addlevel' ? '+' : '-'}${levels}`, inline: true },
+                            { name: 'New Level', value: `${data.level}`, inline: true },
+                            { name: 'Total XP', value: `${data.totalXp}`, inline: true },
+                            { name: 'By', value: `${interaction.user}`, inline: true }
+                        ]
+                    });
 
                     return InteractionHelper.safeEditReply(interaction, {
                         embeds: [successEmbed(
@@ -346,4 +428,12 @@ async function showStatus(interaction, client, guildId) {
         embeds: [infoEmbed(description, '📈 Leveling Status')],
         flags: MessageFlags.Ephemeral
     });
+}
+
+async function logLvlChange(client, guildId, eventType, data) {
+    try {
+        await logEvent({ client, guildId, eventType, data });
+    } catch (error) {
+        logger.error(`[Leveling] Failed to log event ${eventType}:`, error);
+    }
 }
