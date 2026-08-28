@@ -1,9 +1,7 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ComponentType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
-import { getConfirmationButtons } from '../../utils/components.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { errorEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
-import { getColor } from '../../config/bot.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 export default {
@@ -14,7 +12,7 @@ export default {
     category: 'moderation',
 
     async execute(interaction, config, client) {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        const deferSuccess = await InteractionHelper.safeDefer(interaction, { ephemeral: true });
         if (!deferSuccess) {
             logger.warn('Nuke interaction defer failed', {
                 userId: interaction.user.id,
@@ -36,52 +34,6 @@ export default {
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed('This command can only be used in a server channel.')]
             });
-        }
-
-        const confirmButtons = getConfirmationButtons('nuke');
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [
-                createEmbed({
-                    title: '💣 Nuke This Channel?',
-                    description: `This will **delete and recreate** ${channel} with the exact same settings (permissions, topic, category, slowmode...). All messages in it will be permanently lost.\n\nThis action cannot be undone.`
-                }).setColor(getColor('warning'))
-            ],
-            components: [confirmButtons]
-        });
-
-        let collected;
-        try {
-            collected = await channel.awaitMessageComponent({
-                filter: (i) => i.user.id === interaction.user.id && ['nuke_yes', 'nuke_no'].includes(i.customId),
-                componentType: ComponentType.Button,
-                time: 30000
-            });
-        } catch {
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Nuke cancelled — no response in time.')],
-                components: []
-            }).catch(() => {});
-            return;
-        }
-
-        if (collected.customId === 'nuke_no') {
-            await collected.update({
-                embeds: [successEmbed('Nuke cancelled. Nothing was changed.')],
-                components: []
-            });
-            return;
-        }
-
-        try {
-            await collected.update({
-                embeds: [createEmbed({
-                    title: '💣 Nuking...',
-                    description: 'Recreating the channel, one moment.'
-                }).setColor(getColor('warning'))],
-                components: []
-            });
-        } catch (error) {
-            logger.warn('Failed to update nuke confirmation message:', error);
         }
 
         try {
@@ -113,19 +65,12 @@ export default {
                 }
             });
 
-            await newChannel.send({
-                embeds: [
-                    successEmbed(
-                        `This channel has been nuked by ${interaction.user}. Fresh start! 💣`,
-                        '💥 Channel Nuked'
-                    )
-                ]
-            });
+            await newChannel.send(`💥 Channel nuked successfully, ${interaction.user}!`);
         } catch (error) {
             logger.error('Nuke command error:', error);
             try {
                 await channel.send({
-                    embeds: [errorEmbed('An unexpected error occurred while nuking this channel. Check my permissions (I need \'Manage Channels\').', error)]
+                    embeds: [errorEmbed('An unexpected error occurred while nuking this channel. Check my permissions (I need \'Manage Channels\').')]
                 });
             } catch {
                 // Original channel may already be gone at this point; nothing more we can do.
