@@ -9,7 +9,7 @@ import { claimTicket } from '../../services/ticket.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("claim")
-        .setDescription("Claims an open ticket, assigning it to you.")
+        .setDescription("Réclame un ticket ouvert et l'assigne à vous-même.")
         .setDMPermission(false),
 
     async execute(interaction, guildConfig, client) {
@@ -25,8 +25,8 @@ export default {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            "Not a Ticket Channel",
-                            "This command can only be used in a valid ticket channel.",
+                            "Pas un salon de ticket",
+                            "Cette commande ne peut être utilisée que dans un salon de ticket valide.",
                         ),
                     ],
                 });
@@ -36,8 +36,8 @@ export default {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            "Permission Denied",
-                            "You need the `Manage Channels` permission or the configured `Ticket Staff Role` to claim tickets.",
+                            "Permission refusée",
+                            "Vous devez avoir la permission `Gérer les salons` ou le rôle `Staff Tickets` configuré pour réclamer des tickets.",
                         ),
                     ],
                 });
@@ -56,8 +56,8 @@ export default {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            "Not a Ticket Channel",
-                            result.error || "This command can only be used in a valid ticket channel.",
+                            "Pas un salon de ticket",
+                            result.error || "Cette commande ne peut être utilisée que dans un salon de ticket valide.",
                         ),
                     ],
                 });
@@ -66,8 +66,8 @@ export default {
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "Ticket Claimed!",
-                        "You have successfully claimed this ticket.",
+                        "Ticket réclamé !",
+                        "Vous avez réclamé ce ticket.",
                     ),
                 ],
             });

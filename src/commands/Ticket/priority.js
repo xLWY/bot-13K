@@ -10,18 +10,18 @@ import { updateTicketPriority } from '../../services/ticket.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("priority")
-        .setDescription("Sets the priority level for the current support ticket.")
+        .setDescription("Définit le niveau de priorité du ticket actuel.")
         .addStringOption((option) =>
             option
                 .setName("level")
-                .setDescription("The priority level for the ticket.")
+                .setDescription("Le niveau de priorité du ticket.")
                 .setRequired(true)
                 .addChoices(
-                    { name: "🔴 Urgent", value: "urgent" },
-                    { name: "🟠 High", value: "high" },
-                    { name: "🟡 Medium", value: "medium" },
-                    { name: "🟢 Low", value: "low" },
-                    { name: "⚪ None", value: "none" },
+                    { name: "🚨 Urgente", value: "urgent" },
+                    { name: "🔴 Haute", value: "high" },
+                    { name: "🟡 Moyenne", value: "medium" },
+                    { name: "🟢 Faible", value: "low" },
+                    { name: "⚪ Aucune", value: "none" },
                 ),
             )
         .setDMPermission(false),
@@ -40,8 +40,8 @@ export default {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            "Not a Ticket Channel",
-                            "This command can only be used in a valid ticket channel.",
+                            "Pas un salon de ticket",
+                            "Cette commande ne peut être utilisée que dans un salon de ticket valide.",
                         ),
                     ],
                 });
@@ -51,8 +51,8 @@ export default {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            "Permission Denied",
-                            "You need the `Manage Channels` permission or the configured `Ticket Staff Role` to change ticket priority.",
+                            "Permission refusée",
+                            "Vous devez avoir la permission `Gérer les salons` ou le rôle `Staff Tickets` configuré pour modifier la priorité d'un ticket.",
                         ),
                     ],
                 });
@@ -71,8 +71,8 @@ export default {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         errorEmbed(
-                            "Not a Ticket Channel",
-                            result.error || "This command can only be used in a valid ticket channel.",
+                            "Pas un salon de ticket",
+                            result.error || "Cette commande ne peut être utilisée que dans un salon de ticket valide.",
                         ),
                     ],
                 });
@@ -81,8 +81,8 @@ export default {
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "Priority Updated",
-                        `Ticket priority set to **${priorityLevel.toUpperCase()}**.`,
+                        "Priorité mise à jour",
+                        `Priorité du ticket définie sur **${priorityLevel.toUpperCase()}**.`,
                     ),
                 ],
             });

@@ -5,11 +5,11 @@ import { getColor } from '../../config/bot.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 
 const STAR_LABELS = {
-    '1': '⭐ 1 — Poor',
-    '2': '⭐⭐ 2 — Below Average',
-    '3': '⭐⭐⭐ 3 — Average',
-    '4': '⭐⭐⭐⭐ 4 — Good',
-    '5': '⭐⭐⭐⭐⭐ 5 — Excellent',
+    '1': '⭐ 1 — Mauvaise',
+    '2': '⭐⭐ 2 — Moyenne',
+    '3': '⭐⭐⭐ 3 — Correcte',
+    '4': '⭐⭐⭐⭐ 4 — Bonne',
+    '5': '⭐⭐⭐⭐⭐ 5 — Excellente',
 };
 
 const feedbackHandler = {
@@ -23,8 +23,8 @@ const feedbackHandler = {
             await interaction.update({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle('⚠️ Invalid Feedback Link')
-                        .setDescription('This feedback link appears to be malformed.')
+                        .setTitle('⚠️ Lien de sondage invalide')
+                        .setDescription('Ce lien de sondage semble invalide.')
                         .setColor(getColor('error')),
                 ],
                 components: [],
@@ -43,8 +43,8 @@ const feedbackHandler = {
             await interaction.update({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle('⚠️ Ticket Not Found')
-                        .setDescription('Could not find the ticket associated with this survey.')
+                        .setTitle('⚠️ Ticket introuvable')
+                        .setDescription('Impossible de trouver le ticket associé à ce sondage.')
                         .setColor(getColor('error')),
                 ],
                 components: [],
@@ -56,8 +56,8 @@ const feedbackHandler = {
             await interaction.reply({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle('❌ Not Allowed')
-                        .setDescription('Only the ticket creator can submit feedback for this ticket.')
+                        .setTitle('❌ Non autorisé')
+                        .setDescription('Seul le créateur du ticket peut donner son avis pour ce ticket.')
                         .setColor(getColor('error')),
                 ],
                 ephemeral: true,
@@ -69,8 +69,8 @@ const feedbackHandler = {
             await interaction.update({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle('✅ Already Submitted')
-                        .setDescription(`You already rated this ticket **${STAR_LABELS[String(ticketData.feedback.rating)]}**.\nThank you for your feedback!`)
+                        .setTitle('✅ Déjà répondu')
+                        .setDescription(`Vous avez déjà noté ce ticket **${STAR_LABELS[String(ticketData.feedback.rating)]}**.\nMerci pour votre avis !`)
                         .setColor(getColor('success')),
                 ],
                 components: [],
@@ -79,7 +79,7 @@ const feedbackHandler = {
         }
 
         const rating = parseInt(ratingStr, 10);
-        const ratingLabel = STAR_LABELS[String(rating)] ?? `${rating} stars`;
+        const ratingLabel = STAR_LABELS[String(rating)] ?? `${rating} étoiles`;
 
         try {
             ticketData.feedback = {
@@ -98,17 +98,17 @@ const feedbackHandler = {
                 const logsChannel = await interaction.client.channels.fetch(guildConfig.ticketLogsChannelId).catch(() => null);
                 if (logsChannel && logsChannel.isSendable()) {
                     const feedbackEmbed = new EmbedBuilder()
-                        .setTitle('📋 Ticket Feedback Received')
-                        .setDescription('User submitted feedback for a ticket')
+                        .setTitle('📋 Avis reçu')
+                        .setDescription('L\'utilisateur a donné son avis sur un ticket')
                         .setColor(getColor('info'))
                         .addFields(
-                            { name: 'Ticket ID', value: `\`${channelId}\``, inline: true },
-                            { name: 'Rating', value: ratingLabel, inline: true },
-                            { name: 'User', value: `<@${interaction.user.id}>`, inline: true },
-                            { name: 'Submitted', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
+                            { name: 'ID du ticket', value: `\`${channelId}\``, inline: true },
+                            { name: 'Note', value: ratingLabel, inline: true },
+                            { name: 'Utilisateur', value: `<@${interaction.user.id}>`, inline: true },
+                            { name: 'Envoyé le', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
                         )
                         .setThumbnail(interaction.user.displayAvatarURL())
-                        .setFooter({ text: `User ID: ${interaction.user.id}` })
+                        .setFooter({ text: `ID utilisateur : ${interaction.user.id}` })
                         .setTimestamp();
 
                     await logsChannel.send({ embeds: [feedbackEmbed] });
@@ -121,10 +121,10 @@ const feedbackHandler = {
         await interaction.update({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle('✅ Thanks for your feedback!')
-                    .setDescription(`You rated your support experience **${ratingLabel}**.\n\nYour feedback has been recorded and helps us improve!`)
+                    .setTitle('✅ Merci pour votre avis !')
+                    .setDescription(`Vous avez noté votre expérience **${ratingLabel}**.\n\nVotre avis a bien été enregistré et nous aide à nous améliorer !`)
                     .setColor(getColor('success'))
-                    .setFooter({ text: 'Thank you for using our support system.' })
+                    .setFooter({ text: 'Merci d\'avoir utilisé notre support.' })
                     .setTimestamp(),
             ],
             components: [],
@@ -146,8 +146,8 @@ const declineHandler = {
         await interaction.update({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle('👋 No problem!')
-                    .setDescription('You can always reach out again if you need further support.')
+                    .setTitle('👋 Pas de souci !')
+                    .setDescription('Vous pouvez nous recontacter à tout moment si vous avez besoin d\'aide.')
                     .setColor(getColor('default')),
             ],
             components: [],

@@ -1,23 +1,20 @@
-import { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, AttachmentBuilder, MessageFlags } from 'discord.js';
+import {
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+  MessageFlags,
+} from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
-import { createTicket, closeTicket, claimTicket, updateTicketPriority } from '../services/ticket.js';
+import { createTicket, closeTicket, claimTicket, updateTicketPriority, getTicketTypes, getPriorityInfo } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
 import { logger } from '../utils/logger.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { getTicketPermissionContext } from '../utils/ticketPermissions.js';
-
-// Helper function to escape HTML special characters
-function escapeHtml(text) {
-  if (!text) return '';
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
 
 async function ensureGuildContext(interaction) {
   if (interaction.inGuild()) {
@@ -26,7 +23,7 @@ async function ensureGuildContext(interaction) {
 
   if (!interaction.replied && !interaction.deferred) {
     await interaction.reply({
-      embeds: [errorEmbed('Guild Only', 'This action can only be used in a server.')],
+      embeds: [errorEmbed('Serveur uniquement', 'Cette action ne peut être utilisée que dans un serveur.')],
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -46,56 +43,27 @@ async function checkTicketPermissionWithTimeout(interaction, client, actionLabel
     const context = await Promise.race([contextPromise, timeoutPromise]);
 
     if (!context.ticketData) {
-      return { success: false, error: 'Not a Ticket Channel', details: 'This action can only be used in a valid ticket channel.' };
+      return { success: false, error: "Pas un salon de ticket", details: 'Cette action ne peut être utilisée que dans un salon de ticket valide.' };
     }
 
     const allowed = allowTicketCreator ? context.canCloseTicket : context.canManageTicket;
     if (!allowed) {
       const permissionMessage = allowTicketCreator
-        ? 'You must have **Manage Channels**, the configured **Ticket Staff Role**, or be the **ticket creator**.'
-        : 'You must have **Manage Channels** or the configured **Ticket Staff Role**.';
-      return { success: false, error: 'Permission Denied', details: `${permissionMessage}\n\nYou cannot ${actionLabel}.` };
+        ? 'Vous devez avoir la permission **Gérer les salons**, le **rôle Staff Tickets** configuré, ou être le **créateur du ticket**.'
+        : 'Vous devez avoir la permission **Gérer les salons** ou le **rôle Staff Tickets** configuré.';
+      return { success: false, error: 'Permission refusée', details: `${permissionMessage}\n\nVous ne pouvez pas ${actionLabel}.` };
     }
 
     return { success: true, context };
   } catch (error) {
     if (error.message === 'Timeout') {
-      return { success: false, error: 'Request Timeout', details: 'The permission check took too long. Please try again.' };
+      return { success: false, error: 'Délai dépassé', details: 'La vérification des permissions a pris trop de temps. Veuillez réessayer.' };
     }
-    return { success: false, error: 'Error', details: `Failed to check permissions: ${error.message}` };
+    return { success: false, error: 'Erreur', details: `Échec de la vérification des permissions : ${error.message}` };
   }
 }
 
-async function ensureTicketPermission(interaction, client, actionLabel, options = {}) {
-  const { allowTicketCreator = false } = options;
-
-  const context = await getTicketPermissionContext({ client, interaction });
-
-  if (!context.ticketData) {
-    await interaction.reply({
-      embeds: [errorEmbed('Not a Ticket Channel', 'This action can only be used in a valid ticket channel.')],
-      flags: MessageFlags.Ephemeral
-    });
-    return null;
-  }
-
-  const allowed = allowTicketCreator ? context.canCloseTicket : context.canManageTicket;
-  if (!allowed) {
-    const permissionMessage = allowTicketCreator
-      ? 'You must have **Manage Channels**, the configured **Ticket Staff Role**, or be the **ticket creator**.'
-      : 'You must have **Manage Channels** or the configured **Ticket Staff Role**.';
-
-    await interaction.reply({
-      embeds: [errorEmbed('Permission Denied', `${permissionMessage}\n\nYou cannot ${actionLabel}.`)],
-      flags: MessageFlags.Ephemeral
-    });
-    return null;
-  }
-
-  return context;
-}
-
-const createTicketHandler = {
+export const createTicketHandler = {
   name: 'create_ticket',
   async execute(interaction, client) {
     try {
@@ -104,61 +72,67 @@ const createTicketHandler = {
       const rateLimitKey = `${interaction.user.id}:create_ticket`;
       const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
       if (!allowed) {
-        await interaction.reply({
-          embeds: [errorEmbed('Rate Limited', 'You are creating tickets too quickly. Please wait a minute and try again.')],
-          flags: MessageFlags.Ephemeral
+        return await interaction.reply({
+          embeds: [errorEmbed('Trop de tickets', 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.')],
+          flags: MessageFlags.Ephemeral,
         });
-        return;
       }
 
       const config = await getGuildConfig(client, interaction.guildId);
       const maxTicketsPerUser = config.maxTicketsPerUser || 3;
-      
+
       const { getUserTicketCount } = await import('../services/ticket.js');
       const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
-      
+
       if (currentTicketCount >= maxTicketsPerUser) {
         return await interaction.reply({
           embeds: [
             errorEmbed(
-              '🎫 Ticket Limit Reached',
-              `You have reached the maximum number of open tickets (${maxTicketsPerUser}).\n\nPlease close your existing tickets before creating a new one.\n\n**Current Tickets:** ${currentTicketCount}/${maxTicketsPerUser}`
-            )
+              '🎫 Limite de tickets atteinte',
+              `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.\n\n**Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`,
+            ),
           ],
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
       }
-      
-      const modal = new ModalBuilder()
-        .setCustomId('create_ticket_modal')
-        .setTitle('Create a Ticket');
 
-      const reasonInput = new TextInputBuilder()
-        .setCustomId('reason')
-        .setLabel('Why are you creating this ticket?')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Describe your issue...')
-        .setRequired(true)
-        .setMaxLength(1000);
+      const typeEmbed = createEmbed({
+        title: '🎫 Nouveau ticket',
+        description: 'Choisissez le type de ticket que vous souhaitez ouvrir.',
+        color: 'info',
+      });
 
-      const actionRow = new ActionRowBuilder().addComponents(reasonInput);
-      modal.addComponents(actionRow);
-      
-      // showModal must be called directly without defer
-      await interaction.showModal(modal);
+      const typeSelect = new StringSelectMenuBuilder()
+        .setCustomId('ticket_type_select')
+        .setPlaceholder('Sélectionnez un type de ticket…')
+        .addOptions(
+          Object.entries(getTicketTypes()).map(([id, type]) =>
+            new StringSelectMenuOptionBuilder()
+              .setLabel(type.label)
+              .setDescription(type.description)
+              .setValue(id)
+              .setEmoji(type.emoji),
+          ),
+        );
+
+      return await interaction.reply({
+        embeds: [typeEmbed],
+        components: [new ActionRowBuilder().addComponents(typeSelect)],
+        flags: MessageFlags.Ephemeral,
+      });
     } catch (error) {
-      logger.error('Error creating ticket modal:', error);
+      logger.error('Error opening ticket type menu:', error);
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          embeds: [errorEmbed('Error', 'Could not open ticket creation form.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de création de ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
   }
 };
 
-const createTicketModalHandler = {
+export const createTicketModalHandler = {
   name: 'create_ticket_modal',
   async execute(interaction, client) {
     try {
@@ -166,61 +140,61 @@ const createTicketModalHandler = {
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
-      
-      const reason = interaction.fields.getTextInputValue('reason');
-      const config = await getGuildConfig(client, interaction.guildId);
-      const categoryId = config.ticketCategoryId || null;
-      
-      const result = await createTicket(
-        interaction.guild,
-        interaction.member,
-        categoryId,
-        reason
-      );
-      
+
+      const reason = interaction.fields?.getTextInputValue('reason');
+      const typeId = interaction.customId.split(':')[1] || 'support';
+
+      const result = await createTicket(interaction.guild, interaction.member, {
+        type: typeId,
+        reason,
+      });
+
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed(
-            'Ticket Created',
-            `Your ticket has been created in ${result.channel}!`
-          )]
+          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to create ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch (error) {
       logger.error('Error creating ticket:', error);
-      await interaction.editReply({
-        embeds: [errorEmbed('Error', 'An error occurred while creating your ticket.')],
-        flags: MessageFlags.Ephemeral
-      });
+      if (interaction.deferred) {
+        await interaction.editReply({
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la création de votre ticket.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else if (!interaction.replied) {
+        await interaction.reply({
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la création de votre ticket.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      }
     }
   }
 };
 
-const closeTicketHandler = {
+export const closeTicketHandler = {
   name: 'ticket_close',
   async execute(interaction, client) {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      // Use timeout-aware permission check to prevent interaction expiration
       const permissionCheck = await checkTicketPermissionWithTimeout(
         interaction,
         client,
-        'close this ticket',
+        'fermer ce ticket',
         { allowTicketCreator: true },
-        2000 // 2 second timeout for permission checks
+        2000,
       );
 
       if (!permissionCheck.success) {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -228,54 +202,52 @@ const closeTicketHandler = {
 
       const modal = new ModalBuilder()
         .setCustomId('ticket_close_modal')
-        .setTitle('Close Ticket');
+        .setTitle('Fermer le ticket');
 
       const reasonInput = new TextInputBuilder()
         .setCustomId('reason')
-        .setLabel('Reason for closing (optional)')
+        .setLabel('Motif de fermeture (facultatif)')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Add an optional reason for closing this ticket...')
+        .setPlaceholder('Ajoutez un motif éventuel de fermeture…')
         .setRequired(false)
         .setMaxLength(1000);
 
       const actionRow = new ActionRowBuilder().addComponents(reasonInput);
       modal.addComponents(actionRow);
 
-      // showModal must be called directly without defer
       await interaction.showModal(modal);
     } catch (error) {
       logger.error('Error closing ticket:', error);
 
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          embeds: [errorEmbed('Error', 'Could not open ticket close form.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de fermeture.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
   }
 };
 
-const closeTicketModalHandler = {
+export const closeTicketModalHandler = {
   name: 'ticket_close_modal',
   async execute(interaction, client) {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      // Use timeout-aware permission check 
       const permissionCheck = await checkTicketPermissionWithTimeout(
         interaction,
         client,
-        'close this ticket',
+        'fermer ce ticket',
         { allowTicketCreator: true },
-        2000
+        2000,
       );
 
       if (!permissionCheck.success) {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -284,40 +256,40 @@ const closeTicketModalHandler = {
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
 
-      const providedReason = interaction.fields.getTextInputValue('reason')?.trim();
-      const reason = providedReason || 'Closed via ticket button without a specific reason.';
+      const providedReason = interaction.fields?.getTextInputValue('reason')?.trim();
+      const reason = providedReason || 'Fermé via le bouton du ticket sans motif précisé.';
 
       const result = await closeTicket(interaction.channel, interaction.user, reason);
 
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Closed', 'This ticket has been closed.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [successEmbed('Ce ticket a été fermé.', '🔒 Ticket Fermé')],
+          flags: MessageFlags.Ephemeral,
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to close ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', result.error || 'Impossible de fermer le ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch (error) {
       logger.error('Error submitting close ticket modal:', error);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Error', 'An error occurred while closing the ticket.')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else if (interaction.deferred) {
+      if (interaction.deferred) {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', 'An error occurred while closing the ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la fermeture du ticket.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else if (!interaction.replied) {
+        await interaction.reply({
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la fermeture du ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
   }
 };
 
-const claimTicketHandler = {
+export const claimTicketHandler = {
   name: 'ticket_claim',
   async execute(interaction, client) {
     try {
@@ -326,16 +298,16 @@ const claimTicketHandler = {
       const permissionCheck = await checkTicketPermissionWithTimeout(
         interaction,
         client,
-        'claim tickets',
+        'réclamer les tickets',
         {},
-        2000
+        2000,
       );
 
       if (!permissionCheck.success) {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -343,38 +315,38 @@ const claimTicketHandler = {
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
-      
+
       const result = await claimTicket(interaction.channel, interaction.user);
-      
+
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Claimed', 'You have successfully claimed this ticket!')],
-          flags: MessageFlags.Ephemeral
+          embeds: [successEmbed('Vous avez réclamé ce ticket.', '🙋 Ticket Réclamé')],
+          flags: MessageFlags.Ephemeral,
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to claim ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', result.error || 'Impossible de réclamer le ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch (error) {
       logger.error('Error claiming ticket:', error);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Error', 'An error occurred while claiming the ticket.')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else if (interaction.deferred) {
+      if (interaction.deferred) {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', 'An error occurred while claiming the ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la réclamation du ticket.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else if (!interaction.replied) {
+        await interaction.reply({
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la réclamation du ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
   }
 };
 
-const priorityTicketHandler = {
+export const priorityTicketHandler = {
   name: 'ticket_priority',
   async execute(interaction, client, args) {
     try {
@@ -383,16 +355,16 @@ const priorityTicketHandler = {
       const permissionCheck = await checkTicketPermissionWithTimeout(
         interaction,
         client,
-        'change ticket priority',
+        'modifier la priorité du ticket',
         {},
-        2000
+        2000,
       );
 
       if (!permissionCheck.success) {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -400,47 +372,48 @@ const priorityTicketHandler = {
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
-      
+
       const priority = args?.[0];
       if (!priority) {
         await interaction.editReply({
-          embeds: [errorEmbed('Invalid Priority', 'A priority value is required.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Priorité invalide', 'Une valeur de priorité est requise.')],
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
       const result = await updateTicketPriority(interaction.channel, priority, interaction.user);
-      
+
       if (result.success) {
+        const priorityInfo = getPriorityInfo(priority);
         await interaction.editReply({
-          embeds: [successEmbed('Priority Updated', `Ticket priority set to ${priority}.`)],
-          flags: MessageFlags.Ephemeral
+          embeds: [successEmbed(`Priorité définie sur **${priorityInfo.emoji} ${priorityInfo.label}**.`, '📊 Priorité Mise à Jour')],
+          flags: MessageFlags.Ephemeral,
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to update priority.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', result.error || 'Impossible de mettre à jour la priorité.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch (error) {
       logger.error('Error updating ticket priority:', error);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Error', 'An error occurred while updating the priority.')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else if (interaction.deferred) {
+      if (interaction.deferred) {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', 'An error occurred while updating the priority.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la mise à jour de la priorité.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else if (!interaction.replied) {
+        await interaction.reply({
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la mise à jour de la priorité.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
   }
 };
 
-const pinTicketHandler = {
+export const pinTicketHandler = {
   name: 'ticket_pin',
   async execute(interaction, client) {
     try {
@@ -449,16 +422,16 @@ const pinTicketHandler = {
       const permissionCheck = await checkTicketPermissionWithTimeout(
         interaction,
         client,
-        'pin tickets',
+        'épingler les tickets',
         {},
-        2000
+        2000,
       );
 
       if (!permissionCheck.success) {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -472,60 +445,57 @@ const pinTicketHandler = {
 
       if (!category) {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', 'This ticket is not in a category.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', 'Ce ticket n\'est dans aucune catégorie.')],
+          flags: MessageFlags.Ephemeral,
         });
         return;
       }
 
-      // Check if channel name already has ping emoji
-      const hasPingEmoji = channel.name.startsWith('📌');
-      
-      if (hasPingEmoji) {
-        // Unpin: remove emoji and update position
+      const hasPinEmoji = channel.name.startsWith('📌');
+
+      if (hasPinEmoji) {
         const newName = channel.name.replace(/^📌\s*/, '');
-        await channel.edit({ 
+        await channel.edit({
           name: newName,
-          position: 999 // Move to end
+          position: 999,
         });
 
         await interaction.editReply({
           embeds: [createEmbed({
-            title: '📌 Ticket Unpinned',
-            description: 'This ticket has been unpinned and moved back to normal position.',
-            color: 0x95A5A6
+            title: '📌 Ticket Désépinglé',
+            description: 'Ce ticket a été désépinglé et replacé en position normale.',
+            color: 0x95A5A6,
           })],
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
 
         logger.info('Ticket unpinned', {
           guildId: interaction.guildId,
           channelId: channel.id,
           channelName: newName,
-          userId: interaction.user.id
+          userId: interaction.user.id,
         });
       } else {
-        // Pin: add emoji and update position
         const newName = `📌 ${channel.name}`;
-        await channel.edit({ 
+        await channel.edit({
           name: newName,
-          position: 0 // Move to top
+          position: 0,
         });
 
         await interaction.editReply({
           embeds: [createEmbed({
-            title: '📌 Ticket Pinned',
-            description: 'This ticket has been pinned to the top of the category.',
-            color: 0x3498db
+            title: '📌 Ticket Épinglé',
+            description: 'Ce ticket a été épinglé en haut de la catégorie.',
+            color: 0x3498db,
           })],
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
 
         logger.info('Ticket pinned', {
           guildId: interaction.guildId,
           channelId: channel.id,
           channelName: newName,
-          userId: interaction.user.id
+          userId: interaction.user.id,
         });
       }
 
@@ -533,36 +503,35 @@ const pinTicketHandler = {
         client: interaction.client,
         guildId: interaction.guildId,
         event: {
-          type: hasPingEmoji ? 'unpin' : 'pin',
+          type: hasPinEmoji ? 'unpin' : 'pin',
           ticketId: channel.id,
           ticketNumber: channel.name.replace(/[^0-9]/g, ''),
           userId: interaction.user.id,
           executorId: interaction.user.id,
           metadata: {
-            isPinned: !hasPingEmoji,
-            newChannelName: hasPingEmoji ? channel.name.replace(/^📌\s*/, '') : `📌 ${channel.name}`
-          }
-        }
+            isPinned: !hasPinEmoji,
+            newChannelName: hasPinEmoji ? channel.name.replace(/^📌\s*/, '') : `📌 ${channel.name}`,
+          },
+        },
       });
-
     } catch (error) {
       logger.error('Error pinning/unpinning ticket:', error);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Error', 'Failed to pin/unpin the ticket.')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else if (interaction.deferred) {
+      if (interaction.deferred) {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', 'Failed to pin/unpin the ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', 'Impossible d\'épingler/désépingler le ticket.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else if (!interaction.replied) {
+        await interaction.reply({
+          embeds: [errorEmbed('Erreur', 'Impossible d\'épingler/désépingler le ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
   }
 };
 
-const unclaimTicketHandler = {
+export const unclaimTicketHandler = {
   name: 'ticket_unclaim',
   async execute(interaction, client) {
     try {
@@ -571,16 +540,16 @@ const unclaimTicketHandler = {
       const permissionCheck = await checkTicketPermissionWithTimeout(
         interaction,
         client,
-        'unclaim tickets',
+        'retirer la réclamation',
         {},
-        2000
+        2000,
       );
 
       if (!permissionCheck.success) {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -588,39 +557,39 @@ const unclaimTicketHandler = {
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
-      
+
       const { unclaimTicket } = await import('../services/ticket.js');
       const result = await unclaimTicket(interaction.channel, interaction.member);
-      
+
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Unclaimed', 'You have successfully unclaimed this ticket!')],
-          flags: MessageFlags.Ephemeral
+          embeds: [successEmbed('Vous ne réclamez plus ce ticket.', '🔓 Réclamation Retirée')],
+          flags: MessageFlags.Ephemeral,
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to unclaim ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', result.error || 'Impossible de retirer la réclamation.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch (error) {
       logger.error('Error unclaiming ticket:', error);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Error', 'An error occurred while unclaiming the ticket.')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else if (interaction.deferred) {
+      if (interaction.deferred) {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', 'An error occurred while unclaiming the ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else if (!interaction.replied) {
+        await interaction.reply({
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
   }
 };
 
-const reopenTicketHandler = {
+export const reopenTicketHandler = {
   name: 'ticket_reopen',
   async execute(interaction, client) {
     try {
@@ -629,16 +598,16 @@ const reopenTicketHandler = {
       const permissionCheck = await checkTicketPermissionWithTimeout(
         interaction,
         client,
-        'reopen tickets',
+        'rouvrir ce ticket',
         {},
-        2000
+        2000,
       );
 
       if (!permissionCheck.success) {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -646,63 +615,62 @@ const reopenTicketHandler = {
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
-      
+
       const { reopenTicket } = await import('../services/ticket.js');
       const result = await reopenTicket(interaction.channel, interaction.member);
-      
+
       if (result.success) {
-        let reopenMessage = 'You have successfully reopened this ticket!';
+        let reopenMessage = 'Le ticket a été rouvert avec succès !';
         if (result.openCategoryMoveFailed) {
-          reopenMessage += '\n\n⚠️ The ticket was reopened, but it could not be moved to the configured open ticket category.';
+          reopenMessage += '\n\n⚠️ Le ticket a été rouvert, mais il n\'a pas pu être déplacé vers la catégorie configurée des tickets ouverts.';
         }
 
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Reopened', reopenMessage)],
-          flags: MessageFlags.Ephemeral
+          embeds: [successEmbed(reopenMessage, '🔓 Ticket Rouvert')],
+          flags: MessageFlags.Ephemeral,
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to reopen ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', result.error || 'Impossible de rouvrir le ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch (error) {
       logger.error('Error reopening ticket:', error);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Error', 'An error occurred while reopening the ticket.')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else if (interaction.deferred) {
+      if (interaction.deferred) {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', 'An error occurred while reopening the ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la réouverture du ticket.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else if (!interaction.replied) {
+        await interaction.reply({
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la réouverture du ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
   }
 };
 
-const deleteTicketHandler = {
+export const deleteTicketHandler = {
   name: 'ticket_delete',
   async execute(interaction, client) {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      // Use timeout-aware permission check
       const permissionCheck = await checkTicketPermissionWithTimeout(
         interaction,
         client,
-        'delete tickets',
+        'supprimer les tickets',
         {},
-        2000
+        2000,
       );
 
       if (!permissionCheck.success) {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -710,32 +678,32 @@ const deleteTicketHandler = {
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
-      
+
       const { deleteTicket } = await import('../services/ticket.js');
       const result = await deleteTicket(interaction.channel, interaction.member);
-      
+
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Deleted', 'This ticket will be permanently deleted in 3 seconds.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [successEmbed('Ce ticket sera définitivement supprimé dans 3 secondes.', '🗑️ Ticket Supprimé')],
+          flags: MessageFlags.Ephemeral,
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to delete ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', result.error || 'Impossible de supprimer le ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch (error) {
       logger.error('Error deleting ticket:', error);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Error', 'An error occurred while deleting the ticket.')],
-          flags: MessageFlags.Ephemeral
-        });
-      } else if (interaction.deferred) {
+      if (interaction.deferred) {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', 'An error occurred while deleting the ticket.')],
-          flags: MessageFlags.Ephemeral
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la suppression du ticket.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else if (!interaction.replied) {
+        await interaction.reply({
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la suppression du ticket.')],
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
@@ -743,18 +711,14 @@ const deleteTicketHandler = {
 };
 
 export default createTicketHandler;
-export { 
-  createTicketModalHandler, 
+export {
+  createTicketModalHandler,
   closeTicketModalHandler,
-  closeTicketHandler, 
-  claimTicketHandler, 
+  closeTicketHandler,
+  claimTicketHandler,
   priorityTicketHandler,
   pinTicketHandler,
   unclaimTicketHandler,
   reopenTicketHandler,
-  deleteTicketHandler 
+  deleteTicketHandler,
 };
-
-
-
-

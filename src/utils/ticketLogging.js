@@ -117,13 +117,13 @@ async function createTicketLogEmbed(guild, event) {
   const embed = new EmbedBuilder();
   
   const eventColors = {
-open: 0x2ecc71,
-close: 0xe74c3c,
-delete: 0x8b0000,
-claim: 0x3498db,
-unclaim: 0xf39c12,
-priority: 0x9b59b6,
-transcript: 0x1abc9c
+  open: 0x2ecc71,
+  close: 0xe74c3c,
+  delete: 0x8b0000,
+  claim: 0x3498db,
+  unclaim: 0xf39c12,
+  priority: 0x9b59b6,
+  transcript: 0x1abc9c
   };
   
   embed.setColor(eventColors[event.type] || 0x95a5a6);
@@ -136,7 +136,7 @@ transcript: 0x1abc9c
   
   if (event.ticketId || event.ticketNumber) {
     embed.setFooter({ 
-      text: `Ticket ID: ${event.ticketNumber || event.ticketId || 'Unknown'}` 
+      text: `Ticket ID: ${event.ticketNumber || event.ticketId || 'Inconnu'}` 
     });
   }
   
@@ -147,14 +147,14 @@ transcript: 0x1abc9c
       const user = await guild.client.users.fetch(event.userId).catch(() => null);
       if (user) {
         fields.push({
-          name: '👤 Ticket User',
+          name: '👤 Utilisateur',
           value: `${user.tag} (${event.userId})`,
           inline: true
         });
       }
     } catch (error) {
       fields.push({
-        name: '👤 Ticket User',
+        name: '👤 Utilisateur',
         value: `<@${event.userId}> (${event.userId})`,
         inline: true
       });
@@ -166,14 +166,14 @@ transcript: 0x1abc9c
       const executor = await guild.client.users.fetch(event.executorId).catch(() => null);
       if (executor) {
         fields.push({
-          name: '🔨 Executed By',
+          name: '🔨 Exécuté par',
           value: `${executor.tag} (${event.executorId})`,
           inline: true
         });
       }
     } catch (error) {
       fields.push({
-        name: '🔨 Executed By',
+        name: '🔨 Exécuté par',
         value: `<@${event.executorId}> (${event.executorId})`,
         inline: true
       });
@@ -182,7 +182,7 @@ transcript: 0x1abc9c
   
   if (event.reason) {
     fields.push({
-      name: '📝 Reason',
+      name: '📝 Motif',
       value: event.reason,
       inline: false
     });
@@ -191,14 +191,14 @@ transcript: 0x1abc9c
   if (event.priority) {
     const priorityEmojis = {
       none: '⚪',
-      low: '🔵',
-      medium: '🟢',
-      high: '🟡',
-      urgent: '🔴'
+      low: '🟢',
+      medium: '🟡',
+      high: '🔴',
+      urgent: '🚨'
     };
     
     fields.push({
-      name: '🎯 Priority',
+      name: '🎯 Priorité',
       value: `${priorityEmojis[event.priority] || '⚪'} ${event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}`,
       inline: true
     });
@@ -207,8 +207,24 @@ transcript: 0x1abc9c
   if (event.metadata) {
     Object.entries(event.metadata).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
+        const knownLabels = {
+          channelId: 'Salon',
+          categoryName: 'Catégorie',
+          ticketType: 'Type',
+          dmSent: 'MP envoyé',
+          closedAt: 'Fermé le',
+          openedAt: 'Ouvert le',
+          movedToClosedCategory: 'Déplacé',
+          claimedAt: 'Réclamé le',
+          previousClaimer: 'Ancien réclamant',
+          previousPriority: 'Priorité précédente',
+          updatedAt: 'Mis à jour le',
+          deletedAt: 'Supprimé le',
+          isPinned: 'Épinglé',
+          newChannelName: 'Nouveau nom',
+        };
         fields.push({
-          name: `📊 ${key.charAt(0).toUpperCase() + key.slice(1)}`,
+          name: `📊 ${knownLabels[key] || key.charAt(0).toUpperCase() + key.slice(1)}`,
           value: String(value),
           inline: true
         });
@@ -227,42 +243,42 @@ transcript: 0x1abc9c
 
 
 function getEventDisplayInfo(event) {
-  const ticketRef = event.ticketNumber ? `#${event.ticketNumber}` : event.ticketId ? `<#${event.ticketId}>` : 'Unknown';
+  const ticketRef = event.ticketNumber ? `#${event.ticketNumber}` : event.ticketId ? `<#${event.ticketId}>` : 'Inconnu';
   
   const eventMessages = {
     open: {
-      title: '🎫 Ticket Opened',
-      description: `A new ticket has been created: ${ticketRef}`
+      title: '🎫 Ticket Ouvert',
+      description: `Un nouveau ticket a été créé : ${ticketRef}`
     },
     close: {
-      title: '🔒 Ticket Closed',
-      description: `Ticket ${ticketRef} has been closed`
+      title: '🔒 Ticket Fermé',
+      description: `Le ticket ${ticketRef} a été fermé`
     },
     delete: {
-      title: '🗑️ Ticket Deleted',
-      description: `Ticket ${ticketRef} has been permanently deleted`
+      title: '🗑️ Ticket Supprimé',
+      description: `Le ticket ${ticketRef} a été supprimé définitivement`
     },
     claim: {
-      title: '🙋 Ticket Claimed',
-      description: `Ticket ${ticketRef} has been claimed`
+      title: '🙋 Ticket Réclamé',
+      description: `Le ticket ${ticketRef} a été réclamé`
     },
     unclaim: {
-      title: '🔓 Ticket Unclaimed',
-      description: `Ticket ${ticketRef} has been unclaimed`
+      title: '🔓 Ticket Non Réclamé',
+      description: `Le ticket ${ticketRef} n'est plus réclamé`
     },
     priority: {
-      title: '🎯 Priority Updated',
-      description: `Priority changed for ticket ${ticketRef}`
+      title: '🎯 Priorité Mise à Jour',
+      description: `Priorité modifiée pour le ticket ${ticketRef}`
     },
     transcript: {
-      title: '📜 Transcript Created',
-      description: `Transcript generated for ticket ${ticketRef}`
+      title: '📜 Transcript Créé',
+      description: `Transcript généré pour le ticket ${ticketRef}`
     }
   };
   
   return eventMessages[event.type] || {
-    title: '🎫 Ticket Event',
-    description: `An event occurred for ticket ${ticketRef}`
+    title: '🎫 Événement de ticket',
+    description: `Un événement s'est produit pour le ticket ${ticketRef}`
   };
 }
 
@@ -291,7 +307,7 @@ export function validateLogChannel(channel, botMember) {
   if (!channel || channel.type !== ChannelType.GuildText) {
     return {
       valid: false,
-      error: 'Channel must be a text channel.'
+      error: 'Le salon doit être un salon textuel.'
     };
   }
   
@@ -303,7 +319,7 @@ export function validateLogChannel(channel, botMember) {
   if (missing.length > 0) {
     return {
       valid: false,
-      error: `Missing permissions: ${missing.join(', ')}`
+      error: `Permissions manquantes : ${missing.join(', ')}`
     };
   }
   

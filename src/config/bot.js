@@ -209,32 +209,60 @@ export const botConfig = {
     // Role IDs allowed to manage/support tickets.
     supportRoles: [],
 
+    // Ticket types proposed in the creation panel (button → select menu).
+    types: {
+      support: {
+        emoji: "🛟",
+        label: "Support",
+        description: "Une question ou un problème à régler",
+        slug: "support",
+      },
+      prize: {
+        emoji: "🎁",
+        label: "Lot Giveaway",
+        description: "Récupérer un lot gagné lors d'un concours",
+        slug: "lot",
+      },
+      partner: {
+        emoji: "🤝",
+        label: "Partenariat",
+        description: "Proposer un partenariat ou une collaboration",
+        slug: "partenariat",
+      },
+      other: {
+        emoji: "📩",
+        label: "Autre",
+        description: "Toute autre demande",
+        slug: "autre",
+      },
+    },
+
     // Priority options users/staff can assign.
     priorities: {
       none: {
         emoji: "⚪",
         color: "#95A5A6",
-        label: "None",
+        label: "Aucune",
       },
       low: {
         emoji: "🟢",
         color: "#2ECC71",
-        label: "Low",
+        label: "Faible",
       },
       medium: {
         emoji: "🟡",
         color: "#F1C40F",
-        label: "Medium",
+        label: "Moyenne",
       },
       high: {
         emoji: "🔴",
         color: "#E74C3C",
-        label: "High",
+        label: "Haute",
       },
       urgent: {
         emoji: "🚨",
         color: "#E91E63",
-        label: "Urgent",
+        label: "Urgente",
       },
     },
 
