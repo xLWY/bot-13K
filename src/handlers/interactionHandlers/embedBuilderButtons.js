@@ -127,6 +127,8 @@ export async function handleEmbedBuilderButtons(interaction, client) {
     const customId = interaction.customId;
     const data = getEmbedData(userId);
 
+    logger.info(`Embed builder button clicked: ${customId} by user ${userId}`);
+
     // Handle different button actions
     switch (customId) {
       case 'embed_builder:title':
@@ -168,13 +170,24 @@ export async function handleEmbedBuilderButtons(interaction, client) {
   } catch (error) {
     logger.error(`Embed builder button handler failed`, {
       error: error.message,
+      stack: error.stack,
       customId: interaction.customId,
       userId: interaction.user.id
     });
-    await handleInteractionError(interaction, error, {
-      type: 'button',
-      customId: interaction.customId
-    });
+    
+    // Show a simple error message to the user
+    try {
+      const errorMessage = `❌ Erreur: ${error.message}`;
+      if (interaction.deferred) {
+        await interaction.editReply({ content: errorMessage, components: [] });
+      } else if (interaction.replied) {
+        await interaction.followUp({ content: errorMessage, ephemeral: true });
+      } else {
+        await interaction.reply({ content: errorMessage, ephemeral: true });
+      }
+    } catch (replyError) {
+      logger.error('Failed to send error message:', replyError);
+    }
   }
 }
 
@@ -400,6 +413,8 @@ export async function handleEmbedBuilderModals(interaction, client) {
     const customId = interaction.customId;
     const data = getEmbedData(userId);
 
+    logger.info(`Embed builder modal submitted: ${customId} by user ${userId}`);
+
     switch (customId) {
       case 'embed_builder:modal_title':
         data.title = interaction.fields.getTextInputValue('title_input') || null;
@@ -453,12 +468,23 @@ export async function handleEmbedBuilderModals(interaction, client) {
   } catch (error) {
     logger.error(`Embed builder modal handler failed`, {
       error: error.message,
+      stack: error.stack,
       customId: interaction.customId,
       userId: interaction.user.id
     });
-    await handleInteractionError(interaction, error, {
-      type: 'modal',
-      customId: interaction.customId
-    });
+    
+    // Show a simple error message to the user
+    try {
+      const errorMessage = `❌ Erreur: ${error.message}`;
+      if (interaction.deferred) {
+        await interaction.editReply({ content: errorMessage, components: [] });
+      } else if (interaction.replied) {
+        await interaction.followUp({ content: errorMessage, ephemeral: true });
+      } else {
+        await interaction.reply({ content: errorMessage, ephemeral: true });
+      }
+    } catch (replyError) {
+      logger.error('Failed to send error message:', replyError);
+    }
   }
 }
