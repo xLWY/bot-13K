@@ -79,6 +79,13 @@ class TitanBot extends Client {
       startupLog('Loading handlers...');
       await this.loadHandlers();
       startupLog('Handlers loaded');
+
+      startupLog(
+        `Ticket handlers: ${this.buttons.has('create_ticket_direct') ? '✅ create_ticket_direct registered' : '⚠️ create_ticket_direct MISSING — tickets panel buttons will not work'}`
+      );
+      startupLog(
+        `Ticket handlers: ${this.buttons.has('create_ticket_modal') ? '✅ create_ticket_modal registered' : '⚠️ create_ticket_modal MISSING'}`
+      );
       
       startupLog('Logging into Discord...');
       await this.login(this.config.bot.token);
