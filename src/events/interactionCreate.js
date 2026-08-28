@@ -45,11 +45,11 @@ async function fallbackEligibility(interaction, client) {
   const rateLimitKey = `${interaction.user.id}:create_ticket`;
   const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
   if (!allowed) {
-    await interaction.reply({
-      embeds: [errorEmbed('Trop de tickets', 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.')],
-      flags: MessageFlags.Ephemeral,
-    });
-    return { ok: false };
+    return {
+      ok: false,
+      title: 'Trop de tickets',
+      message: 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.',
+    };
   }
 
   const config = await getGuildConfig(client, interaction.guildId);
@@ -57,25 +57,28 @@ async function fallbackEligibility(interaction, client) {
   const count = await getUserTicketCount(interaction.guildId, interaction.user.id);
 
   if (count >= maxTicketsPerUser) {
-    await interaction.reply({
-      embeds: [
-        errorEmbed(
-          '🎫 Limite de tickets atteinte',
-          `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.\n\n**Tickets actuels :** ${count}/${maxTicketsPerUser}`,
-        ),
-      ],
-      flags: MessageFlags.Ephemeral,
-    });
-    return { ok: false };
+    return {
+      ok: false,
+      title: '🎫 Limite de tickets atteinte',
+      message: `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.\n\n**Tickets actuels :** ${count}/${maxTicketsPerUser}`,
+    };
   }
 
   return { ok: true, config };
 }
 
 async function fallbackTicketButton(interaction, client) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
   try {
     const eligibility = await fallbackEligibility(interaction, client);
-    if (!eligibility.ok) return;
+    if (!eligibility.ok) {
+      if (eligibility.message) {
+        await interaction.editReply({
+          embeds: [errorEmbed(eligibility.title || 'Erreur', eligibility.message)],
+        }).catch(() => {});
+      }
+      return;
+    }
 
     const { config } = eligibility;
 
@@ -100,21 +103,19 @@ async function fallbackTicketButton(interaction, client) {
           ),
         );
 
-      return await interaction.reply({
+      return await interaction.editReply({
         embeds: [typeEmbed],
         components: [new ActionRowBuilder().addComponents(typeSelect)],
-        flags: MessageFlags.Ephemeral,
-      });
+      }).catch(() => {});
     }
 
     const typeId = interaction.customId.split(':')[1] || 'support';
     const type = getTicketTypeForGuild(config, typeId);
 
     if (!type) {
-      return await interaction.reply({
+      return await interaction.editReply({
         embeds: [errorEmbed('Type inconnu', `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur. Contactez un administrateur.`)],
-        flags: MessageFlags.Ephemeral,
-      });
+      }).catch(() => {});
     }
 
     const result = await createTicketFallback(interaction.guild, interaction.member, {
@@ -122,24 +123,19 @@ async function fallbackTicketButton(interaction, client) {
     });
 
     if (result.success) {
-      return await interaction.reply({
+      return await interaction.editReply({
         embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
-        flags: MessageFlags.Ephemeral,
-      });
+      }).catch(() => {});
     }
 
-    return await interaction.reply({
+    return await interaction.editReply({
       embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
-      flags: MessageFlags.Ephemeral,
-    });
+    }).catch(() => {});
   } catch (error) {
     logger.error('Fallback ticket button failed:', error);
-    try {
-      await interaction.reply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
-        flags: MessageFlags.Ephemeral,
-      });
-    } catch (_) { /* interaction already responded */ }
+    await interaction.editReply({
+      embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
+    }).catch(() => {});
   }
 }
 
@@ -543,21 +539,28 @@ async function fallbackTicketClose(interaction, client) {
 }
 
 async function fallbackTicketSelect(interaction, client) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
   try {
     if (!interaction.inGuild()) return;
 
     const eligibility = await fallbackEligibility(interaction, client);
-    if (!eligibility.ok) return;
+    if (!eligibility.ok) {
+      if (eligibility.message) {
+        await interaction.editReply({
+          embeds: [errorEmbed(eligibility.title || 'Erreur', eligibility.message)],
+        }).catch(() => {});
+      }
+      return;
+    }
 
     const typeId = interaction.values?.[0] || 'support';
     const { config } = eligibility;
     const type = getTicketTypeForGuild(config, typeId);
 
     if (!type) {
-      return await interaction.reply({
+      return await interaction.editReply({
         embeds: [errorEmbed('Type inconnu', `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur.`)],
-        flags: MessageFlags.Ephemeral,
-      });
+      }).catch(() => {});
     }
 
     const result = await createTicketFallback(interaction.guild, interaction.member, {
@@ -565,24 +568,19 @@ async function fallbackTicketSelect(interaction, client) {
     });
 
     if (result.success) {
-      return await interaction.reply({
+      return await interaction.editReply({
         embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
-        flags: MessageFlags.Ephemeral,
-      });
+      }).catch(() => {});
     }
 
-    return await interaction.reply({
+    return await interaction.editReply({
       embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
-      flags: MessageFlags.Ephemeral,
-    });
+    }).catch(() => {});
   } catch (error) {
     logger.error('Fallback ticket select failed:', error);
-    try {
-      await interaction.reply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
-        flags: MessageFlags.Ephemeral,
-      });
-    } catch (_) { /* fallback already answered */ }
+    await interaction.editReply({
+      embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
+    }).catch(() => {});
   }
 }
 
