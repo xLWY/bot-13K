@@ -48,56 +48,56 @@ function getBuilderComponents() {
   const row = new ActionRowBuilder()
     .addComponents(
       new ButtonBuilder()
-        .setCustomId('embed_title')
-        .setLabel('Set Title')
+        .setCustomId('embed_builder:title')
+        .setLabel('Définir Titre')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
-        .setCustomId('embed_description')
-        .setLabel('Set Description')
+        .setCustomId('embed_builder:description')
+        .setLabel('Définir Description')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
-        .setCustomId('embed_color')
-        .setLabel('Set Color')
+        .setCustomId('embed_builder:color')
+        .setLabel('Définir Couleur')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
-        .setCustomId('embed_field')
-        .setLabel('Add Field')
+        .setCustomId('embed_builder:field')
+        .setLabel('Ajouter Champ')
         .setStyle(ButtonStyle.Secondary)
     );
 
   const row2 = new ActionRowBuilder()
     .addComponents(
       new ButtonBuilder()
-        .setCustomId('embed_image')
-        .setLabel('Set Image')
+        .setCustomId('embed_builder:image')
+        .setLabel('Définir Image')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
-        .setCustomId('embed_thumbnail')
-        .setLabel('Set Thumbnail')
+        .setCustomId('embed_builder:thumbnail')
+        .setLabel('Définir Miniature')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
-        .setCustomId('embed_footer')
-        .setLabel('Set Footer')
+        .setCustomId('embed_builder:footer')
+        .setLabel('Définir Footer')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
-        .setCustomId('embed_send')
-        .setLabel('Send Embed')
+        .setCustomId('embed_builder:send')
+        .setLabel('Envoyer Embed')
         .setStyle(ButtonStyle.Success)
     );
 
   const row3 = new ActionRowBuilder()
     .addComponents(
       new ButtonBuilder()
-        .setCustomId('embed_preview')
-        .setLabel('Preview')
+        .setCustomId('embed_builder:preview')
+        .setLabel('Prévisualiser')
         .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
-        .setCustomId('embed_reset')
-        .setLabel('Reset')
+        .setCustomId('embed_builder:reset')
+        .setLabel('Réinitialiser')
         .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
-        .setCustomId('embed_cancel')
-        .setLabel('Cancel')
+        .setCustomId('embed_builder:cancel')
+        .setLabel('Annuler')
         .setStyle(ButtonStyle.Secondary)
     );
 
@@ -129,37 +129,37 @@ export async function handleEmbedBuilderButtons(interaction, client) {
 
     // Handle different button actions
     switch (customId) {
-      case 'embed_title':
+      case 'embed_builder:title':
         await showTitleModal(interaction);
         break;
-      case 'embed_description':
+      case 'embed_builder:description':
         await showDescriptionModal(interaction);
         break;
-      case 'embed_color':
+      case 'embed_builder:color':
         await showColorModal(interaction);
         break;
-      case 'embed_field':
+      case 'embed_builder:field':
         await showFieldModal(interaction);
         break;
-      case 'embed_image':
+      case 'embed_builder:image':
         await showImageModal(interaction);
         break;
-      case 'embed_thumbnail':
+      case 'embed_builder:thumbnail':
         await showThumbnailModal(interaction);
         break;
-      case 'embed_footer':
+      case 'embed_builder:footer':
         await showFooterModal(interaction);
         break;
-      case 'embed_preview':
+      case 'embed_builder:preview':
         await showPreview(interaction, data);
         break;
-      case 'embed_reset':
+      case 'embed_builder:reset':
         await resetEmbed(interaction, userId);
         break;
-      case 'embed_cancel':
+      case 'embed_builder:cancel':
         await cancelEmbed(interaction, userId);
         break;
-      case 'embed_send':
+      case 'embed_builder:send':
         await sendEmbed(interaction, data);
         break;
       default:
@@ -180,14 +180,14 @@ export async function handleEmbedBuilderButtons(interaction, client) {
 
 async function showTitleModal(interaction) {
   const modal = new ModalBuilder()
-    .setCustomId('embed_modal_title')
-    .setTitle('Set Embed Title');
+    .setCustomId('embed_builder:modal_title')
+    .setTitle('Définir Titre de l\'Embed');
 
   const titleInput = new TextInputBuilder()
     .setCustomId('title_input')
-    .setLabel('Embed Title')
+    .setLabel('Titre de l\'Embed')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('Enter your embed title here')
+    .setPlaceholder('Entrez votre titre ici')
     .setMaxLength(256)
     .setRequired(false);
 
@@ -199,14 +199,14 @@ async function showTitleModal(interaction) {
 
 async function showDescriptionModal(interaction) {
   const modal = new ModalBuilder()
-    .setCustomId('embed_modal_description')
-    .setTitle('Set Embed Description');
+    .setCustomId('embed_builder:modal_description')
+    .setTitle('Définir Description de l\'Embed');
 
   const descInput = new TextInputBuilder()
     .setCustomId('description_input')
-    .setLabel('Embed Description')
+    .setLabel('Description de l\'Embed')
     .setStyle(TextInputStyle.Paragraph)
-    .setPlaceholder('Enter your embed description here')
+    .setPlaceholder('Entrez votre description ici')
     .setMaxLength(4096)
     .setRequired(false);
 
@@ -218,14 +218,14 @@ async function showDescriptionModal(interaction) {
 
 async function showColorModal(interaction) {
   const modal = new ModalBuilder()
-    .setCustomId('embed_modal_color')
-    .setTitle('Set Embed Color');
+    .setCustomId('embed_builder:modal_color')
+    .setTitle('Définir Couleur de l\'Embed');
 
   const colorInput = new TextInputBuilder()
     .setCustomId('color_input')
-    .setLabel('Color (hex code or decimal)')
+    .setLabel('Couleur (code hex ou décimal)')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('e.g., #00ff00 or 65280')
+    .setPlaceholder('ex: #00ff00 ou 65280')
     .setMaxLength(20)
     .setRequired(false);
 
@@ -237,30 +237,30 @@ async function showColorModal(interaction) {
 
 async function showFieldModal(interaction) {
   const modal = new ModalBuilder()
-    .setCustomId('embed_modal_field')
-    .setTitle('Add Embed Field');
+    .setCustomId('embed_builder:modal_field')
+    .setTitle('Ajouter un Champ à l\'Embed');
 
   const nameInput = new TextInputBuilder()
     .setCustomId('field_name')
-    .setLabel('Field Name')
+    .setLabel('Nom du Champ')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('Field name')
+    .setPlaceholder('Nom du champ')
     .setMaxLength(256)
     .setRequired(true);
 
   const valueInput = new TextInputBuilder()
     .setCustomId('field_value')
-    .setLabel('Field Value')
+    .setLabel('Valeur du Champ')
     .setStyle(TextInputStyle.Paragraph)
-    .setPlaceholder('Field value')
+    .setPlaceholder('Valeur du champ')
     .setMaxLength(1024)
     .setRequired(true);
 
   const inlineInput = new TextInputBuilder()
     .setCustomId('field_inline')
-    .setLabel('Inline? (true/false)')
+    .setLabel('En ligne? (true/false)')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('true or false')
+    .setPlaceholder('true ou false')
     .setMaxLength(5)
     .setRequired(false)
     .setValue('false');
@@ -275,12 +275,12 @@ async function showFieldModal(interaction) {
 
 async function showImageModal(interaction) {
   const modal = new ModalBuilder()
-    .setCustomId('embed_modal_image')
-    .setTitle('Set Embed Image');
+    .setCustomId('embed_builder:modal_image')
+    .setTitle('Définir Image de l\'Embed');
 
   const imageInput = new TextInputBuilder()
     .setCustomId('image_input')
-    .setLabel('Image URL')
+    .setLabel('URL de l\'Image')
     .setStyle(TextInputStyle.Short)
     .setPlaceholder('https://example.com/image.png')
     .setRequired(false);
@@ -293,12 +293,12 @@ async function showImageModal(interaction) {
 
 async function showThumbnailModal(interaction) {
   const modal = new ModalBuilder()
-    .setCustomId('embed_modal_thumbnail')
-    .setTitle('Set Embed Thumbnail');
+    .setCustomId('embed_builder:modal_thumbnail')
+    .setTitle('Définir Miniature de l\'Embed');
 
   const thumbnailInput = new TextInputBuilder()
     .setCustomId('thumbnail_input')
-    .setLabel('Thumbnail URL')
+    .setLabel('URL de la Miniature')
     .setStyle(TextInputStyle.Short)
     .setPlaceholder('https://example.com/thumbnail.png')
     .setRequired(false);
@@ -311,14 +311,14 @@ async function showThumbnailModal(interaction) {
 
 async function showFooterModal(interaction) {
   const modal = new ModalBuilder()
-    .setCustomId('embed_modal_footer')
-    .setTitle('Set Embed Footer');
+    .setCustomId('embed_builder:modal_footer')
+    .setTitle('Définir Footer de l\'Embed');
 
   const footerInput = new TextInputBuilder()
     .setCustomId('footer_input')
-    .setLabel('Footer Text')
+    .setLabel('Texte du Footer')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('Footer text')
+    .setPlaceholder('Texte du footer')
     .setMaxLength(2048)
     .setRequired(false);
 
@@ -401,13 +401,13 @@ export async function handleEmbedBuilderModals(interaction, client) {
     const data = getEmbedData(userId);
 
     switch (customId) {
-      case 'embed_modal_title':
+      case 'embed_builder:modal_title':
         data.title = interaction.fields.getTextInputValue('title_input') || null;
         break;
-      case 'embed_modal_description':
+      case 'embed_builder:modal_description':
         data.description = interaction.fields.getTextInputValue('description_input') || null;
         break;
-      case 'embed_modal_color':
+      case 'embed_builder:modal_color':
         const colorValue = interaction.fields.getTextInputValue('color_input');
         if (colorValue) {
           try {
@@ -425,7 +425,7 @@ export async function handleEmbedBuilderModals(interaction, client) {
           data.color = null;
         }
         break;
-      case 'embed_modal_field':
+      case 'embed_builder:modal_field':
         const fieldName = interaction.fields.getTextInputValue('field_name');
         const fieldValue = interaction.fields.getTextInputValue('field_value');
         const fieldInline = interaction.fields.getTextInputValue('field_inline') === 'true';
@@ -434,13 +434,13 @@ export async function handleEmbedBuilderModals(interaction, client) {
           data.fields.push({ name: fieldName, value: fieldValue, inline: fieldInline });
         }
         break;
-      case 'embed_modal_image':
+      case 'embed_builder:modal_image':
         data.image = interaction.fields.getTextInputValue('image_input') || null;
         break;
-      case 'embed_modal_thumbnail':
+      case 'embed_builder:modal_thumbnail':
         data.thumbnail = interaction.fields.getTextInputValue('thumbnail_input') || null;
         break;
-      case 'embed_modal_footer':
+      case 'embed_builder:modal_footer':
         data.footer = interaction.fields.getTextInputValue('footer_input') || null;
         break;
     }

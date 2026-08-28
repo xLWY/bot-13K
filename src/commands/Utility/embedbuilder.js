@@ -28,56 +28,56 @@ export default {
       const row = new ActionRowBuilder()
         .addComponents(
           new ButtonBuilder()
-            .setCustomId('embed_title')
-            .setLabel('Set Title')
+            .setCustomId('embed_builder:title')
+            .setLabel('Définir Titre')
             .setStyle(ButtonStyle.Primary),
           new ButtonBuilder()
-            .setCustomId('embed_description')
-            .setLabel('Set Description')
+            .setCustomId('embed_builder:description')
+            .setLabel('Définir Description')
             .setStyle(ButtonStyle.Primary),
           new ButtonBuilder()
-            .setCustomId('embed_color')
-            .setLabel('Set Color')
+            .setCustomId('embed_builder:color')
+            .setLabel('Définir Couleur')
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
-            .setCustomId('embed_field')
-            .setLabel('Add Field')
+            .setCustomId('embed_builder:field')
+            .setLabel('Ajouter Champ')
             .setStyle(ButtonStyle.Secondary)
         );
 
       const row2 = new ActionRowBuilder()
         .addComponents(
           new ButtonBuilder()
-            .setCustomId('embed_image')
-            .setLabel('Set Image')
+            .setCustomId('embed_builder:image')
+            .setLabel('Définir Image')
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
-            .setCustomId('embed_thumbnail')
-            .setLabel('Set Thumbnail')
+            .setCustomId('embed_builder:thumbnail')
+            .setLabel('Définir Miniature')
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
-            .setCustomId('embed_footer')
-            .setLabel('Set Footer')
+            .setCustomId('embed_builder:footer')
+            .setLabel('Définir Footer')
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
-            .setCustomId('embed_send')
-            .setLabel('Send Embed')
+            .setCustomId('embed_builder:send')
+            .setLabel('Envoyer Embed')
             .setStyle(ButtonStyle.Success)
         );
 
       const row3 = new ActionRowBuilder()
         .addComponents(
           new ButtonBuilder()
-            .setCustomId('embed_preview')
-            .setLabel('Preview')
+            .setCustomId('embed_builder:preview')
+            .setLabel('Prévisualiser')
             .setStyle(ButtonStyle.Primary),
           new ButtonBuilder()
-            .setCustomId('embed_reset')
-            .setLabel('Reset')
+            .setCustomId('embed_builder:reset')
+            .setLabel('Réinitialiser')
             .setStyle(ButtonStyle.Danger),
           new ButtonBuilder()
-            .setCustomId('embed_cancel')
-            .setLabel('Cancel')
+            .setCustomId('embed_builder:cancel')
+            .setLabel('Annuler')
             .setStyle(ButtonStyle.Secondary)
         );
 

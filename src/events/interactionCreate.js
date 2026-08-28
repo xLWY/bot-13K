@@ -225,7 +225,7 @@ export default {
           }
         } else if (interaction.isButton()) {
           // Handle embed builder buttons
-          if (interaction.customId.startsWith('embed_')) {
+          if (interaction.customId.startsWith('embed_builder:')) {
             try {
               await handleEmbedBuilderButtons(interaction, client);
             } catch (error) {
@@ -293,7 +293,7 @@ export default {
           }
         } else if (interaction.isModalSubmit()) {
           // Handle embed builder modals
-          if (interaction.customId.startsWith('embed_modal_')) {
+          if (interaction.customId.startsWith('embed_builder:modal_')) {
             try {
               await handleEmbedBuilderModals(interaction, client);
             } catch (error) {
