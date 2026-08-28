@@ -5,7 +5,8 @@ import {
   ActionRowBuilder,
   MessageFlags,
 } from 'discord.js';
-import { getTicketType } from '../../services/ticket.js';
+import { getTicketTypeForGuild } from '../../services/ticket.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
 import { logger } from '../../utils/logger.js';
 
 const ticketTypeSelectHandler = {
@@ -16,7 +17,8 @@ const ticketTypeSelectHandler = {
       if (!interaction.inGuild()) return;
 
       const typeId = interaction.values?.[0] || 'support';
-      const type = getTicketType(typeId);
+      const guildConfig = await getGuildConfig(client, interaction.guildId);
+      const type = getTicketTypeForGuild(guildConfig, typeId);
 
       const modal = new ModalBuilder()
         .setCustomId(`create_ticket_modal:${typeId}`)

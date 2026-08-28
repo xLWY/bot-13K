@@ -22,7 +22,7 @@ import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
 import { getGuildConfigKey } from '../../../utils/database.js';
-import { getUserTicketCount, buildTicketTypeButtons } from '../../../services/ticket.js';
+import { getUserTicketCount, buildTicketTypeButtons, resolveTicketTypes } from '../../../services/ticket.js';
 
 const DEFAULT_PANEL_MESSAGE =
     "Bonjour ! Besoin d'aide ou d'une question ? Cliquez sur le bouton ci-dessous pour ouvrir un ticket.";
@@ -46,6 +46,8 @@ function buildDashboardEmbed(config, guild) {
     const rawMsg = config.ticketPanelMessage || DEFAULT_PANEL_MESSAGE;
     const panelMsg = `\`${rawMsg.length > 60 ? rawMsg.substring(0, 60) + '…' : rawMsg}\``;
     const btnLabel = `\`${config.ticketButtonLabel || DEFAULT_BUTTON_LABEL}\``;
+    const typesSummary =
+        resolveTicketTypes(config).map((t) => `${t.emoji} ${t.label}`).join(' • ') || '`Aucun`';
 
     return new EmbedBuilder()
         .setTitle('🎫 Tableau de bord Tickets')
@@ -64,6 +66,7 @@ function buildDashboardEmbed(config, guild) {
             { name: '📬 MP à la fermeture', value: config.dmOnClose !== false ? '✅ Activé' : '❌ Désactivé', inline: true },
             { name: '🎫 Salon des logs tickets', value: ticketLogsChannel, inline: true },
             { name: '📜 Salon des transcripts', value: transcriptChannel, inline: true },
+            { name: '🔘 Boutons du panneau', value: typesSummary, inline: false },
         )
         .setFooter({ text: 'Sélectionnez une option ci-dessous • Le tableau de bord se ferme après 10 minutes d\'inactivité' })
         .setTimestamp();
@@ -109,6 +112,16 @@ function buildSelectMenu(guildId) {
                 .setDescription('Salon recevant les transcripts à la suppression')
                 .setValue('transcript_channel')
                 .setEmoji('📜'),
+            new StringSelectMenuOptionBuilder()
+                .setLabel('➕ Ajouter un bouton')
+                .setDescription('Ajouter une nouvelle catégorie de ticket (bouton sur le panneau)')
+                .setValue('add_type')
+                .setEmoji('➕'),
+            new StringSelectMenuOptionBuilder()
+                .setLabel('➖ Supprimer un bouton')
+                .setDescription('Retirer une catégorie de ticket du panneau')
+                .setValue('remove_type')
+                .setEmoji('➖'),
         );
 }
 
@@ -173,7 +186,7 @@ async function updateLivePanel(client, guild, config) {
             .setColor(getColor('info'))
             .setFooter({ text: 'Choisissez un bouton ci-dessous pour ouvrir un ticket' });
 
-        await panelMsg.edit({ embeds: [updatedEmbed], components: buildTicketTypeButtons() });
+        await panelMsg.edit({ embeds: [updatedEmbed], components: buildTicketTypeButtons(resolveTicketTypes(config)) });
         return true;
     } catch (error) {
         logger.warn('Failed to update live ticket panel:', error.message);
@@ -257,6 +270,12 @@ export default {
                             break;
                         case 'transcript_channel':
                             await handleTranscriptChannel(selectInteraction, interaction, guildConfig, guildId, client);
+                            break;
+                        case 'add_type':
+                            await handleAddType(selectInteraction, interaction, guildConfig, guildId, client);
+                            break;
+                        case 'remove_type':
+                            await handleRemoveType(selectInteraction, interaction, guildConfig, guildId, client);
                             break;
                     }
                 } catch (error) {
@@ -706,6 +725,199 @@ async function handleMaxTickets(selectInteraction, rootInteraction, guildConfig,
     });
 
     await refreshDashboard(rootInteraction, guildConfig, guildId);
+}
+
+// ─── Ticket Type Buttons ──────────────────────────────────────────────────────
+
+function slugifyLabel(label) {
+    return label
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'ticket';
+}
+
+async function handleAddType(selectInteraction, rootInteraction, guildConfig, guildId, client) {
+    const modal = new ModalBuilder()
+        .setCustomId('ticket_cfg_add_type')
+        .setTitle('➕ Ajouter un bouton')
+        .addComponents(
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('type_emoji_input')
+                    .setLabel('Emoji du bouton')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('🎁')
+                    .setMaxLength(40)
+                    .setMinLength(1)
+                    .setRequired(true),
+            ),
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('type_label_input')
+                    .setLabel('Nom du bouton (80 caractères max)')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Lot du concours')
+                    .setMaxLength(80)
+                    .setMinLength(1)
+                    .setRequired(true),
+            ),
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('type_desc_input')
+                    .setLabel('Description (optionnelle)')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setPlaceholder('Fait apparaître ce texte dans la modale de création')
+                    .setMaxLength(100)
+                    .setRequired(false),
+            ),
+        );
+
+    await selectInteraction.showModal(modal);
+
+    const submitted = await selectInteraction
+        .awaitModalSubmit({
+            filter: i => i.customId === 'ticket_cfg_add_type' && i.user.id === selectInteraction.user.id,
+            time: 120_000,
+        })
+        .catch(() => null);
+
+    if (!submitted) return;
+
+    const emoji = submitted.fields.getTextInputValue('type_emoji_input').trim();
+    const label = submitted.fields.getTextInputValue('type_label_input').trim();
+    const description = submitted.fields.getTextInputValue('type_desc_input').trim();
+
+    if (emoji.length === 0 || /\s/.test(emoji) || emoji.length > 40) {
+        await submitted.reply({
+            embeds: [errorEmbed('Emoji invalide', 'L\'emoji doit être un seul emoji ou une emoji personnalisée (ex. `🎁` ou `<:nom:123456789>`).')],
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    if (label.length === 0 || label.length > 80) {
+        await submitted.reply({
+            embeds: [errorEmbed('Nom invalide', 'Le nom du bouton doit contenir entre **1** et **80** caractères.')],
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    const currentTypes = resolveTicketTypes(guildConfig);
+    const baseSlug = slugifyLabel(label);
+    let slug = baseSlug;
+    let n = 2;
+    while (currentTypes.some((t) => t.slug === slug || t.id === slug)) {
+        slug = `${baseSlug}-${n++}`;
+    }
+
+    const newType = { id: slug, emoji, label, description, slug };
+    guildConfig.ticketTypes = [...currentTypes, newType];
+    await client.db.set(getGuildConfigKey(guildId), guildConfig);
+
+    const panelUpdated = await updateLivePanel(client, rootInteraction.guild, guildConfig);
+
+    await submitted.reply({
+        embeds: [
+            successEmbed(
+                '✅ Bouton ajouté',
+                `Le bouton **${emoji} ${label}** a été ajouté au panneau.${
+                    panelUpdated
+                        ? '\nLe panneau de tickets en direct a été actualisé.'
+                        : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Le bouton apparaîtra à la prochaine exécution de `/ticket setup`.'
+                }`,
+            ),
+        ],
+        flags: MessageFlags.Ephemeral,
+    });
+
+    await refreshDashboard(rootInteraction, guildConfig, guildId);
+}
+
+async function handleRemoveType(selectInteraction, rootInteraction, guildConfig, guildId, client) {
+    const currentTypes = resolveTicketTypes(guildConfig);
+
+    if (currentTypes.length <= 1) {
+        await selectInteraction.reply({
+            embeds: [errorEmbed('Impossible', 'Au moins un bouton doit rester sur le panneau.')],
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    await selectInteraction.deferUpdate();
+
+    const typeSelect = new StringSelectMenuBuilder()
+        .setCustomId('ticket_cfg_remove_type')
+        .setPlaceholder('Sélectionnez le bouton à supprimer…')
+        .setMinValues(1)
+        .setMaxValues(1)
+        .addOptions(
+            currentTypes.map((t) =>
+                new StringSelectMenuOptionBuilder()
+                    .setLabel(`${t.emoji} ${t.label}`)
+                    .setDescription(t.description ? t.description.substring(0, 100) : t.id)
+                    .setValue(t.id),
+            ),
+        );
+
+    await selectInteraction.followUp({
+        embeds: [
+            new EmbedBuilder()
+                .setTitle('➖ Supprimer un bouton')
+                .setDescription('Sélectionnez la catégorie de ticket à retirer du panneau.')
+                .setColor(getColor('info')),
+        ],
+        components: [new ActionRowBuilder().addComponents(typeSelect)],
+        flags: MessageFlags.Ephemeral,
+    });
+
+    const typeCollector = rootInteraction.channel.createMessageComponentCollector({
+        componentType: ComponentType.StringSelect,
+        filter: i => i.user.id === selectInteraction.user.id && i.customId === 'ticket_cfg_remove_type',
+        time: 60_000,
+        max: 1,
+    });
+
+    typeCollector.on('collect', async (typeInteraction) => {
+        await typeInteraction.deferUpdate();
+        const removedId = typeInteraction.values[0];
+
+        const remaining = resolveTicketTypes(guildConfig).filter((t) => t.id !== removedId);
+        guildConfig.ticketTypes = remaining;
+        await client.db.set(getGuildConfigKey(guildId), guildConfig);
+
+        const panelUpdated = await updateLivePanel(client, rootInteraction.guild, guildConfig);
+
+        await typeInteraction.followUp({
+            embeds: [
+                successEmbed(
+                    '✅ Bouton supprimé',
+                    `Le bouton a été retiré du panneau.${
+                        panelUpdated
+                            ? '\nLe panneau de tickets en direct a été actualisé.'
+                            : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé.'
+                    }`,
+                ),
+            ],
+            flags: MessageFlags.Ephemeral,
+        });
+
+        await refreshDashboard(rootInteraction, guildConfig, guildId);
+    });
+
+    typeCollector.on('end', (collected, reason) => {
+        if (reason === 'time' && collected.size === 0) {
+            selectInteraction
+                .followUp({
+                    embeds: [errorEmbed('Délai dépassé', 'Aucun bouton sélectionné. Aucune modification n\'a été effectuée.')],
+                    flags: MessageFlags.Ephemeral,
+                })
+                .catch(() => {});
+        }
+    });
 }
 
 // ─── DM on Close Toggle ───────────────────────────────────────────────────────

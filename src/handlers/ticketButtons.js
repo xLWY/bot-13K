@@ -8,7 +8,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
-import { createTicket, closeTicket, claimTicket, updateTicketPriority, getTicketTypes, getTicketType, getPriorityInfo } from '../services/ticket.js';
+import { createTicket, closeTicket, claimTicket, updateTicketPriority, getTicketTypeForGuild, resolveTicketTypes, getPriorityInfo } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
 import { logger } from '../utils/logger.js';
@@ -106,11 +106,11 @@ export const createTicketHandler = {
         .setCustomId('ticket_type_select')
         .setPlaceholder('Sélectionnez un type de ticket…')
         .addOptions(
-          Object.entries(getTicketTypes()).map(([id, type]) =>
+          resolveTicketTypes(config).map((type) =>
             new StringSelectMenuOptionBuilder()
               .setLabel(type.label)
               .setDescription(type.description)
-              .setValue(id)
+              .setValue(type.id)
               .setEmoji(type.emoji),
           ),
         );
@@ -166,7 +166,7 @@ export const createTicketDirectHandler = {
       }
 
       const typeId = interaction.customId.split(':')[1] || 'support';
-      const type = getTicketType(typeId);
+      const type = getTicketTypeForGuild(config, typeId);
 
       const modal = new ModalBuilder()
         .setCustomId(`create_ticket_modal:${typeId}`)

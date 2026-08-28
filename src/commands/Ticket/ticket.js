@@ -6,7 +6,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
-import { buildTicketTypeButtons } from '../../services/ticket.js';
+import { buildTicketTypeButtons, resolveTicketTypes } from '../../services/ticket.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
@@ -167,7 +167,7 @@ export default {
                 try {
                     await panelChannel.send({
                         embeds: [setupEmbed],
-                        components: buildTicketTypeButtons(),
+                        components: buildTicketTypeButtons(resolveTicketTypes(existingConfig)),
                     });
 
                     if (client.db && interaction.guildId) {

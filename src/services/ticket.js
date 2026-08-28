@@ -78,13 +78,59 @@ export function getPriorityInfo(priority) {
   return PRIORITY_MAP[priority] || PRIORITY_MAP.none;
 }
 
+export function resolveTicketTypes(guildConfig = {}) {
+  const raw =
+    Array.isArray(guildConfig?.ticketTypes) && guildConfig.ticketTypes.length
+      ? guildConfig.ticketTypes
+      : Object.entries(DEFAULT_TYPES).map(([id, type]) => ({ id, ...type }));
+
+  return raw
+    .map((type) => {
+      const id = String(type.id || type.slug || 'support');
+      const slug =
+        String(type.slug || id)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') || 'ticket';
+      return {
+        id,
+        emoji: type.emoji || '🎫',
+        label: type.label || 'Ticket',
+        description: type.description || '',
+        slug,
+      };
+    })
+    .filter((type) => type.label.trim().length > 0);
+}
+
+export function getTicketTypesForGuild(guildConfig = {}) {
+  const map = {};
+  for (const type of resolveTicketTypes(guildConfig)) {
+    map[type.id] = type;
+  }
+  return map;
+}
+
+export function getTicketTypeForGuild(guildConfig, typeId) {
+  const types = getTicketTypesForGuild(guildConfig);
+  return (
+    types[typeId] ||
+    types.support ||
+    types[Object.keys(types)[0]] ||
+    getTicketType('support')
+  );
+}
+
 async function findTicketEmbedMessage(channel) {
   const messages = await channel.messages.fetch();
   return messages.find((m) => m.embeds.length > 0 && m.embeds[0].title?.startsWith('🎫 Ticket #'));
 }
 
 function buildTicketEmbed({ ticketData, guild, member, ticketNumber }) {
-  const type = getTicketType(ticketData.ticketType);
+  const type = {
+    emoji: ticketData.ticketTypeEmoji || getTicketType(ticketData.ticketType).emoji,
+    label: ticketData.ticketTypeLabel || getTicketType(ticketData.ticketType).label,
+  };
   const priority = getPriorityInfo(ticketData.priority);
   const status = ticketData.status === 'closed' ? '🔴 Fermé' : '🟢 Ouvert';
   const claimedBy = ticketData.claimedBy ? `<@${ticketData.claimedBy}>` : 'Personne';
@@ -173,15 +219,14 @@ function buildTicketButtons(ticketData, { enablePriority = true } = {}) {
   return rows;
 }
 
-export function buildTicketTypeButtons() {
-  const types = Object.entries(getTicketTypes());
+export function buildTicketTypeButtons(types = resolveTicketTypes()) {
   const rows = [];
   for (let i = 0; i < types.length; i += 5) {
     rows.push(
       new ActionRowBuilder().addComponents(
-        types.slice(i, i + 5).map(([id, type]) =>
+        types.slice(i, i + 5).map((type) =>
           new ButtonBuilder()
-            .setCustomId(`create_ticket_direct:${id}`)
+            .setCustomId(`create_ticket_direct:${type.id}`)
             .setLabel(type.label)
             .setStyle(ButtonStyle.Primary)
             .setEmoji(type.emoji),
@@ -223,7 +268,7 @@ export async function createTicket(guild, member, options = {}) {
   const priority = options.priority || 'none';
   try {
     const config = await getGuildConfig(guild.client, guild.id);
-    const type = getTicketType(typeId);
+    const type = getTicketTypeForGuild(config, typeId);
 
     const maxTicketsPerUser = config.maxTicketsPerUser ?? 3;
     const currentTicketCount = await getUserTicketCount(guild.id, member.id);
@@ -299,7 +344,9 @@ export async function createTicket(guild, member, options = {}) {
       status: 'open',
       claimedBy: null,
       priority: priority || 'none',
-      ticketType: typeId,
+      ticketType: type.id,
+      ticketTypeEmoji: type.emoji,
+      ticketTypeLabel: type.label,
       reason,
     };
 
