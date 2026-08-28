@@ -249,12 +249,13 @@ export async function createTicket(guild, member, options = {}) {
     const ticketNumber = await getNextTicketNumber(guild.id);
     let channelName = `${type.emoji}-${type.slug}-ticket-${ticketNumber}`;
 
-    const allowPerms = [
+const allowPerms = [
       PermissionFlagsBits.ViewChannel,
       PermissionFlagsBits.SendMessages,
       PermissionFlagsBits.AttachFiles,
       PermissionFlagsBits.ReadMessageHistory,
       PermissionFlagsBits.AddReactions,
+      PermissionFlagsBits.MentionEveryone,
     ];
 
 channel = await guild.channels.create({
