@@ -145,7 +145,6 @@ export default {
                     'ticket_close',
                     'ticket_close_modal',
                     'ticket_claim',
-                    'ticket_priority',
                     'ticket_pin',
                     'ticket_unclaim',
                     'ticket_reopen',

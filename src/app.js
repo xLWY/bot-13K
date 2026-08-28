@@ -311,7 +311,6 @@ class TitanBot extends Client {
         ticketButtons.closeTicketHandler,
         ticketButtons.closeTicketModalHandler,
         ticketButtons.claimTicketHandler,
-        ticketButtons.priorityTicketHandler,
         ticketButtons.pinTicketHandler,
         ticketButtons.unclaimTicketHandler,
         ticketButtons.reopenTicketHandler,

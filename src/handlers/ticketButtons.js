@@ -8,7 +8,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
-import { createTicket, closeTicket, claimTicket, updateTicketPriority, getTicketTypeForGuild, resolveTicketTypes, getPriorityInfo } from '../services/ticket.js';
+import { createTicket, closeTicket, claimTicket, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
 import { logger } from '../utils/logger.js';
@@ -409,73 +409,6 @@ export const claimTicketHandler = {
   }
 };
 
-export const priorityTicketHandler = {
-  name: 'ticket_priority',
-  async execute(interaction, client, args) {
-    try {
-      if (!(await ensureGuildContext(interaction))) return;
-
-      const permissionCheck = await checkTicketPermissionWithTimeout(
-        interaction,
-        client,
-        'modifier la priorité du ticket',
-        {},
-        2000,
-      );
-
-      if (!permissionCheck.success) {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral,
-          });
-        }
-        return;
-      }
-
-      const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
-      if (!deferSuccess) return;
-
-      const priority = args?.[0];
-      if (!priority) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Priorité invalide', 'Une valeur de priorité est requise.')],
-          flags: MessageFlags.Ephemeral,
-        });
-        return;
-      }
-
-      const result = await updateTicketPriority(interaction.channel, priority, interaction.user);
-
-      if (result.success) {
-        const priorityInfo = getPriorityInfo(priority);
-        await interaction.editReply({
-          embeds: [successEmbed(`Priorité définie sur **${priorityInfo.emoji} ${priorityInfo.label}**.`, '📊 Priorité Mise à Jour')],
-          flags: MessageFlags.Ephemeral,
-        });
-      } else {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', result.error || 'Impossible de mettre à jour la priorité.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-    } catch (error) {
-      logger.error('Error updating ticket priority:', error);
-      if (interaction.deferred) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la mise à jour de la priorité.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      } else if (!interaction.replied) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la mise à jour de la priorité.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-    }
-  }
-};
-
 export const pinTicketHandler = {
   name: 'ticket_pin',
   async execute(interaction, client) {
@@ -779,7 +712,6 @@ export {
   closeTicketModalHandler,
   closeTicketHandler,
   claimTicketHandler,
-  priorityTicketHandler,
   pinTicketHandler,
   unclaimTicketHandler,
   reopenTicketHandler,
