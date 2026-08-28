@@ -129,7 +129,7 @@ export default {
             const newRow = createGiveawayButtons(true);
 
             await message.edit({
-                content: "🏁 **CONCOURS TERMINÉ** 🏁",
+                content: "",
                 embeds: [newEmbed],
                 components: [newRow],
             });
@@ -140,7 +140,7 @@ export default {
                     .map((id) => `<@${id}>`)
                     .join(", ");
                 const winnerPingMsg = await channel.send({
-                    content: `🎉 Félicitations ${winnerMentions} ! Tu as gagné le concours **${updatedGiveaway.prize || 'Concours mystère'}** ! Contacte <@${updatedGiveaway.hostId}> pour récupérer ton lot. 🎁`,
+                    content: `🎉 Félicitations ${winnerMentions} ! Tu as gagné le concours **${updatedGiveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`,
                 });
                 updatedGiveaway.winnerPingMessageId = winnerPingMsg.id;
                 await saveGiveaway(interaction.client, interaction.guildId, updatedGiveaway);

@@ -117,7 +117,6 @@ export default {
             
             
             const giveawayMessage = await targetChannel.send({
-                content: "🎉 **NOUVEAU CONCOURS** 🎉",
                 embeds: [embed],
                 components: [row],
             });

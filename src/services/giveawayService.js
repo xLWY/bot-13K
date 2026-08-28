@@ -180,7 +180,7 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
 
         const embed = new EmbedBuilder()
             .setTitle(isEnded ? (status === 'reroll' ? '🔄 Concours Re-tiré' : '🏁 Concours Terminé') : '🎉 Concours en Cours')
-            .setDescription(`**🎁 ${prize}**`)
+            .setDescription(`**__🎁 ${prize}__**`)
             .setColor(color)
             .addFields(
                 { name: '👑 Organisé par', value: `<@${giveaway.hostId}>`, inline: true },
@@ -229,11 +229,6 @@ export function createGiveawayButtons(ended = false) {
                     .setCustomId('giveaway_reroll')
                     .setLabel('🎲 Re-tirer')
                     .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(false),
-                new ButtonBuilder()
-                    .setCustomId('giveaway_view')
-                    .setLabel('👁️ Voir les gagnants')
-                    .setStyle(ButtonStyle.Primary)
                     .setDisabled(false)
             );
         } else {
@@ -458,6 +453,7 @@ export async function checkGiveaways(client) {
         const endedEmbed = createGiveawayEmbed(giveaway, 'ended', winners);
 
         await message.edit({
+          content: '',
           embeds: [endedEmbed],
           components: [createGiveawayButtons(true)]
         });
@@ -475,7 +471,7 @@ export async function checkGiveaways(client) {
         }
 
         if (winners.length > 0) {
-          const winnerAnnouncement = `🎉 Félicitations ${winners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Contacte <@${giveaway.hostId}> pour récupérer ton lot. 🎁`;
+          const winnerAnnouncement = `🎉 Félicitations ${winners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`;
           const winnerPingMsg = await channel.send({ content: winnerAnnouncement });
           giveaway.winnerPingMessageId = winnerPingMsg.id;
           await markGiveawayEnded(client, giveawayId, giveaway);

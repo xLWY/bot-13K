@@ -71,6 +71,7 @@ export const giveawayJoinHandler = {
                 const updatedRow = createGiveawayButtons(false);
 
                 await interaction.message.edit({
+                    content: '',
                     embeds: [updatedEmbed],
                     components: [updatedRow]
                 });
@@ -151,13 +152,13 @@ export const giveawayEndHandler = {
             const updatedRow = createGiveawayButtons(true);
 
             await interaction.message.edit({
-                content: '🏁 **CONCOURS TERMINÉ** 🏁',
+                content: '',
                 embeds: [updatedEmbed],
                 components: [updatedRow]
             });
 
             if (winners.length > 0) {
-                const winnerPing = `🎉 Félicitations ${winners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Contacte <@${giveaway.hostId}> pour récupérer ton lot. 🎁`;
+                const winnerPing = `🎉 Félicitations ${winners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`;
                 const pingMsg = await interaction.channel.send({ content: winnerPing });
                 giveaway.winnerPingMessageId = pingMsg.id;
                 await saveGiveaway(client, interaction.guildId, giveaway);
@@ -296,12 +297,12 @@ export const giveawayRerollHandler = {
             const updatedRow = createGiveawayButtons(true);
 
             await interaction.message.edit({
-                content: '🔄 **CONCOURS RE-TIRÉ** 🔄',
+                content: '',
                 embeds: [updatedEmbed],
                 components: [updatedRow]
             });
 
-            const rerollPing = `🔄 Nouveau tirage ! Félicitations ${newWinners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Contacte <@${giveaway.hostId}> pour récupérer ton lot. 🎁`;
+            const rerollPing = `🔄 Nouveau tirage ! Félicitations ${newWinners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`;
             const pingMsg = await interaction.channel.send({ content: rerollPing });
             giveaway.winnerPingMessageId = pingMsg.id;
             await saveGiveaway(client, interaction.guildId, giveaway);

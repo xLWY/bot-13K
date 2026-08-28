@@ -166,11 +166,11 @@ export default {
                     : null;
                 if (existingPingMsg) {
                     await existingPingMsg.edit({
-                        content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Contacte <@${giveaway.hostId}> pour récupérer ton lot. 🎁`,
+                        content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`,
                     });
                 } else {
                     const newPingMsg = await channel.send({
-                        content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Contacte <@${giveaway.hostId}> pour récupérer ton lot. 🎁`,
+                        content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`,
                     });
                     updatedGiveaway.winnerPingMessageId = newPingMsg.id;
                 }
@@ -231,7 +231,7 @@ export default {
             const newRow = createGiveawayButtons(true);
 
             await message.edit({
-                content: "🔄 **CONCOURS RE-TIRÉ** 🔄",
+                content: "",
                 embeds: [newEmbed],
                 components: [newRow],
             });
@@ -246,11 +246,11 @@ export default {
                 : null;
             if (existingPingMsg) {
                 await existingPingMsg.edit({
-                    content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Contacte <@${giveaway.hostId}> pour récupérer ton lot. 🎁`,
+                    content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`,
                 });
             } else {
                 const newPingMsg = await channel.send({
-                    content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Contacte <@${giveaway.hostId}> pour récupérer ton lot. 🎁`,
+                    content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`,
                 });
                 updatedGiveaway.winnerPingMessageId = newPingMsg.id;
             }
