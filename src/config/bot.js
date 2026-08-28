@@ -40,6 +40,9 @@ export const botConfig = {
     // Owners can access owner/admin-level bot commands.
     owners: process.env.OWNER_IDS?.split(",") || [],
 
+    // Extra text prefix used in chat (slash commands with `/` stay enabled).
+    defaultPrefix: "!",
+
     // Default wait time between command uses (in seconds).
     defaultCooldown: 3, 
 

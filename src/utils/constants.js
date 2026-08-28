@@ -34,6 +34,7 @@ export const DEFAULT_ECONOMY_DATA = {
 
 
 export const DEFAULT_GUILD_CONFIG = {
+    prefix: '!',
     logIgnore: { users: [], channels: [] },
     enabledCommands: {},
     reportChannelId: null,
