@@ -95,6 +95,11 @@ export default {
             subcommand
                 .setName("dashboard")
                 .setDescription("Ouvre le tableau de bord interactif du système de tickets"),
+        )
+        .addSubcommand((subcommand) =>
+            subcommand
+                .setName("debug")
+                .setDescription("Diagnostique l'état du système de tickets (boutons, menus, modales)"),
         ),
     category: "ticket",
 
@@ -126,6 +131,59 @@ export default {
             }
 
             const subcommand = interaction.options.getSubcommand();
+
+            if (subcommand === "debug") {
+                const check = (name, collection) =>
+                    collection.has(name)
+                        ? `✅ \`${name}\``
+                        : `❌ \`${name}\``;
+
+                const buttonNames = [
+                    'create_ticket',
+                    'create_ticket_direct',
+                    'create_ticket_modal',
+                    'ticket_close',
+                    'ticket_close_modal',
+                    'ticket_claim',
+                    'ticket_priority',
+                    'ticket_pin',
+                    'ticket_unclaim',
+                    'ticket_reopen',
+                    'ticket_delete',
+                ];
+
+                const botVersion = `\`${process.env.COMMIT_SHA || 'inconnu'}\``;
+
+                const debugEmbed = createEmbed({
+                    title: '🔍 Diagnostic du système de tickets',
+                    description: `**Version déployée :** ${botVersion}\n**Boutons enregistrés :** ${client.buttons.size} · **Menus :** ${client.selectMenus.size} · **Modales :** ${client.modals.size}`,
+                    color: 0x3498db,
+                    timestamp: true,
+                }).addFields(
+                    {
+                        name: 'Boutons',
+                        value: buttonNames
+                            .map((n) => check(n, client.buttons))
+                            .join('\n'),
+                        inline: true,
+                    },
+                    {
+                        name: 'Menus & Modales',
+                        value: `${check('ticket_type_select', client.selectMenus)}\n${check('create_ticket_modal', client.modals)}\n${check('ticket_close_modal', client.modals)}`,
+                        inline: true,
+                    },
+                    {
+                        name: 'Etapes suivantes',
+                        value: client.buttons.has('create_ticket_direct')
+                            ? 'Tout est en ordre : recharge la page du panneau (ré-envoie-le avec `/ticket setup` dans un salon de test si besoin).'
+                            : 'Le bouton `create_ticket_direct` n\'est pas chargé sur ce serveur. Le bot tourne avec une version périmée de `handlers/ticketButtons.js` — il faut redéployer.\n\n⚠️ Si une ligne `❌` apparaît pour TOUS les boutons, les interactions ne sont pas chargées du tout : vérifie `Error loading interaction` dans les logs.',
+                    },
+                );
+
+                return await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [debugEmbed],
+                });
+            }
 
             if (subcommand === "dashboard") {
                 return ticketConfig.execute(interaction, config, client);
