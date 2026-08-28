@@ -15,7 +15,7 @@ import {
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { errorEmbed, successEmbed, createEmbed } from '../utils/embeds.js';
-import { saveTicketData, incrementTicketCounter } from '../utils/database.js';
+import { saveTicketData, getTicketData, incrementTicketCounter } from '../utils/database.js';
 import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 import { handleEmbedBuilderButtons, handleEmbedBuilderModals } from '../handlers/interactionHandlers/embedBuilderButtons.js';
@@ -25,7 +25,9 @@ import { createInteractionTraceContext, runWithTraceContext } from '../utils/tra
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
-import { closeTicket, getUserTicketCount, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
+import { getUserTicketCount, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
+
+logger.info('[TicketFallback] v3 chargé — création + fermeture autonomes, boutons simplifiés.');
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -284,13 +286,122 @@ async function fallbackTicketModal(interaction, client) {
   }
 }
 
+async function closeTicketFallback(channel, closer) {
+  try {
+    const ticketData = await getTicketData(channel.guild.id, channel.id);
+    if (!ticketData) {
+      return { success: false, error: "Ce canal n'est pas un ticket." };
+    }
+    if (ticketData.status === 'closed') {
+      return { success: false, error: 'Ce ticket est déjà fermé.' };
+    }
+
+    const ticketNumber = ticketData.ticketNumber || '';
+
+    ticketData.status = 'closed';
+    ticketData.closedBy = closer.id;
+    ticketData.closedAt = new Date().toISOString();
+    ticketData.closeReason = 'Aucun motif précisé.';
+    await saveTicketData(channel.guild.id, channel.id, ticketData);
+
+    try {
+      const config = await getGuildConfig(channel.client, channel.guild.id);
+      const closedCategoryId = config.ticketClosedCategoryId || null;
+      if (closedCategoryId && channel.parentId !== closedCategoryId) {
+        const closedCategory =
+          channel.guild.channels.cache.get(closedCategoryId) ||
+          (await channel.guild.channels.fetch(closedCategoryId).catch(() => null));
+        if (closedCategory?.type === ChannelType.GuildCategory) {
+          await channel.setParent(closedCategoryId, { lockPermissions: false });
+        }
+      }
+    } catch (_) {}
+
+    try {
+      const ticketCreator = await channel.client.users.fetch(ticketData.userId).catch(() => null);
+      if (ticketCreator) {
+        await ticketCreator.send({
+          embeds: [
+            createEmbed({
+              title: '🎫 Votre ticket a été fermé',
+              description: `Votre ticket **${channel.name}** a été fermé.\n\n**Fermé par :** ${closer}\n**Fermé le :** <t:${Math.floor(Date.now() / 1000)}:F>\n\nMerci d'avoir utilisé notre support !`,
+              color: '#e74c3c',
+            }),
+          ],
+        });
+      }
+    } catch (_) {}
+
+    try {
+      const overwrite = channel.permissionOverwrites.cache.get(ticketData.userId);
+      if (overwrite) {
+        await overwrite.edit({ ViewChannel: false, SendMessages: false });
+      }
+    } catch (_) {}
+
+    try {
+      const messages = await channel.messages.fetch();
+      const ticketMessage = messages.find((m) => m.embeds.length > 0 && m.embeds[0].title?.startsWith('🎫 Ticket #'));
+      if (ticketMessage) {
+        await ticketMessage.edit({
+          embeds: [
+            createEmbed({
+              title: ticketNumber ? `🎫 Ticket #${ticketNumber}` : '🎫 Ticket Fermé',
+              description: `🔒 Ce ticket a été **fermé**.\n\nMerci d'avoir utilisé notre support !`,
+              color: '#e74c3c',
+              timestamp: false,
+            }),
+          ],
+          components: [],
+        });
+      }
+    } catch (_) {}
+
+    try {
+      await channel.send({
+        embeds: [
+          createEmbed({
+            title: '🔒 Ticket Fermé',
+            description: `Ce ticket a été fermé par ${closer}.`,
+            color: '#e74c3c',
+          }),
+        ],
+        components: [
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('ticket_reopen')
+              .setLabel('Rouvrir')
+              .setStyle(ButtonStyle.Success)
+              .setEmoji('🔓'),
+            new ButtonBuilder()
+              .setCustomId('ticket_delete')
+              .setLabel('Supprimer')
+              .setStyle(ButtonStyle.Danger)
+              .setEmoji('🗑️'),
+          ),
+        ],
+      });
+    } catch (_) {}
+
+    return { success: true, channel, ticketData };
+  } catch (error) {
+    const detail = error?.message || String(error);
+    logger.error('Fallback closeTicket failed:', detail);
+    return {
+      success: false,
+      error: 'Impossible de fermer le ticket. Réessayez dans un instant.',
+      debug: detail,
+    };
+  }
+}
+
 async function fallbackTicketClose(interaction, client) {
   try {
     if (!interaction.inGuild()) return;
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
 
-    const result = await closeTicket(interaction.channel, interaction.member);
+    const result = await closeTicketFallback(interaction.channel, interaction.member);
 
     if (result.success) {
       return await interaction.editReply({
