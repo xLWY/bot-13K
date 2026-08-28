@@ -25,7 +25,7 @@ import { createInteractionTraceContext, runWithTraceContext } from '../utils/tra
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
-import { getUserTicketCount, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
+import { closeTicket, getUserTicketCount, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -227,16 +227,6 @@ async function createTicketFallback(guild, member, options = {}) {
             .setLabel('Fermer')
             .setStyle(ButtonStyle.Danger)
             .setEmoji('🔒'),
-          new ButtonBuilder()
-            .setCustomId('ticket_claim')
-            .setLabel('Réclamer')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('🙋'),
-          new ButtonBuilder()
-            .setCustomId('ticket_pin')
-            .setLabel('Épingler')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('📌'),
         ),
       ],
     });
@@ -289,6 +279,33 @@ async function fallbackTicketModal(interaction, client) {
       await interaction.reply({
         embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la création de votre ticket.')],
         flags: MessageFlags.Ephemeral,
+      });
+    } catch (_) { /* fallback already answered */ }
+  }
+}
+
+async function fallbackTicketClose(interaction, client) {
+  try {
+    if (!interaction.inGuild()) return;
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
+
+    const result = await closeTicket(interaction.channel, interaction.member);
+
+    if (result.success) {
+      return await interaction.editReply({
+        embeds: [successEmbed('Le ticket a été fermé.', '✅ Ticket Fermé')],
+      });
+    }
+
+    return await interaction.editReply({
+      embeds: [errorEmbed('Erreur', result.error || 'Impossible de fermer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
+    });
+  } catch (error) {
+    logger.error('Fallback ticket close failed:', error);
+    try {
+      await interaction.editReply({
+        embeds: [errorEmbed('Erreur', 'Impossible de fermer le ticket.')],
       });
     } catch (_) { /* fallback already answered */ }
   }
@@ -567,7 +584,16 @@ export default {
               userId: interaction.user?.id
             });
 
-            if (interaction.customId.startsWith('create_ticket')) {
+            if (interaction.customId === 'ticket_close') {
+              try {
+                await fallbackTicketClose(interaction, client);
+              } catch (_) {
+                logger.warn('Fallback ticket close reply failed:', {
+                  event: 'interaction.button.close_fallback_failed',
+                  traceId: interactionTraceContext.traceId
+                });
+              }
+            } else if (interaction.customId.startsWith('create_ticket')) {
               try {
                 await fallbackTicketButton(interaction, client);
               } catch (_) {

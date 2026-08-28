@@ -132,34 +132,18 @@ function buildTicketEmbed({ ticketData, guild, member, ticketNumber }) {
 }
 
 function buildTicketButtons(ticketData) {
-  const isClaimed = !!ticketData.claimedBy;
   const rows = [];
 
-  const actions = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('ticket_close')
-      .setLabel('Fermer')
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('ðŸ”’'),
-    isClaimed
-      ? new ButtonBuilder()
-          .setCustomId('ticket_claim')
-          .setLabel('RÃ©clamÃ©')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('ðŸ™‹')
-          .setDisabled(true)
-      : new ButtonBuilder()
-          .setCustomId('ticket_claim')
-          .setLabel('RÃ©clamer')
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji('ðŸ™‹'),
-    new ButtonBuilder()
-      .setCustomId('ticket_pin')
-      .setLabel('Ã‰pingler')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('ðŸ“Œ'),
+  rows.push(
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('ticket_close')
+        .setLabel('Fermer')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🔒')
+        .setDisabled(ticketData.status === 'closed'),
+    ),
   );
-  rows.push(actions);
 
   return rows;
 }
