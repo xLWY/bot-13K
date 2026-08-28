@@ -3,6 +3,7 @@ import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationReviewModal } from '../commands/Community/app-admin.js';
+import { handleEmbedBuilderButtons, handleEmbedBuilderModals } from '../handlers/interactionHandlers/embedBuilderButtons.js';
 import { handleInteractionError, createError, ErrorTypes } from '../utils/errorHandler.js';
 import { MessageTemplates } from '../utils/messageTemplates.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
@@ -223,6 +224,20 @@ export default {
             }
           }
         } else if (interaction.isButton()) {
+          // Handle embed builder buttons
+          if (interaction.customId.startsWith('embed_')) {
+            try {
+              await handleEmbedBuilderButtons(interaction, client);
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'button',
+                customId: interaction.customId,
+                handler: 'embed_builder'
+              }, interactionTraceContext));
+            }
+            return;
+          }
+
           const [customId, ...args] = interaction.customId.split(':');
           const button = client.buttons.get(customId);
 
@@ -277,6 +292,20 @@ export default {
             }, interactionTraceContext));
           }
         } else if (interaction.isModalSubmit()) {
+          // Handle embed builder modals
+          if (interaction.customId.startsWith('embed_modal_')) {
+            try {
+              await handleEmbedBuilderModals(interaction, client);
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'modal',
+                customId: interaction.customId,
+                handler: 'embed_builder'
+              }, interactionTraceContext));
+            }
+            return;
+          }
+
           if (interaction.customId.startsWith('app_modal_')) {
             try {
               await handleApplicationModal(interaction);
