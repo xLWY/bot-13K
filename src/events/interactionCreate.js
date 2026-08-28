@@ -1,7 +1,16 @@
-import { Events, MessageFlags } from 'discord.js';
+import {
+  Events,
+  MessageFlags,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+} from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
-import { errorEmbed } from '../utils/embeds.js';
+import { errorEmbed, successEmbed } from '../utils/embeds.js';
 import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 import { handleEmbedBuilderButtons, handleEmbedBuilderModals } from '../handlers/interactionHandlers/embedBuilderButtons.js';
@@ -10,6 +19,8 @@ import { InteractionHelper } from '../utils/interactionHelper.js';
 import { createInteractionTraceContext, runWithTraceContext } from '../utils/traceContext.js';
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
+import { checkRateLimit } from '../utils/rateLimiter.js';
+import { createTicket, getUserTicketCount, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -19,6 +30,186 @@ function withTraceContext(context = {}, traceContext = {}) {
     command: context.commandName || traceContext.command,
     ...context
   };
+}
+
+async function fallbackEligibility(interaction, client) {
+  if (!interaction.inGuild()) return { ok: false };
+
+  const rateLimitKey = `${interaction.user.id}:create_ticket`;
+  const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
+  if (!allowed) {
+    await interaction.reply({
+      embeds: [errorEmbed('Trop de tickets', 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.')],
+      flags: MessageFlags.Ephemeral,
+    });
+    return { ok: false };
+  }
+
+  const config = await getGuildConfig(client, interaction.guildId);
+  const maxTicketsPerUser = config.maxTicketsPerUser || 3;
+  const count = await getUserTicketCount(interaction.guildId, interaction.user.id);
+
+  if (count >= maxTicketsPerUser) {
+    await interaction.reply({
+      embeds: [
+        errorEmbed(
+          '🎫 Limite de tickets atteinte',
+          `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.\n\n**Tickets actuels :** ${count}/${maxTicketsPerUser}`,
+        ),
+      ],
+      flags: MessageFlags.Ephemeral,
+    });
+    return { ok: false };
+  }
+
+  return { ok: true, config };
+}
+
+async function fallbackTicketButton(interaction, client) {
+  try {
+    const eligibility = await fallbackEligibility(interaction, client);
+    if (!eligibility.ok) return;
+
+    const { config } = eligibility;
+
+    if (interaction.customId === 'create_ticket') {
+      const typeEmbed = {
+        title: '🎫 Nouveau ticket',
+        description: 'Choisissez le type de ticket que vous souhaitez ouvrir.',
+        color: 0x3498db,
+      };
+
+      const typeSelect = new StringSelectMenuBuilder()
+        .setCustomId('ticket_type_select')
+        .setPlaceholder('Sélectionnez un type de ticket…')
+        .addOptions(
+          resolveTicketTypes(config).map((type) =>
+            new StringSelectMenuOptionBuilder()
+              .setLabel(type.label)
+              .setDescription(type.description)
+              .setValue(type.id)
+              .setEmoji(type.emoji),
+          ),
+        );
+
+      return await interaction.reply({
+        embeds: [typeEmbed],
+        components: [new ActionRowBuilder().addComponents(typeSelect)],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const typeId = interaction.customId.split(':')[1] || 'support';
+    const type = getTicketTypeForGuild(config, typeId);
+
+    if (!type) {
+      return await interaction.reply({
+        embeds: [errorEmbed('Type inconnu', `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur. Contactez un administrateur.`)],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const modal = new ModalBuilder()
+      .setCustomId(`create_ticket_modal:${typeId}`)
+      .setTitle(`${type.emoji} ${type.label}`);
+
+    const reasonInput = new TextInputBuilder()
+      .setCustomId('reason')
+      .setLabel('Votre demande')
+      .setStyle(TextInputStyle.Paragraph)
+      .setPlaceholder(`Décrivez votre demande : ${type.description.toLowerCase()}…`)
+      .setRequired(true)
+      .setMaxLength(1000);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
+
+    return await interaction.showModal(modal);
+  } catch (error) {
+    logger.error('Fallback ticket button failed:', error);
+    try {
+      await interaction.reply({
+        embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de création de ticket.')],
+        flags: MessageFlags.Ephemeral,
+      });
+    } catch (_) { /* interaction already responded */ }
+  }
+}
+
+async function fallbackTicketModal(interaction, client) {
+  try {
+    if (!interaction.inGuild()) return;
+
+    const typeId = interaction.customId.split(':')[1] || 'support';
+    const reason = interaction.fields?.getTextInputValue('reason');
+
+    const result = await createTicket(interaction.guild, interaction.member, {
+      type: typeId,
+      reason,
+    });
+
+    if (result.success) {
+      return await interaction.reply({
+        embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return await interaction.reply({
+      embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.')],
+      flags: MessageFlags.Ephemeral,
+    });
+  } catch (error) {
+    logger.error('Fallback ticket modal failed:', error);
+    try {
+      await interaction.reply({
+        embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la création de votre ticket.')],
+        flags: MessageFlags.Ephemeral,
+      });
+    } catch (_) { /* fallback already answered */ }
+    // The true creation path (services) may fail if the deployed service file is old;
+    // fall back to the registered handler path is impossible here, so surface the error above.
+  }
+}
+
+async function fallbackTicketSelect(interaction, client) {
+  try {
+    if (!interaction.inGuild()) return;
+
+    const typeId = interaction.values?.[0] || 'support';
+    const guildConfig = await getGuildConfig(client, interaction.guildId);
+    const type = getTicketTypeForGuild(guildConfig, typeId);
+
+    if (!type) {
+      return await interaction.reply({
+        embeds: [errorEmbed('Type inconnu', `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur.`)],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const modal = new ModalBuilder()
+      .setCustomId(`create_ticket_modal:${typeId}`)
+      .setTitle(`${type.emoji} ${type.label}`);
+
+    const reasonInput = new TextInputBuilder()
+      .setCustomId('reason')
+      .setLabel('Votre demande')
+      .setStyle(TextInputStyle.Paragraph)
+      .setPlaceholder(`Décrivez votre demande : ${type.description.toLowerCase()}…`)
+      .setRequired(true)
+      .setMaxLength(1000);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
+
+    return await interaction.showModal(modal);
+  } catch (error) {
+    logger.error('Fallback ticket select failed:', error);
+    try {
+      await interaction.reply({
+        embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de création de ticket.')],
+        flags: MessageFlags.Ephemeral,
+      });
+    } catch (_) { /* fallback already answered */ }
+  }
 }
 
 export default {
@@ -252,12 +443,9 @@ export default {
 
             if (interaction.customId.startsWith('create_ticket')) {
               try {
-                await interaction.reply({
-                  embeds: [errorEmbed('Bouton indisponible', 'Ce bouton de ticket est temporairement indisponible. Réessayez dans quelques instants.')],
-                  flags: MessageFlags.Ephemeral,
-                });
+                await fallbackTicketButton(interaction, client);
               } catch (_) {
-                logger.warn('Could not reply to unavailable ticket button (bot probably still starting):', {
+                logger.warn('Fallback ticket button reply failed:', {
                   event: 'interaction.button.unavailable_reply_failed',
                   traceId: interactionTraceContext.traceId
                 });
@@ -282,7 +470,7 @@ export default {
           if (!selectMenu) {
             // No registered handler (e.g. inline-collected select menus like
             // ticket_config_<guildId>, or interactions received while the bot
-            // is still starting). Log and ignore.
+            // is still starting). Log and use fallback for ticket type select.
             logger.warn('Unhandled select menu interaction (no registered handler or bot still starting):', {
               event: 'interaction.selectmenu.unhandled',
               customId: interaction.customId,
@@ -290,6 +478,17 @@ export default {
               guildId: interaction.guildId,
               userId: interaction.user?.id
             });
+
+            if (interaction.customId === 'ticket_type_select') {
+              try {
+                await fallbackTicketSelect(interaction, client);
+              } catch (_) {
+                logger.warn('Fallback ticket select reply failed:', {
+                  event: 'interaction.selectmenu.fallback_failed',
+                  traceId: interactionTraceContext.traceId
+                });
+              }
+            }
             return;
           }
 
@@ -356,7 +555,7 @@ export default {
           if (!modal) {
             // No registered handler (e.g. inline-awaited modals via
             // awaitModalSubmit, or interactions received while the bot is
-            // still starting). Log and ignore.
+            // still starting). Log and use fallback for ticket creation modal.
             logger.warn('Unhandled modal interaction (no registered handler or bot still starting):', {
               event: 'interaction.modal.unhandled',
               customId: interaction.customId,
@@ -364,6 +563,17 @@ export default {
               guildId: interaction.guildId,
               userId: interaction.user?.id
             });
+
+            if (interaction.customId.startsWith('create_ticket_modal')) {
+              try {
+                await fallbackTicketModal(interaction, client);
+              } catch (_) {
+                logger.warn('Fallback ticket modal reply failed:', {
+                  event: 'interaction.modal.fallback_failed',
+                  traceId: interactionTraceContext.traceId
+                });
+              }
+            }
             return;
           }
 
