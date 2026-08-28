@@ -7,10 +7,15 @@ import {
   ActionRowBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+  PermissionFlagsBits,
 } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
-import { errorEmbed, successEmbed } from '../utils/embeds.js';
+import { errorEmbed, successEmbed, createEmbed } from '../utils/embeds.js';
+import { saveTicketData, incrementTicketCounter } from '../utils/database.js';
 import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 import { handleEmbedBuilderButtons, handleEmbedBuilderModals } from '../handlers/interactionHandlers/embedBuilderButtons.js';
@@ -20,7 +25,7 @@ import { createInteractionTraceContext, runWithTraceContext } from '../utils/tra
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
-import { createTicket, getUserTicketCount, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
+import { getUserTicketCount, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
@@ -135,6 +140,126 @@ async function fallbackTicketButton(interaction, client) {
   }
 }
 
+async function createTicketFallback(guild, member, options = {}) {
+  let createdChannel = null;
+  try {
+    const config = await getGuildConfig(guild.client, guild.id);
+    const type = getTicketTypeForGuild(config, options.type || 'support');
+
+    const maxTicketsPerUser = config.maxTicketsPerUser ?? 3;
+    const currentTicketCount = await getUserTicketCount(guild.id, member.id);
+    if (currentTicketCount >= maxTicketsPerUser) {
+      return {
+        success: false,
+        error: `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.`,
+      };
+    }
+
+    const category = config.ticketCategoryId
+      ? guild.channels.cache.get(config.ticketCategoryId) ||
+        (await guild.channels.fetch(config.ticketCategoryId).catch(() => null))
+      : guild.channels.cache.find(
+          (c) => c.type === ChannelType.GuildCategory && c.name.toLowerCase().includes('tickets'),
+        );
+
+    const ticketNumber = await incrementTicketCounter(guild.id);
+    const channelName = `${type.emoji}-${type.slug}-ticket-${ticketNumber}`;
+    const allowPerms = [
+      PermissionFlagsBits.ViewChannel,
+      PermissionFlagsBits.SendMessages,
+      PermissionFlagsBits.AttachFiles,
+      PermissionFlagsBits.ReadMessageHistory,
+      PermissionFlagsBits.AddReactions,
+      PermissionFlagsBits.MentionEveryone,
+    ];
+
+    createdChannel = await guild.channels.create({
+      name: channelName,
+      type: ChannelType.GuildText,
+      parent: category?.id,
+      permissionOverwrites: [
+        { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+        { id: guild.client.user.id, allow: allowPerms },
+        { id: member.id, allow: allowPerms },
+        ...(config.ticketStaffRoleId
+          ? [{ id: config.ticketStaffRoleId, allow: allowPerms }]
+          : []),
+      ],
+    });
+
+    const ticketData = {
+      id: createdChannel.id,
+      ticketNumber,
+      userId: member.id,
+      guildId: guild.id,
+      createdAt: new Date().toISOString(),
+      status: 'open',
+      claimedBy: null,
+      ticketType: type.id,
+      ticketTypeEmoji: type.emoji,
+      ticketTypeLabel: type.label,
+      reason: options.reason || 'Aucun motif précisé.',
+    };
+
+    await saveTicketData(guild.id, createdChannel.id, ticketData);
+
+    const embed = createEmbed({
+      title: `🎫 Ticket #${ticketNumber}`,
+      description: `${member}, un membre de l'équipe va s'occuper de votre demande très vite.\n\nMerci de décrire précisément votre besoin dans ce salon.`,
+      color: 'info',
+      fields: [
+        { name: '🏷️ Type', value: `${type.emoji} ${type.label}`, inline: true },
+        { name: '🟢 Statut', value: '🟢 Ouvert', inline: true },
+        { name: '🙋 Réclamé par', value: 'Personne', inline: true },
+        ...(ticketData.reason ? [{ name: '📝 Demande', value: ticketData.reason, inline: false }] : []),
+      ],
+      footer: { text: `Ticket #${ticketNumber} • ${guild?.name || ''}` },
+      timestamp: false,
+    });
+
+    const embedMessage = await createdChannel.send({
+      content: `${member.toString()}${config.ticketStaffRoleId ? ` <@&${config.ticketStaffRoleId}>` : ''}`,
+      embeds: [embed],
+      components: [
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('ticket_close')
+            .setLabel('Fermer')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🔒'),
+          new ButtonBuilder()
+            .setCustomId('ticket_claim')
+            .setLabel('Réclamer')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🙋'),
+          new ButtonBuilder()
+            .setCustomId('ticket_pin')
+            .setLabel('Épingler')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('📌'),
+        ),
+      ],
+    });
+
+    await embedMessage.pin().catch(() => {});
+
+    return { success: true, channel: createdChannel, ticketData };
+  } catch (error) {
+    if (createdChannel?.deletable) {
+      try {
+        await createdChannel.delete('Échec de la création du ticket');
+      } catch (_) {}
+    }
+    const detail = error?.message || String(error);
+    logger.error('Fallback createTicket failed:', detail);
+    return {
+      success: false,
+      error: 'Impossible de créer le ticket. Réessayez dans un instant.',
+      debug: detail,
+    };
+  }
+}
+
 async function fallbackTicketModal(interaction, client) {
   try {
     if (!interaction.inGuild()) return;
@@ -142,7 +267,7 @@ async function fallbackTicketModal(interaction, client) {
     const typeId = interaction.customId.split(':')[1] || 'support';
     const reason = interaction.fields?.getTextInputValue('reason');
 
-    const result = await createTicket(interaction.guild, interaction.member, {
+    const result = await createTicketFallback(interaction.guild, interaction.member, {
       type: typeId,
       reason,
     });
@@ -166,8 +291,6 @@ async function fallbackTicketModal(interaction, client) {
         flags: MessageFlags.Ephemeral,
       });
     } catch (_) { /* fallback already answered */ }
-    // The true creation path (services) may fail if the deployed service file is old;
-    // fall back to the registered handler path is impossible here, so surface the error above.
   }
 }
 
