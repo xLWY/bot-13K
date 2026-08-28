@@ -1,6 +1,7 @@
 import { Events, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
+import { errorEmbed } from '../utils/embeds.js';
 import { handleApplicationModal } from '../commands/Community/apply.js';
 import { handleApplicationReviewModal } from '../commands/Community/app-admin.js';
 import { handleEmbedBuilderButtons, handleEmbedBuilderModals } from '../handlers/interactionHandlers/embedBuilderButtons.js';
@@ -52,7 +53,7 @@ export default {
               throw createError(
                 `No command matching ${interaction.commandName} was found.`,
                 ErrorTypes.CONFIGURATION,
-                'Sorry, that command does not exist.',
+                'Désolé, cette commande n\'existe pas.',
                 withTraceContext({ commandName: interaction.commandName }, interactionTraceContext)
               );
             }
@@ -241,16 +242,28 @@ export default {
           const button = client.buttons.get(customId);
 
           if (!button) {
-            if (!interaction.customId.includes(':')) {
-              return;
-            }
+            logger.warn('Unhandled button interaction (no registered handler or bot still starting):', {
+              event: 'interaction.button.unhandled',
+              customId: interaction.customId,
+              traceId: interactionTraceContext.traceId,
+              guildId: interaction.guildId,
+              userId: interaction.user?.id
+            });
 
-            throw createError(
-              `No button handler found for ${customId}`,
-              ErrorTypes.CONFIGURATION,
-              'This button is not available.',
-              withTraceContext({ customId }, interactionTraceContext)
-            );
+            if (interaction.customId.startsWith('create_ticket')) {
+              try {
+                await interaction.reply({
+                  embeds: [errorEmbed('Bouton indisponible', 'Ce bouton de ticket est temporairement indisponible. Réessayez dans quelques instants.')],
+                  flags: MessageFlags.Ephemeral,
+                });
+              } catch (_) {
+                logger.warn('Could not reply to unavailable ticket button (bot probably still starting):', {
+                  event: 'interaction.button.unavailable_reply_failed',
+                  traceId: interactionTraceContext.traceId
+                });
+              }
+            }
+            return;
           }
 
           try {
@@ -267,19 +280,17 @@ export default {
           const selectMenu = client.selectMenus.get(customId);
 
           if (!selectMenu) {
-            if (!interaction.customId.includes(':')) {
-              // No registered handler and no ':' delimiter — this is an inline-collected
-              // select menu (e.g. ticket_config_<guildId>, jointocreate_config_<id>).
-              // Return silently so the existing MessageComponentCollector handles it.
-              return;
-            }
-
-            throw createError(
-              `No select menu handler found for ${customId}`,
-              ErrorTypes.CONFIGURATION,
-              'This select menu is not available.',
-              withTraceContext({ customId }, interactionTraceContext)
-            );
+            // No registered handler (e.g. inline-collected select menus like
+            // ticket_config_<guildId>, or interactions received while the bot
+            // is still starting). Log and ignore.
+            logger.warn('Unhandled select menu interaction (no registered handler or bot still starting):', {
+              event: 'interaction.selectmenu.unhandled',
+              customId: interaction.customId,
+              traceId: interactionTraceContext.traceId,
+              guildId: interaction.guildId,
+              userId: interaction.user?.id
+            });
+            return;
           }
 
           try {
@@ -343,18 +354,17 @@ export default {
           const modal = client.modals.get(customId);
 
           if (!modal) {
-            if (!interaction.customId.includes(':')) {
-              // No registered handler and no ':' delimiter — this is an inline-awaited
-              // modal (e.g. via awaitModalSubmit). Return silently so the caller handles it.
-              return;
-            }
-
-            throw createError(
-              `No modal handler found for ${customId}`,
-              ErrorTypes.CONFIGURATION,
-              'This form is not available.',
-              withTraceContext({ customId }, interactionTraceContext)
-            );
+            // No registered handler (e.g. inline-awaited modals via
+            // awaitModalSubmit, or interactions received while the bot is
+            // still starting). Log and ignore.
+            logger.warn('Unhandled modal interaction (no registered handler or bot still starting):', {
+              event: 'interaction.modal.unhandled',
+              customId: interaction.customId,
+              traceId: interactionTraceContext.traceId,
+              guildId: interaction.guildId,
+              userId: interaction.user?.id
+            });
+            return;
           }
 
           try {

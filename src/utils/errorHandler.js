@@ -236,18 +236,18 @@ export async function handleInteractionError(interaction, error, context = {}) {
 
     if (errorType === ErrorTypes.RATE_LIMIT) {
         embed.addFields({
-            name: "💡 Tip",
-            value: "Rate limits help prevent spam. Wait a moment before trying again."
+            name: "💡 Astuce",
+            value: "Les limites de débit aident à lutter contre le spam. Patientez un instant avant de réessayer."
         });
     } else if (errorType === ErrorTypes.PERMISSION) {
         embed.addFields({
-            name: "🔧 Need Help?",
-            value: "Contact a server administrator if you believe this is an error."
+            name: "🔧 Besoin d'aide ?",
+            value: "Contactez un administrateur du serveur si vous pensez qu'il s'agit d'une erreur."
         });
     } else if (errorType === ErrorTypes.CONFIGURATION) {
         embed.addFields({
             name: "📋 Configuration",
-            value: "This feature needs to be configured by a server administrator."
+            value: "Cette fonctionnalité doit être configurée par un administrateur du serveur."
         });
     }
 
