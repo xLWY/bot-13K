@@ -33,7 +33,6 @@ const CONFIG_HISTORY_LIMIT = 100;
 
 const CONFIG_VALIDATION_RULES = {
     logChannelId: { type: 'channel', required: false },
-    reportChannelId: { type: 'channel', required: false },
     premiumRoleId: { type: 'role', required: false },
     autoRole: { type: 'role', required: false },
     modRole: { type: 'role', required: false },
@@ -50,13 +49,11 @@ const CONFIG_VALIDATION_RULES = {
 const SETTING_CONFLICTS = {
     'logChannelId': ['logging'],
     'birthdayChannelId': [],
-    'reportChannelId': [],
     'logging': ['logChannelId']
 };
 
 const ConfigValueSchemas = Object.freeze({
     logChannelId: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
-    reportChannelId: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
     premiumRoleId: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
     autoRole: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
     modRole: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),

@@ -37,7 +37,6 @@ export const DEFAULT_GUILD_CONFIG = {
     prefix: '!',
     logIgnore: { users: [], channels: [] },
     enabledCommands: {},
-    reportChannelId: null,
     birthdayChannelId: null,
     premiumRoleId: null,
     modRole: null,
