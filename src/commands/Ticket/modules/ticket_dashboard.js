@@ -22,7 +22,7 @@ import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
 import { getGuildConfigKey } from '../../../utils/database.js';
-import { getUserTicketCount } from '../../../services/ticket.js';
+import { getUserTicketCount, buildTicketTypeButtons } from '../../../services/ticket.js';
 
 const DEFAULT_PANEL_MESSAGE =
     "Bonjour ! Besoin d'aide ou d'une question ? Cliquez sur le bouton ci-dessous pour ouvrir un ticket.";
@@ -162,7 +162,8 @@ async function updateLivePanel(client, guild, config) {
             m =>
                 m.author.id === client.user.id &&
                 m.components?.length > 0 &&
-                m.components[0]?.components?.[0]?.customId === 'create_ticket',
+                (m.components[0]?.components?.[0]?.customId === 'create_ticket' ||
+                    m.components[0]?.components?.[0]?.customId?.startsWith('create_ticket_direct:')),
         );
         if (!panelMsg) return false;
 
@@ -170,17 +171,9 @@ async function updateLivePanel(client, guild, config) {
             .setTitle('🎫 Centre d\'aide')
             .setDescription(config.ticketPanelMessage || DEFAULT_PANEL_MESSAGE)
             .setColor(getColor('info'))
-            .setFooter({ text: 'Cliquez sur le bouton ci-dessous pour ouvrir un ticket' });
+            .setFooter({ text: 'Choisissez un bouton ci-dessous pour ouvrir un ticket' });
 
-        const button = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('create_ticket')
-                .setLabel(config.ticketButtonLabel || DEFAULT_BUTTON_LABEL)
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('🎫'),
-        );
-
-        await panelMsg.edit({ embeds: [updatedEmbed], components: [button] });
+        await panelMsg.edit({ embeds: [updatedEmbed], components: buildTicketTypeButtons() });
         return true;
     } catch (error) {
         logger.warn('Failed to update live ticket panel:', error.message);
@@ -988,7 +981,8 @@ async function handleDeleteSystem(btnInteraction, rootInteraction, guildConfig, 
                     if (messages) {
                         const found = messages.find(
                             m => m.author.id === client.user.id &&
-                                m.components?.[0]?.components?.[0]?.customId === 'create_ticket'
+                                (m.components?.[0]?.components?.[0]?.customId === 'create_ticket' ||
+                                    m.components?.[0]?.components?.[0]?.customId?.startsWith('create_ticket_direct:'))
                         );
                         if (found) await found.delete().catch(() => {});
                     }

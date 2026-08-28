@@ -88,9 +88,6 @@ function buildTicketEmbed({ ticketData, guild, member, ticketNumber }) {
   const priority = getPriorityInfo(ticketData.priority);
   const status = ticketData.status === 'closed' ? '🔴 Fermé' : '🟢 Ouvert';
   const claimedBy = ticketData.claimedBy ? `<@${ticketData.claimedBy}>` : 'Personne';
-  const createdTs = ticketData.createdAt
-    ? Math.floor(new Date(ticketData.createdAt).getTime() / 1000)
-    : Math.floor(Date.now() / 1000);
   const number = ticketNumber ?? ticketData.ticketNumber ?? '';
 
   const fields = [
@@ -98,8 +95,6 @@ function buildTicketEmbed({ ticketData, guild, member, ticketNumber }) {
     { name: '📊 Priorité', value: `${priority.emoji} ${priority.label}`, inline: true },
     { name: '🟢 Statut', value: status, inline: true },
     { name: '🙋 Réclamé par', value: claimedBy, inline: true },
-    { name: '⏰ Ouvert le', value: `<t:${createdTs}:R>`, inline: true },
-    { name: '\u200B', value: '\u200B', inline: true },
   ];
 
   if (ticketData.reason) {
@@ -114,6 +109,7 @@ function buildTicketEmbed({ ticketData, guild, member, ticketNumber }) {
     color: ticketData.priority && ticketData.priority !== 'none' ? priority.color : 'info',
     fields,
     footer: { text: `Ticket #${number} • ${guild?.name || ''}` },
+    timestamp: false,
   });
 }
 
@@ -174,6 +170,25 @@ function buildTicketButtons(ticketData, { enablePriority = true } = {}) {
     rows.push(priorityRow);
   }
 
+  return rows;
+}
+
+export function buildTicketTypeButtons() {
+  const types = Object.entries(getTicketTypes());
+  const rows = [];
+  for (let i = 0; i < types.length; i += 5) {
+    rows.push(
+      new ActionRowBuilder().addComponents(
+        types.slice(i, i + 5).map(([id, type]) =>
+          new ButtonBuilder()
+            .setCustomId(`create_ticket_direct:${id}`)
+            .setLabel(type.label)
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji(type.emoji),
+        ),
+      ),
+    );
+  }
   return rows;
 }
 

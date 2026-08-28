@@ -8,7 +8,7 @@ import {
   MessageFlags,
 } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
-import { createTicket, closeTicket, claimTicket, updateTicketPriority, getTicketTypes, getPriorityInfo } from '../services/ticket.js';
+import { createTicket, closeTicket, claimTicket, updateTicketPriority, getTicketTypes, getTicketType, getPriorityInfo } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
 import { logger } from '../utils/logger.js';
@@ -122,6 +122,69 @@ export const createTicketHandler = {
       });
     } catch (error) {
       logger.error('Error opening ticket type menu:', error);
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de création de ticket.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+    }
+  }
+};
+
+export const createTicketDirectHandler = {
+  name: 'create_ticket_direct',
+  async execute(interaction, client) {
+    try {
+      if (!(await ensureGuildContext(interaction))) return;
+
+      const rateLimitKey = `${interaction.user.id}:create_ticket`;
+      const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
+      if (!allowed) {
+        return await interaction.reply({
+          embeds: [errorEmbed('Trop de tickets', 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.')],
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      const config = await getGuildConfig(client, interaction.guildId);
+      const maxTicketsPerUser = config.maxTicketsPerUser || 3;
+
+      const { getUserTicketCount } = await import('../services/ticket.js');
+      const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
+
+      if (currentTicketCount >= maxTicketsPerUser) {
+        return await interaction.reply({
+          embeds: [
+            errorEmbed(
+              '🎫 Limite de tickets atteinte',
+              `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.\n\n**Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`,
+            ),
+          ],
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      const typeId = interaction.customId.split(':')[1] || 'support';
+      const type = getTicketType(typeId);
+
+      const modal = new ModalBuilder()
+        .setCustomId(`create_ticket_modal:${typeId}`)
+        .setTitle(`${type.emoji} ${type.label}`);
+
+      const reasonInput = new TextInputBuilder()
+        .setCustomId('reason')
+        .setLabel('Votre demande')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder(`Décrivez votre demande : ${type.description.toLowerCase()}…`)
+        .setRequired(true)
+        .setMaxLength(1000);
+
+      modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
+
+      return await interaction.showModal(modal);
+    } catch (error) {
+      logger.error('Error opening ticket type modal:', error);
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
           embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de création de ticket.')],

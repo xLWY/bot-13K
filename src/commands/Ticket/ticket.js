@@ -3,12 +3,10 @@ import {
   SlashCommandBuilder,
   PermissionFlagsBits,
   ChannelType,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   MessageFlags,
 } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { buildTicketTypeButtons } from '../../services/ticket.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
@@ -163,21 +161,13 @@ export default {
                     title: "🎫 Centre d'aide",
                     description: panelMessage,
                     color: getColor('info'),
-                    footer: { text: 'Cliquez sur le bouton ci-dessous pour ouvrir un ticket' },
+                    footer: { text: 'Choisissez un bouton ci-dessous pour ouvrir un ticket' },
                 });
-
-                const ticketButton = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId("create_ticket")
-                        .setLabel(buttonLabel)
-                        .setStyle(ButtonStyle.Primary)
-                        .setEmoji("🎫"),
-                );
 
                 try {
                     await panelChannel.send({
                         embeds: [setupEmbed],
-                        components: [ticketButton],
+                        components: buildTicketTypeButtons(),
                     });
 
                     if (client.db && interaction.guildId) {
