@@ -1,46 +1,117 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } from 'discord.js';
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { getColor } from '../../config/bot.js';
 
-// Store embed data per user
 const embedBuilderData = new Map();
+const MAX_TEXT_INPUT_LENGTH = 4000;
+const MAX_EMBED_DESCRIPTION = 4096;
+const MAX_EMBED_FIELDS = 25;
 
 function getEmbedData(userId) {
   if (!embedBuilderData.has(userId)) {
-    embedBuilderData.set(userId, {
-      title: null,
-      description: null,
-      color: null,
-      fields: [],
-      image: null,
-      thumbnail: null,
-      footer: null,
-      author: null,
-      timestamp: false
-    });
+    embedBuilderData.set(userId, createEmptyEmbedData());
   }
   return embedBuilderData.get(userId);
+}
+
+function createEmptyEmbedData() {
+  return {
+    title: null,
+    description: null,
+    color: null,
+    fields: [],
+    image: null,
+    thumbnail: null,
+    footer: null,
+    author: null,
+    timestamp: false
+  };
 }
 
 function clearEmbedData(userId) {
   embedBuilderData.delete(userId);
 }
 
+function truncate(value, max) {
+  if (!value) return value;
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
+function fieldValue(value) {
+  const text = String(value ?? '').trim() || 'Non défini';
+  return truncate(text, 1024);
+}
+
+function hasEmbedContent(data) {
+  return Boolean(
+    data.title ||
+    data.description ||
+    data.image ||
+    data.thumbnail ||
+    data.footer ||
+    data.author ||
+    data.fields.length > 0
+  );
+}
+
+function parseColor(input) {
+  if (!input) return null;
+  const raw = String(input).trim();
+  if (!raw) return null;
+
+  if (raw.startsWith('#')) {
+    const hex = raw.slice(1);
+    if (!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+    return parseInt(hex, 16);
+  }
+
+  if (/^[0-9a-fA-F]{6}$/.test(raw)) {
+    return parseInt(raw, 16);
+  }
+
+  if (/^\d+$/.test(raw)) {
+    const numeric = Number(raw);
+    if (Number.isInteger(numeric) && numeric >= 0 && numeric <= 0xffffff) {
+      return numeric;
+    }
+  }
+
+  return null;
+}
+
+function formatColor(color) {
+  if (typeof color !== 'number' || !Number.isFinite(color)) return 'Par défaut';
+  return `#${color.toString(16).padStart(6, '0').toUpperCase()}`;
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function generatePreviewEmbed(data) {
   const embed = new EmbedBuilder();
-  
-  if (data.title) embed.setTitle(data.title);
-  if (data.description) embed.setDescription(data.description);
-  if (data.color) embed.setColor(data.color);
-  if (data.fields.length > 0) embed.addFields(data.fields);
+
+  if (!hasEmbedContent(data)) {
+    return embed
+      .setDescription('Prévisualisation vide — ajoute un titre, une description ou un champ.')
+      .setColor(getColor('info'));
+  }
+
+  if (data.title) embed.setTitle(truncate(data.title, 256));
+  if (data.description) embed.setDescription(truncate(data.description, MAX_EMBED_DESCRIPTION));
+  if (typeof data.color === 'number') embed.setColor(data.color);
+  if (data.fields.length > 0) embed.addFields(data.fields.slice(0, MAX_EMBED_FIELDS));
   if (data.image) embed.setImage(data.image);
   if (data.thumbnail) embed.setThumbnail(data.thumbnail);
-  if (data.footer) embed.setFooter({ text: data.footer });
-  if (data.author) embed.setAuthor({ name: data.author });
+  if (data.footer) embed.setFooter({ text: truncate(data.footer, 2048) });
+  if (data.author) embed.setAuthor({ name: truncate(data.author, 256) });
   if (data.timestamp) embed.setTimestamp();
-  
+
   return embed;
 }
 
@@ -105,52 +176,158 @@ function getBuilderComponents() {
 }
 
 function getStatusEmbed(data) {
-  const embed = new EmbedBuilder()
-    .setTitle('🎨 Embed Builder')
-    .setDescription('Use the buttons below to customize your embed')
-    .setColor(getColor('info'))
-    .addFields(
-      { name: '📝 Title', value: data.title || 'Not set', inline: true },
-      { name: '📖 Description', value: data.description ? data.description.substring(0, 50) + '...' : 'Not set', inline: true },
-      { name: '🎨 Color', value: data.color || 'Default', inline: true },
-      { name: '📊 Fields', value: data.fields.length.toString(), inline: true },
-      { name: '🖼️ Image', value: data.image ? 'Set' : 'Not set', inline: true },
-      { name: '👾 Thumbnail', value: data.thumbnail ? 'Set' : 'Not set', inline: true }
-    );
+  const descriptionPreview = data.description
+    ? truncate(data.description, 50)
+    : 'Non défini';
 
-  return embed;
+  return new EmbedBuilder()
+    .setTitle('🎨 Embed Builder')
+    .setDescription('Utilise les boutons ci-dessous pour personnaliser ton embed.')
+    .setColor(typeof data.color === 'number' ? data.color : getColor('info'))
+    .addFields(
+      { name: '📝 Titre', value: fieldValue(data.title), inline: true },
+      { name: '📖 Description', value: fieldValue(descriptionPreview), inline: true },
+      { name: '🎨 Couleur', value: fieldValue(formatColor(data.color)), inline: true },
+      { name: '📊 Champs', value: fieldValue(String(data.fields.length)), inline: true },
+      { name: '🖼️ Image', value: fieldValue(data.image ? 'Définie' : 'Non définie'), inline: true },
+      { name: '👾 Miniature', value: fieldValue(data.thumbnail ? 'Définie' : 'Non définie'), inline: true }
+    );
+}
+
+function getBuilderOwnerId(interaction) {
+  return interaction.message?.interaction?.user?.id
+    ?? interaction.message?.interactionMetadata?.user?.id
+    ?? null;
+}
+
+async function refreshBuilderMessage(interaction, data, extra = {}) {
+  const payload = {
+    content: extra.content ?? null,
+    embeds: extra.embeds ?? [getStatusEmbed(data)],
+    components: extra.components ?? getBuilderComponents()
+  };
+
+  if (!interaction.replied && !interaction.deferred) {
+    if (typeof interaction.update === 'function' && interaction.message) {
+      await interaction.update(payload);
+      return;
+    }
+    await interaction.reply(payload);
+    return;
+  }
+
+  await interaction.editReply(payload);
+}
+
+async function replyEphemeral(interaction, content) {
+  const payload = { content, flags: MessageFlags.Ephemeral };
+  if (interaction.replied || interaction.deferred) {
+    await interaction.followUp(payload);
+    return;
+  }
+  await interaction.reply(payload);
+}
+
+async function showTextModal(interaction, { customId, title, inputCustomId, label, placeholder, style, maxLength, required = false }) {
+  const modal = new ModalBuilder()
+    .setCustomId(customId)
+    .setTitle(title);
+
+  const input = new TextInputBuilder()
+    .setCustomId(inputCustomId)
+    .setLabel(label)
+    .setStyle(style)
+    .setPlaceholder(placeholder)
+    .setMaxLength(maxLength)
+    .setRequired(required);
+
+  modal.addComponents(new ActionRowBuilder().addComponents(input));
+  await interaction.showModal(modal);
 }
 
 export async function handleEmbedBuilderButtons(interaction, client) {
   try {
     const userId = interaction.user.id;
     const customId = interaction.customId;
-    const data = getEmbedData(userId);
+    const ownerId = getBuilderOwnerId(interaction);
 
+    if (ownerId && ownerId !== userId) {
+      await replyEphemeral(interaction, '❌ Seule la personne qui a lancé le constructeur peut l’utiliser.');
+      return;
+    }
+
+    const data = getEmbedData(userId);
     logger.info(`Embed builder button clicked: ${customId} by user ${userId}`);
 
-    // Handle different button actions
     switch (customId) {
       case 'embed_title':
-        await showTitleModal(interaction);
+        await showTextModal(interaction, {
+          customId: 'embed_title_modal',
+          title: 'Définir le titre',
+          inputCustomId: 'embed_title',
+          label: 'Titre de l’embed',
+          placeholder: 'Entre ton titre ici',
+          style: TextInputStyle.Short,
+          maxLength: 256
+        });
         break;
       case 'embed_desc':
-        await showDescriptionModal(interaction);
+        await showTextModal(interaction, {
+          customId: 'embed_desc_modal',
+          title: 'Définir la description',
+          inputCustomId: 'embed_desc',
+          label: 'Description de l’embed',
+          placeholder: 'Entre ta description ici',
+          style: TextInputStyle.Paragraph,
+          maxLength: MAX_TEXT_INPUT_LENGTH
+        });
         break;
       case 'embed_color':
-        await showColorModal(interaction);
+        await showTextModal(interaction, {
+          customId: 'embed_color_modal',
+          title: 'Définir la couleur',
+          inputCustomId: 'embed_color',
+          label: 'Couleur (hex ou décimal)',
+          placeholder: 'ex: #00ff00 ou 65280',
+          style: TextInputStyle.Short,
+          maxLength: 20
+        });
         break;
       case 'embed_field':
         await showFieldModal(interaction);
         break;
       case 'embed_image':
-        await showImageModal(interaction);
+        await showTextModal(interaction, {
+          customId: 'embed_image_modal',
+          title: 'Définir l’image',
+          inputCustomId: 'embed_image',
+          label: 'URL de l’image',
+          placeholder: 'https://example.com/image.png',
+          style: TextInputStyle.Short,
+          maxLength: 512
+        });
         break;
       case 'embed_thumb':
-        await showThumbnailModal(interaction);
+        await showTextModal(interaction, {
+          customId: 'embed_thumb_modal',
+          title: 'Définir la miniature',
+          inputCustomId: 'embed_thumb',
+          label: 'URL de la miniature',
+          placeholder: 'https://example.com/thumbnail.png',
+          style: TextInputStyle.Short,
+          maxLength: 512
+        });
         break;
       case 'embed_footer':
-        await showFooterModal(interaction);
+        await showTextModal(interaction, {
+          customId: 'embed_footer_modal',
+          title: 'Définir le footer',
+          inputCustomId: 'embed_footer',
+          label: 'Texte du footer',
+          placeholder: 'Texte du footer',
+          style: TextInputStyle.Short,
+          maxLength: 2048
+        });
         break;
       case 'embed_preview':
         await showPreview(interaction, data);
@@ -174,16 +351,15 @@ export async function handleEmbedBuilderButtons(interaction, client) {
       customId: interaction.customId,
       userId: interaction.user.id
     });
-    
-    // Show a simple error message to the user
+
     try {
       const errorMessage = `❌ Erreur: ${error.message}`;
       if (interaction.deferred) {
         await interaction.editReply({ content: errorMessage, components: [] });
       } else if (interaction.replied) {
-        await interaction.followUp({ content: errorMessage, ephemeral: true });
+        await interaction.followUp({ content: errorMessage, flags: MessageFlags.Ephemeral });
       } else {
-        await interaction.reply({ content: errorMessage, ephemeral: true });
+        await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
       }
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
@@ -191,254 +367,100 @@ export async function handleEmbedBuilderButtons(interaction, client) {
   }
 }
 
-async function showTitleModal(interaction) {
-  try {
-    const modal = new ModalBuilder()
-      .setCustomId('embed_title_modal')
-      .setTitle('Définir Titre de l\'Embed');
-
-    const titleInput = new TextInputBuilder()
-      .setCustomId('embed_title')
-      .setLabel('Titre de l\'Embed')
-      .setStyle(TextInputStyle.Short)
-      .setPlaceholder('Entrez votre titre ici')
-      .setMaxLength(256)
-      .setRequired(false);
-
-    const firstActionRow = new ActionRowBuilder().addComponents(titleInput);
-    modal.addComponents(firstActionRow);
-
-    await interaction.showModal(modal);
-  } catch (error) {
-    logger.error('Error showing title modal:', error);
-    throw error;
-  }
-}
-
-async function showDescriptionModal(interaction) {
-  try {
-    const modal = new ModalBuilder()
-      .setCustomId('embed_desc_modal')
-      .setTitle('Définir Description de l\'Embed');
-
-    const descInput = new TextInputBuilder()
-      .setCustomId('embed_desc')
-      .setLabel('Description de l\'Embed')
-      .setStyle(TextInputStyle.Short)
-      .setPlaceholder('Entrez votre description ici')
-      .setMaxLength(4096)
-      .setRequired(false);
-
-    const firstActionRow = new ActionRowBuilder().addComponents(descInput);
-    modal.addComponents(firstActionRow);
-
-    await interaction.showModal(modal);
-  } catch (error) {
-    logger.error('Error showing description modal:', error);
-    throw error;
-  }
-}
-
-async function showColorModal(interaction) {
-  try {
-    await interaction.update({
-      content: '🎨 Veuillez entrer votre couleur...',
-      embeds: [],
-      components: []
-    });
-
-    const modal = new ModalBuilder()
-      .setCustomId('embed_color_modal')
-      .setTitle('Définir Couleur de l\'Embed');
-
-    const colorInput = new TextInputBuilder()
-      .setCustomId('embed_color')
-      .setLabel('Couleur (code hex ou décimal)')
-      .setStyle(TextInputStyle.Short)
-      .setPlaceholder('ex: #00ff00 ou 65280')
-      .setMaxLength(20)
-      .setRequired(false);
-
-    const firstActionRow = new ActionRowBuilder().addComponents(colorInput);
-    modal.addComponents(firstActionRow);
-
-    await interaction.showModal(modal);
-  } catch (error) {
-    logger.error('Error showing color modal:', error);
-    throw error;
-  }
-}
-
 async function showFieldModal(interaction) {
-  try {
-    await interaction.update({
-      content: '📊 Veuillez entrer les informations du champ...',
-      embeds: [],
-      components: []
-    });
-
-    const modal = new ModalBuilder()
-      .setCustomId('embed_field_modal')
-      .setTitle('Ajouter un Champ à l\'Embed');
-
-    const nameInput = new TextInputBuilder()
-      .setCustomId('field_name')
-      .setLabel('Nom du Champ')
-      .setStyle(TextInputStyle.Short)
-      .setPlaceholder('Nom du champ')
-      .setMaxLength(256)
-      .setRequired(true);
-
-    const valueInput = new TextInputBuilder()
-      .setCustomId('field_value')
-      .setLabel('Valeur du Champ')
-      .setStyle(TextInputStyle.Paragraph)
-      .setPlaceholder('Valeur du champ')
-      .setMaxLength(1024)
-      .setRequired(true);
-
-    const inlineInput = new TextInputBuilder()
-      .setCustomId('field_inline')
-      .setLabel('En ligne? (true/false)')
-      .setStyle(TextInputStyle.Short)
-      .setPlaceholder('true ou false')
-      .setMaxLength(5)
-      .setRequired(false)
-      .setValue('false');
-
-    const firstActionRow = new ActionRowBuilder().addComponents(nameInput);
-    const secondActionRow = new ActionRowBuilder().addComponents(valueInput);
-    const thirdActionRow = new ActionRowBuilder().addComponents(inlineInput);
-
-    modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
-    await interaction.showModal(modal);
-  } catch (error) {
-    logger.error('Error showing field modal:', error);
-    throw error;
-  }
-}
-
-async function showImageModal(interaction) {
   const modal = new ModalBuilder()
-    .setCustomId('embed_image_modal')
-    .setTitle('Définir Image de l\'Embed');
+    .setCustomId('embed_field_modal')
+    .setTitle('Ajouter un champ');
 
-  const imageInput = new TextInputBuilder()
-    .setCustomId('embed_image')
-    .setLabel('URL de l\'Image')
+  const nameInput = new TextInputBuilder()
+    .setCustomId('field_name')
+    .setLabel('Nom du champ')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('https://example.com/image.png')
-    .setRequired(false);
+    .setPlaceholder('Nom du champ')
+    .setMaxLength(256)
+    .setRequired(true);
 
-  const firstActionRow = new ActionRowBuilder().addComponents(imageInput);
-  modal.addComponents(firstActionRow);
+  const valueInput = new TextInputBuilder()
+    .setCustomId('field_value')
+    .setLabel('Valeur du champ')
+    .setStyle(TextInputStyle.Paragraph)
+    .setPlaceholder('Valeur du champ')
+    .setMaxLength(1024)
+    .setRequired(true);
 
-  await interaction.showModal(modal);
-}
-
-async function showThumbnailModal(interaction) {
-  const modal = new ModalBuilder()
-    .setCustomId('embed_thumb_modal')
-    .setTitle('Définir Miniature de l\'Embed');
-
-  const thumbnailInput = new TextInputBuilder()
-    .setCustomId('embed_thumb')
-    .setLabel('URL de la Miniature')
+  const inlineInput = new TextInputBuilder()
+    .setCustomId('field_inline')
+    .setLabel('En ligne ? (true/false)')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('https://example.com/thumbnail.png')
-    .setRequired(false);
+    .setPlaceholder('true ou false')
+    .setMaxLength(5)
+    .setRequired(false)
+    .setValue('false');
 
-  const firstActionRow = new ActionRowBuilder().addComponents(thumbnailInput);
-  modal.addComponents(firstActionRow);
-
-  await interaction.showModal(modal);
-}
-
-async function showFooterModal(interaction) {
-  const modal = new ModalBuilder()
-    .setCustomId('embed_footer_modal')
-    .setTitle('Définir Footer de l\'Embed');
-
-  const footerInput = new TextInputBuilder()
-    .setCustomId('embed_footer')
-    .setLabel('Texte du Footer')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('Texte du footer')
-    .setMaxLength(2048)
-    .setRequired(false);
-
-  const firstActionRow = new ActionRowBuilder().addComponents(footerInput);
-  modal.addComponents(firstActionRow);
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(nameInput),
+    new ActionRowBuilder().addComponents(valueInput),
+    new ActionRowBuilder().addComponents(inlineInput)
+  );
 
   await interaction.showModal(modal);
 }
 
 async function showPreview(interaction, data) {
-  const previewEmbed = generatePreviewEmbed(data);
-  
-  await interaction.update({
-    embeds: [previewEmbed],
-    components: getBuilderComponents()
+  await refreshBuilderMessage(interaction, data, {
+    embeds: [generatePreviewEmbed(data), getStatusEmbed(data)]
   });
 }
 
 async function resetEmbed(interaction, userId) {
   clearEmbedData(userId);
   const data = getEmbedData(userId);
-  
-  await interaction.update({
-    embeds: [getStatusEmbed(data)],
-    components: getBuilderComponents()
-  });
-  
+  await refreshBuilderMessage(interaction, data);
   logger.info(`Embed builder reset for user ${userId}`);
 }
 
 async function cancelEmbed(interaction, userId) {
   clearEmbedData(userId);
-  
-  await interaction.update({
+
+  await refreshBuilderMessage(interaction, createEmptyEmbedData(), {
     embeds: [
       new EmbedBuilder()
-        .setDescription('❌ Embed builder cancelled')
+        .setDescription('❌ Constructeur d’embed annulé.')
         .setColor(getColor('error'))
     ],
     components: []
   });
-  
+
   logger.info(`Embed builder cancelled for user ${userId}`);
 }
 
 async function sendEmbed(interaction, data) {
-  if (!data.title && !data.description && data.fields.length === 0) {
-    await interaction.reply({
-      content: '❌ Your embed is empty! Add at least a title, description, or field.',
-      flags: MessageFlags.Ephemeral
-    });
+  if (!hasEmbedContent(data)) {
+    await replyEphemeral(interaction, '❌ Ton embed est vide. Ajoute au moins un titre, une description ou un champ.');
     return;
   }
 
+  if (!interaction.replied && !interaction.deferred) {
+    await interaction.deferUpdate();
+  }
+
   const finalEmbed = generatePreviewEmbed(data);
-  
-  // Send the embed to the current channel
   await interaction.channel.send({ embeds: [finalEmbed] });
-  
-  // Clear the data and close the builder
+
   clearEmbedData(interaction.user.id);
-  
-  await interaction.update({
+
+  await refreshBuilderMessage(interaction, createEmptyEmbedData(), {
     embeds: [
       new EmbedBuilder()
-        .setDescription('✅ Embed sent successfully!')
+        .setDescription('✅ Embed envoyé avec succès.')
         .setColor(getColor('success'))
     ],
     components: []
   });
-  
+
   logger.info(`Embed sent by user ${interaction.user.id} in channel ${interaction.channelId}`);
 }
 
-// Modal submission handlers
 export async function handleEmbedBuilderModals(interaction, client) {
   try {
     const userId = interaction.user.id;
@@ -449,54 +471,76 @@ export async function handleEmbedBuilderModals(interaction, client) {
 
     switch (customId) {
       case 'embed_title_modal':
-        data.title = interaction.fields.getTextInputValue('embed_title') || null;
+        data.title = interaction.fields.getTextInputValue('embed_title').trim() || null;
         break;
       case 'embed_desc_modal':
-        data.description = interaction.fields.getTextInputValue('embed_desc') || null;
+        data.description = interaction.fields.getTextInputValue('embed_desc').trim() || null;
         break;
-      case 'embed_color_modal':
-        const colorValue = interaction.fields.getTextInputValue('embed_color');
-        if (colorValue) {
-          try {
-            // Try hex format
-            if (colorValue.startsWith('#')) {
-              data.color = parseInt(colorValue.replace('#', ''), 16);
-            } else {
-              // Try decimal format
-              data.color = parseInt(colorValue);
-            }
-          } catch (e) {
-            data.color = null;
-          }
-        } else {
+      case 'embed_color_modal': {
+        const colorValue = interaction.fields.getTextInputValue('embed_color').trim();
+        if (!colorValue) {
           data.color = null;
+          break;
+        }
+        const parsedColor = parseColor(colorValue);
+        if (parsedColor === null) {
+          await refreshBuilderMessage(interaction, data);
+          await replyEphemeral(interaction, '❌ Couleur invalide. Utilise un hex (`#00FF00`) ou un nombre décimal (0–16777215).');
+          return;
+        }
+        data.color = parsedColor;
+        break;
+      }
+      case 'embed_field_modal': {
+        if (data.fields.length >= MAX_EMBED_FIELDS) {
+          await refreshBuilderMessage(interaction, data);
+          await replyEphemeral(interaction, '❌ Maximum 25 champs par embed.');
+          return;
+        }
+
+        const fieldName = interaction.fields.getTextInputValue('field_name').trim();
+        const fieldValueText = interaction.fields.getTextInputValue('field_value').trim();
+        const fieldInline = interaction.fields.getTextInputValue('field_inline').trim().toLowerCase() === 'true';
+
+        if (fieldName && fieldValueText) {
+          data.fields.push({ name: fieldName, value: fieldValueText, inline: fieldInline });
         }
         break;
-      case 'embed_field_modal':
-        const fieldName = interaction.fields.getTextInputValue('field_name');
-        const fieldValue = interaction.fields.getTextInputValue('field_value');
-        const fieldInline = interaction.fields.getTextInputValue('field_inline') === 'true';
-        
-        if (fieldName && fieldValue) {
-          data.fields.push({ name: fieldName, value: fieldValue, inline: fieldInline });
+      }
+      case 'embed_image_modal': {
+        const imageUrl = interaction.fields.getTextInputValue('embed_image').trim();
+        if (!imageUrl) {
+          data.image = null;
+          break;
         }
+        if (!isValidHttpUrl(imageUrl)) {
+          await refreshBuilderMessage(interaction, data);
+          await replyEphemeral(interaction, '❌ URL d’image invalide. Utilise une URL http(s).');
+          return;
+        }
+        data.image = imageUrl;
         break;
-      case 'embed_image_modal':
-        data.image = interaction.fields.getTextInputValue('embed_image') || null;
+      }
+      case 'embed_thumb_modal': {
+        const thumbnailUrl = interaction.fields.getTextInputValue('embed_thumb').trim();
+        if (!thumbnailUrl) {
+          data.thumbnail = null;
+          break;
+        }
+        if (!isValidHttpUrl(thumbnailUrl)) {
+          await refreshBuilderMessage(interaction, data);
+          await replyEphemeral(interaction, '❌ URL de miniature invalide. Utilise une URL http(s).');
+          return;
+        }
+        data.thumbnail = thumbnailUrl;
         break;
-      case 'embed_thumb_modal':
-        data.thumbnail = interaction.fields.getTextInputValue('embed_thumb') || null;
-        break;
+      }
       case 'embed_footer_modal':
-        data.footer = interaction.fields.getTextInputValue('embed_footer') || null;
+        data.footer = interaction.fields.getTextInputValue('embed_footer').trim() || null;
         break;
     }
 
-    await interaction.update({
-      embeds: [getStatusEmbed(data)],
-      components: getBuilderComponents()
-    });
-
+    await refreshBuilderMessage(interaction, data);
   } catch (error) {
     logger.error(`Embed builder modal handler failed`, {
       error: error.message,
@@ -504,16 +548,15 @@ export async function handleEmbedBuilderModals(interaction, client) {
       customId: interaction.customId,
       userId: interaction.user.id
     });
-    
-    // Show a simple error message to the user
+
     try {
       const errorMessage = `❌ Erreur: ${error.message}`;
       if (interaction.deferred) {
         await interaction.editReply({ content: errorMessage, components: [] });
       } else if (interaction.replied) {
-        await interaction.followUp({ content: errorMessage, ephemeral: true });
+        await interaction.followUp({ content: errorMessage, flags: MessageFlags.Ephemeral });
       } else {
-        await interaction.reply({ content: errorMessage, ephemeral: true });
+        await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
       }
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);

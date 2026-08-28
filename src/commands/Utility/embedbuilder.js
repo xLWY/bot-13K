@@ -16,13 +16,13 @@ export default {
       // Initial embed builder interface
       const embed = createEmbed({
         title: '🎨 Embed Builder',
-        description: 'Use the buttons below to customize your embed',
+        description: 'Utilise les boutons ci-dessous pour personnaliser ton embed.',
         color: BotConfig.embeds.colors.info
       })
         .addFields(
-          { name: '📝 Title', value: 'Not set', inline: true },
-          { name: '📖 Description', value: 'Not set', inline: true },
-          { name: '🎨 Color', value: 'Default', inline: true }
+          { name: '📝 Titre', value: 'Non défini', inline: true },
+          { name: '📖 Description', value: 'Non définie', inline: true },
+          { name: '🎨 Couleur', value: 'Par défaut', inline: true }
         );
 
       const row = new ActionRowBuilder()
