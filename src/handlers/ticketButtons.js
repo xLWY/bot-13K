@@ -66,16 +66,16 @@ async function checkTicketPermissionWithTimeout(interaction, client, actionLabel
 export const createTicketHandler = {
   name: 'create_ticket',
   async execute(interaction, client) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
       const rateLimitKey = `${interaction.user.id}:create_ticket`;
       const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
       if (!allowed) {
-        return await interaction.reply({
+        return await interaction.editReply({
           embeds: [errorEmbed('Trop de tickets', 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.')],
-          flags: MessageFlags.Ephemeral,
-        });
+        }).catch(() => {});
       }
 
       const config = await getGuildConfig(client, interaction.guildId);
@@ -85,21 +85,21 @@ export const createTicketHandler = {
       const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
 
       if (currentTicketCount >= maxTicketsPerUser) {
-        return await interaction.reply({
+        return await interaction.editReply({
           embeds: [
             errorEmbed(
               '🎫 Limite de tickets atteinte',
               `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.\n\n**Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`,
             ),
           ],
-          flags: MessageFlags.Ephemeral,
-        });
+        }).catch(() => {});
       }
 
       const typeEmbed = createEmbed({
         title: '🎫 Nouveau ticket',
         description: 'Choisissez le type de ticket que vous souhaitez ouvrir.',
         color: 'info',
+        footer: { text: 'TF v4' },
       });
 
       const typeSelect = new StringSelectMenuBuilder()
@@ -115,19 +115,15 @@ export const createTicketHandler = {
           ),
         );
 
-      return await interaction.reply({
+      return await interaction.editReply({
         embeds: [typeEmbed],
         components: [new ActionRowBuilder().addComponents(typeSelect)],
-        flags: MessageFlags.Ephemeral,
-      });
+      }).catch(() => {});
     } catch (error) {
       logger.error('Error opening ticket type menu:', error);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de création de ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await interaction.editReply({
+        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible d\'ouvrir le formulaire de création de ticket.')],
+      }).catch(() => {});
     }
   }
 };
@@ -135,16 +131,16 @@ export const createTicketHandler = {
 export const createTicketDirectHandler = {
   name: 'create_ticket_direct',
   async execute(interaction, client) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
       const rateLimitKey = `${interaction.user.id}:create_ticket`;
       const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
       if (!allowed) {
-        return await interaction.reply({
+        return await interaction.editReply({
           embeds: [errorEmbed('Trop de tickets', 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.')],
-          flags: MessageFlags.Ephemeral,
-        });
+        }).catch(() => {});
       }
 
       const config = await getGuildConfig(client, interaction.guildId);
@@ -154,15 +150,14 @@ export const createTicketDirectHandler = {
       const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
 
       if (currentTicketCount >= maxTicketsPerUser) {
-        return await interaction.reply({
+        return await interaction.editReply({
           embeds: [
             errorEmbed(
               '🎫 Limite de tickets atteinte',
               `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.\n\n**Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`,
             ),
           ],
-          flags: MessageFlags.Ephemeral,
-        });
+        }).catch(() => {});
       }
 
       const typeId = interaction.customId.split(':')[1] || 'support';
@@ -173,24 +168,19 @@ export const createTicketDirectHandler = {
       });
 
       if (result.success) {
-        return await interaction.reply({
+        return await interaction.editReply({
           embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé')],
-          flags: MessageFlags.Ephemeral,
-        });
+        }).catch(() => {});
       }
 
-      return await interaction.reply({
-        embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
-        flags: MessageFlags.Ephemeral,
-      });
+      return await interaction.editReply({
+        embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
+      }).catch(() => {});
     } catch (error) {
       logger.error('Error creating ticket:', error);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Impossible de créer le ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await interaction.editReply({
+        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
+      }).catch(() => {});
     }
   }
 };
