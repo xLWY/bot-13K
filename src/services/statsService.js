@@ -114,25 +114,6 @@ export async function getGuildStatsSummary(client, guildId) {
 }
 
 /**
- * Returns the record for a single user, or null if no activity.
- * @param {Array} users Summary list from getGuildStatsSummary
- * @param {string} userId
- */
-export function getUserStatsRecord(users, userId) {
-    return users.find((u) => u.userId === userId) || null;
-}
-
-/**
- * 1-based rank of a user for a given field ("messages" | "voiceSeconds"),
- * 0 when the user is not tracked.
- */
-export function getUserRank(users, userId, field) {
-    const sorted = [...users].sort((a, b) => b[field] - a[field]);
-    const index = sorted.findIndex((u) => u.userId === userId);
-    return index === -1 ? 0 : index + 1;
-}
-
-/**
  * Formats a duration in French, e.g. "12 h 34 min" or "45 min".
  * @param {number} totalSeconds
  */

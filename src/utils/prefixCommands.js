@@ -19,6 +19,7 @@ const OPTION_TYPE = {
 };
 
 const DEFAULT_PREFIX = '!';
+const STATBOT_PREFIX = 's?';
 
 /**
  * Splits a string into tokens, keeping "quoted phrases" and 'single quoted' together.
@@ -285,10 +286,11 @@ export async function handlePrefixCommand(message, client) {
         logger.error('Failed to load guild config for prefix command check:', error);
     }
 
-    const prefix = guildConfig?.prefix || DEFAULT_PREFIX;
-    if (!message.content.startsWith(prefix)) return false;
+    const configuredPrefix = guildConfig?.prefix || DEFAULT_PREFIX;
+    const matchedPrefix = [configuredPrefix, STATBOT_PREFIX].find((p) => p && message.content.startsWith(p));
+    if (!matchedPrefix) return false;
 
-    const withoutPrefix = message.content.slice(prefix.length).trim();
+    const withoutPrefix = message.content.slice(matchedPrefix.length).trim();
     if (!withoutPrefix) return false;
 
     const tokens = tokenize(withoutPrefix);
@@ -324,14 +326,14 @@ export async function handlePrefixCommand(message, client) {
             const groupToken = tokens.shift();
             const group = optionDefs.find(o => o.name === groupToken?.toLowerCase());
             if (!group) {
-                await message.reply(`Usage: ${usageLine(prefix, commandName, null, [])} — available groups: ${optionDefs.map(o => o.name).join(', ')}`);
+                await message.reply(`Usage: ${usageLine(matchedPrefix, commandName, null, [])} — available groups: ${optionDefs.map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommandGroup = group.name;
             const subToken = tokens.shift();
             const sub = group.options?.find(o => o.name === subToken?.toLowerCase());
             if (!sub) {
-                await message.reply(`Usage: \`${prefix}${commandName} ${group.name} <subcommand>\` — available: ${(group.options || []).map(o => o.name).join(', ')}`);
+                await message.reply(`Usage: \`${matchedPrefix}${commandName} ${group.name} <subcommand>\` — available: ${(group.options || []).map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommand = sub.name;
@@ -340,7 +342,7 @@ export async function handlePrefixCommand(message, client) {
             const subToken = tokens.shift();
             const sub = optionDefs.find(o => o.name === subToken?.toLowerCase());
             if (!sub) {
-                await message.reply(`Usage: \`${prefix}${commandName} <subcommand>\` — available: ${optionDefs.map(o => o.name).join(', ')}`);
+                await message.reply(`Usage: \`${matchedPrefix}${commandName} <subcommand>\` — available: ${optionDefs.map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommand = sub.name;
@@ -358,14 +360,14 @@ export async function handlePrefixCommand(message, client) {
 
         const parsed = buildOptionsFromTokens(message, optionDefs, tokens);
         if (parsed.error) {
-            await message.reply(`❌ ${parsed.error}\nUsage: ${usageLine(prefix, commandName, subcommand, optionDefs)}`);
+            await message.reply(`❌ ${parsed.error}\nUsage: ${usageLine(matchedPrefix, commandName, subcommand, optionDefs)}`);
             return true;
         }
 
         const optionsAccessor = makeOptionsAccessor(parsed.values, message, subcommand, subcommandGroup);
         const interaction = createPrefixInteraction(message, client, commandName, optionsAccessor);
 
-        logger.info(`Prefix command executed: ${prefix}${commandName} by ${message.author.tag}`, {
+        logger.info(`Prefix command executed: ${matchedPrefix}${commandName} by ${message.author.tag}`, {
             event: 'prefix.command.received',
             guildId: message.guild.id,
             userId: message.author.id,

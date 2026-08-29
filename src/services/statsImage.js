@@ -25,10 +25,7 @@ const COLORS = {
     body: '#DBDEE3',
     muted: '#9AA1AC',
     faint: '#6A7078',
-    green: '#3BA55D',
-    pink: '#EB4D7B',
     blueA: '#4E7DFF',
-    blueB: '#1F3E9E',
     orangeA: '#F4752B',
     orangeB: '#7A3410'
 };
@@ -123,15 +120,6 @@ function drawAvatar(ctx, image, x, y, size, { ring = null, fallbackText = '?', h
         ctx.stroke();
         ctx.restore();
     }
-}
-
-function shade(hex, percent) {
-    const num = parseInt(hex.slice(1), 16);
-    const amt = Math.round(255 * (Math.abs(percent) / 100));
-    const r = percent < 0 ? Math.max(0, (num >> 16) - amt) : Math.min(255, (num >> 16) + amt);
-    const g = percent < 0 ? Math.max(0, ((num >> 8) & 0xff) - amt) : Math.min(255, ((num >> 8) & 0xff) + amt);
-    const b = percent < 0 ? Math.max(0, (num & 0xff) - amt) : Math.min(255, (num & 0xff) + amt);
-    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
 
 function dateLabel(timestamp) {
@@ -340,7 +328,7 @@ export async function renderTopImage({
 
     const rowsTop = sectionsTop + sectionH;
 
-    const drawColumn = (entries, colIndex, accent, accentB, isVoice) => {
+    const drawColumn = (entries, colIndex, accent, isVoice) => {
         const colX = pad + colIndex * (colW + colGap);
         entries.forEach((entry, index) => {
             const rowTop = rowsTop + index * (rowH + rowGap);
@@ -356,7 +344,6 @@ export async function renderTopImage({
                 index,
                 avatarImages: avatars,
                 accent,
-                accentB,
                 valueText,
                 maxEntries: entries.length
             });
@@ -372,178 +359,14 @@ export async function renderTopImage({
         });
     };
 
-    drawColumn(messageEntries, 0, COLORS.orangeA, COLORS.orangeB, false);
-    drawColumn(voiceEntries, 1, COLORS.blueA, COLORS.blueB, true);
+    drawColumn(messageEntries, 0, COLORS.orangeA, false);
+    drawColumn(voiceEntries, 1, COLORS.blueA, true);
 
     ctx.font = `500 15px ${FONT.regular}`;
     ctx.fillStyle = COLORS.faint;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`s?t · données cumulées depuis le ${dateLabel(startedAt)}`, W / 2, H - pad / 2 - 2);
-
-    return canvas.toBuffer('image/png');
-}
-
-/**
- * Renders the "User" card (messages + voice + top channels), Statbot style:
- * 1280px wide, blue splash, stat tiles + channel list.
- */
-export async function renderUserImage({
-    displayName,
-    avatarUrl,
-    startedAt,
-    messages,
-    messageRank,
-    voiceSeconds,
-    voiceRank,
-    channels
-}) {
-    const W = 1280;
-    const pad = 28;
-    const headerH = 150;
-    const tilesGap = 24;
-    const tilesH = 150;
-    const sectionH = 52;
-    const rowH = 66;
-    const rowGap = 8;
-    const footerH = 46;
-    const tilesW = (W - pad * 2 - tilesGap) / 2;
-
-    const channelRows = channels.slice(0, 5);
-    const channelsH = channelRows.length > 0
-        ? channelRows.length * rowH + (channelRows.length - 1) * rowGap
-        : 40;
-
-    const H = pad * 2 + headerH + tilesH + 20 + sectionH + channelsH + footerH;
-
-    const canvas = createCanvas(W, H);
-    const ctx = canvas.getContext('2d');
-    drawStatPage(ctx, W, H, COLORS.blueA, COLORS.blueB);
-
-    let avatar = null;
-    if (avatarUrl) {
-        const avatars = await preloadAvatars([avatarUrl]);
-        avatar = avatars.get(avatarUrl);
-    }
-
-    const top = pad;
-    const avatarSize = 92;
-    drawAvatar(ctx, avatar, pad, top + 4, avatarSize, {
-        ring: '#FFFFFF4D',
-        fallbackText: (displayName || '?').charAt(0).toUpperCase(),
-        hue: 258
-    });
-
-    const titleX = pad + avatarSize + 28;
-    ctx.font = `700 40px ${FONT.bold}`;
-    ctx.fillStyle = COLORS.text;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(fitText(ctx, displayName || 'Membre', W - titleX - pad), titleX, top + 48);
-
-    ctx.font = `500 18px ${FONT.regular}`;
-    ctx.fillStyle = 'rgba(255,255,255,0.72)';
-    ctx.fillText(`Statistiques · depuis le ${dateLabel(startedAt)}`, titleX, top + 80);
-
-    const tilesTop = top + headerH;
-
-    const drawTile = (tileX, label, valueText, rankText, accent) => {
-        rounded(ctx, tileX, tilesTop, tilesW, tilesH, 14);
-        ctx.fillStyle = COLORS.panel;
-        ctx.fill();
-        ctx.strokeStyle = COLORS.panelBorder;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        const topLine = ctx.createLinearGradient(tileX, 0, tileX + tilesW, 0);
-        topLine.addColorStop(0, accent);
-        topLine.addColorStop(1, shade(accent, 20));
-        rounded(ctx, tileX, tilesTop, tilesW, 5, 2.5);
-        ctx.fillStyle = topLine;
-        ctx.fill();
-
-        ctx.font = `600 17px ${FONT.semibold}`;
-        ctx.fillStyle = COLORS.muted;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillText(label.toUpperCase(), tileX + 26, tilesTop + 42);
-
-        ctx.font = `700 44px ${FONT.bold}`;
-        ctx.fillStyle = COLORS.text;
-        ctx.fillText(valueText, tileX + 26, tilesTop + 116);
-
-        ctx.font = `500 16px ${FONT.regular}`;
-        ctx.fillStyle = COLORS.muted;
-        ctx.textAlign = 'right';
-        ctx.fillText(rankText, tileX + tilesW - 26, tilesTop + 116);
-        ctx.textAlign = 'left';
-    };
-
-    drawTile(pad, 'Messages', messages.toLocaleString('fr-FR'), `#${messageRank} au classement`, COLORS.blueA);
-    drawTile(pad + tilesW + tilesGap, 'Temps vocal', formatVoiceDuration(voiceSeconds), `#${voiceRank} au classement`, COLORS.green);
-
-    const sectionTop = tilesTop + tilesH + 20;
-    drawSectionTitle(ctx, pad, sectionTop + 12, 'Top salons', COLORS.blueA);
-
-    const channelsTop = sectionTop + sectionH;
-
-    if (channelRows.length > 0) {
-        const maxCount = Math.max(1, ...channelRows.map((c) => c.count));
-        channelRows.forEach((channel, index) => {
-            const rowTop = channelsTop + index * (rowH + rowGap);
-
-            if (index > 0) {
-                ctx.strokeStyle = COLORS.divider;
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(pad, rowTop);
-                ctx.lineTo(W - pad, rowTop);
-                ctx.stroke();
-            }
-
-            const hashSize = 38;
-            const hashX = pad;
-            const hashY = rowTop + (rowH - hashSize) / 2;
-            const hashGrad = ctx.createLinearGradient(hashX, hashY, hashX + hashSize, hashY + hashSize);
-            hashGrad.addColorStop(0, '#4E7DFF');
-            hashGrad.addColorStop(1, '#2B3E9E');
-            rounded(ctx, hashX, hashY, hashSize, hashSize, 9);
-            ctx.fillStyle = hashGrad;
-            ctx.fill();
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = `700 20px ${FONT.bold}`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('#', hashX + hashSize / 2, hashY + hashSize / 2 + 1);
-
-            const nameX = hashX + hashSize + 16;
-            ctx.font = `600 19px ${FONT.semibold}`;
-            ctx.fillStyle = COLORS.body;
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(fitText(ctx, channel.name || 'Salon inconnu', W - pad * 2 - 260), nameX, rowTop + rowH / 2 - 3);
-
-            const countText = channel.count.toLocaleString('fr-FR');
-            ctx.font = `700 19px ${FONT.bold}`;
-            ctx.fillStyle = COLORS.text;
-            ctx.textAlign = 'right';
-            ctx.fillText(countText, W - pad - 8, rowTop + rowH / 2 - 3);
-
-            drawValueBar(ctx, nameX, rowTop + rowH - 12, W - pad * 2 - 48, 4, channel.count / maxCount, COLORS.blueA);
-        });
-    } else {
-        ctx.font = `500 17px ${FONT.regular}`;
-        ctx.fillStyle = COLORS.muted;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillText('Aucun message enregistré.', pad, channelsTop + 12);
-    }
-
-    ctx.font = `500 15px ${FONT.regular}`;
-    ctx.fillStyle = COLORS.faint;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`s?u · données cumulées depuis le ${dateLabel(startedAt)}`, W / 2, H - pad / 2 - 2);
 
     return canvas.toBuffer('image/png');
 }
