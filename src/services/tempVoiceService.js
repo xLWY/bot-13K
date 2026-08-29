@@ -140,6 +140,28 @@ export async function createControlPanel(client, guild, voiceChannel) {
             return false;
         }
 
+        const layout = await buildControlPanel(client, voiceChannel, tempInfo);
+
+        try {
+            const message = await voiceChannel.send({
+                content: `<@${tempInfo.ownerId}>`,
+                ...layout
+            });
+
+            await updateTemporaryChannelInfo(client, guild.id, voiceChannel.id, {
+                textChannelId: voiceChannel.id,
+                panelMessageId: message.id
+            });
+
+            logger.info(`Created control panel for temporary channel ${voiceChannel.id} (in voice text chat)`);
+            return true;
+        } catch (voiceChatError) {
+            logger.warn(
+                `Voice text chat unavailable for ${voiceChannel.id}, falling back to a separate text channel:`,
+                voiceChatError.message
+            );
+        }
+
         const textChannelName = sanitizeChannelName(
             `${CONTROL_TEXT_PREFIX}${voiceChannel.name}`,
             '🎛 Salon vocal'
@@ -151,7 +173,6 @@ export async function createControlPanel(client, guild, voiceChannel) {
             parent: voiceChannel.parentId
         });
 
-        const layout = await buildControlPanel(client, voiceChannel, tempInfo);
         const message = await textChannel.send({
             content: `<@${tempInfo.ownerId}>`,
             ...layout
@@ -177,10 +198,13 @@ export async function refreshControlPanel(client, guild, voiceChannelId, tempInf
         const voiceChannel = await guild.channels.fetch(voiceChannelId).catch(() => null);
         if (!voiceChannel) return false;
 
-        const textChannel = await guild.channels.fetch(tempInfo.textChannelId).catch(() => null);
-        if (!textChannel || textChannel.type !== ChannelType.GuildText) return false;
+        const panelChannel = await guild.channels.fetch(tempInfo.textChannelId).catch(() => null);
+        const isPanelChannelTextBased =
+            panelChannel &&
+            (panelChannel.type === ChannelType.GuildText || panelChannel.type === ChannelType.GuildVoice);
+        if (!isPanelChannelTextBased) return false;
 
-        const message = await textChannel.messages.fetch(tempInfo.panelMessageId).catch(() => null);
+        const message = await panelChannel.messages.fetch(tempInfo.panelMessageId).catch(() => null);
         if (!message) return false;
 
         const layout = await buildControlPanel(client, voiceChannel, tempInfo);
@@ -198,6 +222,7 @@ export async function ensureControlOverrides(voiceChannel, tempInfo, config) {
             ViewChannel: true,
             Connect: true,
             Speak: true,
+            SendMessages: true,
             PrioritySpeaker: true,
             MoveMembers: true
         });
@@ -210,7 +235,8 @@ export async function ensureControlOverrides(voiceChannel, tempInfo, config) {
             await voiceChannel.permissionOverwrites.edit(modRoleId, {
                 ViewChannel: true,
                 Connect: true,
-                Speak: true
+                Speak: true,
+                SendMessages: true
             });
         }
 
@@ -219,6 +245,7 @@ export async function ensureControlOverrides(voiceChannel, tempInfo, config) {
                 ViewChannel: true,
                 Connect: true,
                 Speak: true,
+                SendMessages: true,
                 ManageChannels: true
             });
         }
@@ -255,6 +282,8 @@ export async function setChannelLocked(client, voiceChannel, tempInfo, config, l
 export async function setChannelPrivate(client, voiceChannel, tempInfo, config, privateChannel) {
     const guild = voiceChannel.guild;
     const textChannelId = tempInfo?.textChannelId;
+    const separateTextChannelId =
+        textChannelId && textChannelId !== voiceChannel.id ? textChannelId : null;
 
     try {
         if (privateChannel) {
@@ -264,8 +293,8 @@ export async function setChannelPrivate(client, voiceChannel, tempInfo, config, 
                 Speak: false
             });
 
-            if (textChannelId) {
-                const textChannel = await guild.channels.fetch(textChannelId).catch(() => null);
+            if (separateTextChannelId) {
+                const textChannel = await guild.channels.fetch(separateTextChannelId).catch(() => null);
                 if (textChannel) {
                     await textChannel.permissionOverwrites.edit(guild.id, { ViewChannel: false });
                     if (guild.members.me) {
@@ -280,8 +309,8 @@ export async function setChannelPrivate(client, voiceChannel, tempInfo, config, 
                 Speak: null
             });
 
-            if (textChannelId) {
-                const textChannel = await guild.channels.fetch(textChannelId).catch(() => null);
+            if (separateTextChannelId) {
+                const textChannel = await guild.channels.fetch(separateTextChannelId).catch(() => null);
                 if (textChannel) {
                     await textChannel.permissionOverwrites.edit(guild.id, { ViewChannel: null });
                 }
@@ -303,7 +332,7 @@ export async function renameTemporaryChannel(client, voiceChannel, tempInfo, new
 
     await voiceChannel.setName(safeName);
 
-    if (tempInfo?.textChannelId) {
+    if (tempInfo?.textChannelId && tempInfo.textChannelId !== voiceChannel.id) {
         const textChannel = await guild.channels.fetch(tempInfo.textChannelId).catch(() => null);
         if (textChannel) {
             await textChannel.setName(
@@ -345,7 +374,7 @@ export async function transferTemporaryChannel(client, voiceChannel, newOwnerId)
 
     await voiceChannel.setName(newChannelName);
 
-    if (tempInfo.textChannelId) {
+    if (tempInfo.textChannelId && tempInfo.textChannelId !== voiceChannel.id) {
         const textChannel = await guild.channels.fetch(tempInfo.textChannelId).catch(() => null);
         if (textChannel) {
             await textChannel.setName(

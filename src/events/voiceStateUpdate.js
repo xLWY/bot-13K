@@ -234,7 +234,7 @@ userLimit: userLimit === 0 ? undefined : userLimit,
             try {
                 const tempInfo = await getTemporaryChannelInfo(client, guildId, channel.id);
 
-                if (tempInfo?.textChannelId) {
+                if (tempInfo?.textChannelId && tempInfo.textChannelId !== channel.id) {
                     const textChannel = await channel.guild.channels
                         .fetch(tempInfo.textChannelId)
                         .catch(() => null);
@@ -279,7 +279,7 @@ userLimit: userLimit === 0 ? undefined : userLimit,
 
                     await channel.setName(newChannelName);
 
-                    if (tempChannelInfo?.textChannelId) {
+                    if (tempChannelInfo?.textChannelId && tempChannelInfo.textChannelId !== channel.id) {
                         const textChannel = await channel.guild.channels
                             .fetch(tempChannelInfo.textChannelId)
                             .catch(() => null);
