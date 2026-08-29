@@ -98,6 +98,16 @@ export default {
             value: u.voiceSeconds
         }));
 
+        const decoratedMessages = byMessages.map((u) => ({ ...u, displayName: members.get(u.userId)?.name }));
+        const decoratedVoice = byVoice.map((u) => ({ ...u, displayName: members.get(u.userId)?.name }));
+
+        const messagesText = decoratedMessages.length > 0
+            ? formatTopLines(decoratedMessages, (u) => `${u.messages.toLocaleString('fr-FR')} msg`)
+            : 'Aucun message enregistré.';
+        const voiceText = decoratedVoice.length > 0
+            ? formatTopLines(decoratedVoice, (u) => formatVoiceDuration(u.voiceSeconds))
+            : 'Aucune activité vocale enregistrée.';
+
         try {
             const imageBuffer = await renderTopImage({
                 guildName: interaction.guild.name,
@@ -134,35 +144,5 @@ export default {
             await interaction.reply({ embeds: [fallbackEmbed] });
             return;
         }
-
-        const decoratedMessages = byMessages.map((u) => ({ ...u, displayName: members.get(u.userId)?.name }));
-        const decoratedVoice = byVoice.map((u) => ({ ...u, displayName: members.get(u.userId)?.name }));
-
-        const messagesText = decoratedMessages.length > 0
-            ? formatTopLines(decoratedMessages, (u) => `${u.messages.toLocaleString('fr-FR')} msg`)
-            : 'Aucun message enregistré.';
-        const voiceText = decoratedVoice.length > 0
-            ? formatTopLines(decoratedVoice, (u) => formatVoiceDuration(u.voiceSeconds))
-            : 'Aucune activité vocale enregistrée.';
-
-        const embed = createEmbed({
-            title: "📊 Top activité",
-            description: `Statistiques cumulées depuis le <t:${Math.floor(startedAt / 1000)}:d> — ${users.length} membre(s) suivi(s).`,
-            color: 'primary',
-            fields: [
-                {
-                    name: "✉️ Messages",
-                    value: messagesText,
-                    inline: true
-                },
-                {
-                    name: "🎙️ Vocal",
-                    value: voiceText,
-                    inline: true
-                }
-            ]
-        });
-
-        await interaction.reply({ embeds: [embed] });
     }
 };
