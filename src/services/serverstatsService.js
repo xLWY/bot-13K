@@ -16,6 +16,16 @@ export const COUNTER_TYPE_CONFIG = {
     label: 'Bots Only',
     baseName: 'Bots',
     emoji: '🤖'
+  },
+  online: {
+    label: 'Online Members',
+    baseName: 'En ligne',
+    emoji: '🟢'
+  },
+  voice: {
+    label: 'In Voice',
+    baseName: 'En vocal',
+    emoji: '🎙️'
   }
 };
 
@@ -53,11 +63,19 @@ export async function getGuildCounterStats(guild) {
   const botCount = memberCollection.filter((member) => member.user.bot).size;
   const totalCount = typeof guild.memberCount === 'number' ? guild.memberCount : memberCollection.size;
   const humanCount = Math.max(totalCount - botCount, 0);
+  const onlineCount = memberCollection.filter((member) =>
+    !member.user.bot && ['online', 'idle', 'dnd'].includes(member.presence?.status)
+  ).size;
+  const voiceCount = guild.channels.cache
+    .filter((channel) => channel.isVoiceBased && channel.isVoiceBased())
+    .reduce((total, channel) => total + (channel.members?.size || 0), 0);
 
   return {
     totalCount,
     botCount,
-    humanCount
+    humanCount,
+    onlineCount,
+    voiceCount
   };
 }
 
@@ -71,6 +89,10 @@ export async function getCounterCount(guild, type) {
       return stats.botCount;
     case 'members_only':
       return stats.humanCount;
+    case 'online':
+      return stats.onlineCount;
+    case 'voice':
+      return stats.voiceCount;
     default:
       return null;
   }

@@ -18,6 +18,10 @@ export default {
 
       seedActiveVoiceSessions(client);
 
+      if (typeof client.updateAllCounters === 'function') {
+        client.updateAllCounters().catch((error) => logger.warn('Initial counter sync failed:', error));
+      }
+
       const reconciliationSummary = await reconcileReactionRoleMessages(client);
       startupLog(
         `Reaction role reconciliation: scanned ${reconciliationSummary.scannedMessages}, removed ${reconciliationSummary.removedMessages}, errors ${reconciliationSummary.errors}`

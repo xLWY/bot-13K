@@ -16,10 +16,13 @@ import {
 } from '../services/tempVoiceService.js';
 import { recordVoiceSession } from '../services/statsService.js';
 import { Mutex } from '../utils/mutex.js';
+import { getServerCounters, updateCounter } from '../services/serverstatsService.js';
 
 const channelCreationCooldown = new Map();
 const activeVoiceSessions = new Map();
+const voiceCounterDebounce = new Map();
 const VOICE_CREATE_COOLDOWN_MS = 2000;
+const VOICE_COUNTER_DEBOUNCE_MS = 30000;
 const DEFAULT_VOICE_BITRATE = 64000;
 const MAX_VOICE_BITRATE = 384000;
 const MIN_VOICE_BITRATE = 8000;
@@ -40,6 +43,7 @@ export default {
         cleanupCooldownEntries();
 
         await trackVoiceStats(oldState, newState, client);
+        await updateVoiceCounters(client, newState.guild);
 
         try {
             const config = await getJoinToCreateConfig(client, guildId);
@@ -372,6 +376,25 @@ async function trackVoiceStats(oldState, newState, client) {
         }
     } catch (error) {
         logger.warn('Error tracking voice stats session:', error.message);
+    }
+}
+
+async function updateVoiceCounters(client, guild) {
+    const guildId = guild.id;
+    const lastRun = voiceCounterDebounce.get(guildId) || 0;
+    const now = Date.now();
+    if (now - lastRun < VOICE_COUNTER_DEBOUNCE_MS) return;
+    voiceCounterDebounce.set(guildId, now);
+
+    try {
+        const counters = await getServerCounters(client, guildId);
+        for (const counter of counters) {
+            if (counter.type === 'voice' && counter.enabled !== false) {
+                await updateCounter(client, guild, counter);
+            }
+        }
+    } catch (error) {
+        logger.debug(`Failed to update voice counters for guild ${guildId}:`, error.message);
     }
 }
 

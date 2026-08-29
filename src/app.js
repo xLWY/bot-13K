@@ -17,12 +17,13 @@ class TitanBot extends Client {
   constructor() {
     super({
       intents: [
-        
-        GatewayIntentBits.Guilds,                        
+GatewayIntentBits.Guilds,                        
         GatewayIntentBits.GuildMembers,                 
+        GatewayIntentBits.GuildPresences,               
         
-        
-        GatewayIntentBits.GuildMessages,                
+
+
+        GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMessageReactions,        
         GatewayIntentBits.MessageContent,               
         

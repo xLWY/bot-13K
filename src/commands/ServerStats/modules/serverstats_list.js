@@ -62,7 +62,7 @@ export async function handleList(interaction, client) {
 
             embed.addFields({
                 name: "🔧 **Available Counter Types**",
-                value: "👥 **Members + Bots** - Total server members\n👤 **Members Only** - Human members only\n🤖 **Bots Only** - Bot members only",
+                value: "👥 **Members + Bots** - Total server members\n👤 **Members Only** - Human members only\n🤖 **Bots Only** - Bot members only\n🟢 **Online Members** - Members currently online\n🎙️ **In Voice** - Members currently in a voice channel",
                 inline: false
             });
 
@@ -168,6 +168,10 @@ function getCurrentCount(stats, type) {
             return stats.botCount;
         case "members_only":
             return stats.humanCount;
+        case "online":
+            return stats.onlineCount;
+        case "voice":
+            return stats.voiceCount;
         default:
             return 0;
     }

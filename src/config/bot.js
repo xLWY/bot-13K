@@ -445,6 +445,23 @@ export const botConfig = {
         getCount: (guild) =>
           guild.members.cache.filter((m) => !m.user.bot).size.toString(),
       },
+      online: {
+        name: "🟢 Online Members",
+        description: "Members currently online (non-bots, not invisible)",
+        getCount: (guild) =>
+          guild.members.cache
+            .filter((m) => !m.user.bot && m.presence && ['online', 'idle', 'dnd'].includes(m.presence.status))
+            .size.toString(),
+      },
+      voice: {
+        name: "🎙️ In Voice",
+        description: "Members currently in a voice or stage channel",
+        getCount: (guild) =>
+          guild.channels.cache
+            .filter((c) => c.isVoiceBased && c.isVoiceBased())
+            .reduce((t, c) => t + (c.members?.size || 0), 0)
+            .toString(),
+      },
     },
   },
 
