@@ -130,44 +130,37 @@ function dateLabel(timestamp) {
     });
 }
 
+function hexToRgba(hex, alpha) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = (n >> 16) & 0xff;
+    const g = (n >> 8) & 0xff;
+    const b = n & 0xff;
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
 /**
- * Fills the page: very dark background + a subtle diagonal colored blob
- * anchored in the top-left corner (Statbot-style splash), a few soft
- * decorative circles, and a faint top-right glow.
+ * Fills the page: very dark background, a barely-there colored bloom in the
+ * top-left corner and a faint top-right glow. Kept subtle by design.
  */
-function drawStatPage(ctx, W, H, accent, accentB) {
+function drawStatPage(ctx, W, H, accent) {
     const bg = ctx.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, COLORS.pageA);
     bg.addColorStop(1, COLORS.pageB);
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.save();
-    const cx = -W * 0.08;
-    const cy = -H * 0.06;
-    const blobR = Math.max(W, H) * 0.42;
-    const blob = ctx.createRadialGradient(cx, cy, 10, cx, cy, blobR);
-    blob.addColorStop(0, accent);
-    blob.addColorStop(0.35, accentB);
-    blob.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = blob;
+    const bloom = ctx.createRadialGradient(-W * 0.05, -H * 0.05, 10, -W * 0.05, -H * 0.05, W * 0.45);
+    bloom.addColorStop(0, hexToRgba(accent, 0.22));
+    bloom.addColorStop(0.5, hexToRgba(accent, 0.06));
+    bloom.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = bloom;
     ctx.fillRect(0, 0, W, H);
-
-    ctx.globalAlpha = 0.06;
-    ctx.fillStyle = '#FFFFFF';
-    circle(ctx, cx + blobR * 0.62, cy + blobR * 0.34, blobR * 0.16);
-    ctx.fill();
-    ctx.globalAlpha = 0.04;
-    circle(ctx, cx + blobR * 0.42, cy + blobR * 0.62, blobR * 0.22);
-    ctx.fill();
 
     const glow = ctx.createRadialGradient(W * 0.98, -H * 0.05, 10, W * 0.98, -H * 0.05, W * 0.35);
-    glow.addColorStop(0, 'rgba(255,255,255,0.07)');
+    glow.addColorStop(0, 'rgba(255,255,255,0.05)');
     glow.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.globalAlpha = 1;
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
-    ctx.restore();
 }
 
 function drawHeader(ctx, X, Y, { title, subtitle }) {
@@ -191,71 +184,8 @@ function drawSectionTitle(ctx, X, Y, label, accent) {
 }
 
 /**
- * Leaderboard row (rank + avatar + name + value) + subtle separators.
- */
-function drawRankRow(ctx, opts) {
-    const {
-        colX, colW, rowTop, rowH, entry, index, avatarImages, accent, valueText
-    } = opts;
-
-    if (index > 0) {
-        ctx.strokeStyle = COLORS.divider;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(colX, rowTop);
-        ctx.lineTo(colX + colW, rowTop);
-        ctx.stroke();
-    }
-
-    const rankSize = 34;
-    const rankX = colX;
-    const rankY = rowTop + (rowH - rankSize) / 2;
-    const leader = index === 0;
-    circle(ctx, rankX + rankSize / 2, rankY + rankSize / 2, rankSize / 2);
-    ctx.fillStyle = leader ? 'rgba(255,255,255,0.10)' : COLORS.panel;
-    ctx.fill();
-    ctx.strokeStyle = leader ? 'rgba(255,255,255,0.55)' : COLORS.panelBorder;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = leader ? COLORS.text : COLORS.muted;
-    ctx.font = `700 ${Math.floor(rankSize * 0.46)}px ${FONT.bold}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String(index + 1), rankX + rankSize / 2, rankY + rankSize / 2 + 1);
-
-    const avatarSize = 38;
-    const avatarX = colX + rankSize + 13;
-    const avatarY = rowTop + (rowH - avatarSize) / 2;
-    drawAvatar(ctx, avatarImages.get(entry.avatarUrl) || null, avatarX, avatarY, avatarSize, {
-        fallbackText: (entry.name || '?').charAt(0).toUpperCase(),
-        hue: index * 47 + 190
-    });
-
-    const nameX = avatarX + avatarSize + 13;
-    const nameMaxW = colW - (nameX - colX) - 130;
-    ctx.font = `600 19px ${FONT.semibold}`;
-    ctx.fillStyle = COLORS.body;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(fitText(ctx, entry.name || 'Membre', nameMaxW), nameX, rowTop + rowH / 2 - 2);
-
-    ctx.font = `600 19px ${FONT.semibold}`;
-    ctx.fillStyle = leader ? accent : COLORS.muted;
-    ctx.textAlign = 'right';
-    ctx.fillText(valueText, colX + colW - 6, rowTop + rowH / 2 - 2);
-
-    const barW = colW - (nameX - colX) - 2;
-    rounded(ctx, nameX, rowTop + rowH - 1, barW, 2, 1);
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    ctx.fill();
-    rounded(ctx, nameX, rowTop + rowH - 1, Math.max(2, barW * 0.55 * (index === 0 ? 1 : 0.65)), 2, 1);
-    ctx.fillStyle = leader ? accent : 'rgba(255,255,255,0.16)';
-    ctx.fill();
-}
-
-/**
- * Renders the "Top" card (Top Messages / Top Vocal), Statbot style: 1280px
- * wide, orange corner splash, two leaderboard columns.
+ * Renders the "Top" card: a dominant horizontal bar chart of Top Messages
+ * with avatars, then a compact Top Vocal list. 1280px wide, dark canvas.
  */
 export async function renderTopImage({
     guildName,
@@ -266,76 +196,164 @@ export async function renderTopImage({
     voiceEntries
 }) {
     const W = 1280;
-    const pad = 28;
-    const headerH = 120;
-    const sectionH = 52;
-    const rowH = 62;
-    const rowGap = 4;
-    const footerH = 46;
-    const colGap = 72;
-    const colW = (W - pad * 2 - colGap) / 2;
-    const rows = Math.max(messageEntries.length, voiceEntries.length);
+    const pad = 32;
+    const headerH = 92;
+    const sectionH = 40;
+    const rowH = 30;
+    const rowGap = 8;
+    const listH = 33;
+    const listGap = 7;
+    const sectionGap = 30;
+    const footerH = 38;
 
-    const H = pad * 2 + headerH + sectionH + rows * rowH + (rows - 1) * rowGap + footerH;
+    const chartCount = Math.max(0, Math.min(messageEntries.length, 6));
+    const listCount = Math.max(0, Math.min(voiceEntries.length, 8));
+
+    const H = pad + headerH
+        + sectionH + chartCount * (rowH + rowGap)
+        + sectionGap + sectionH + listCount * (listH + listGap)
+        + footerH + pad;
 
     const canvas = createCanvas(W, H);
     const ctx = canvas.getContext('2d');
-    drawStatPage(ctx, W, H, COLORS.orangeA, COLORS.orangeB);
-
-    const top = pad;
-    drawHeader(ctx, pad, top, {
-        title: 'Top',
-        subtitle: `${guildName || 'Serveur'} · ${memberCount} membre(s) suivi(s) · depuis le ${dateLabel(startedAt)}`
-    });
+    drawStatPage(ctx, W, H, COLORS.orangeA);
 
     const avatars = await preloadAvatars(
         [...messageEntries, ...voiceEntries].map((e) => e.avatarUrl).filter(Boolean)
     );
 
-    const sectionsTop = top + headerH;
-    drawSectionTitle(ctx, pad, sectionsTop + 12, 'Top Messages', COLORS.orangeA);
-    drawSectionTitle(ctx, pad + colW + colGap, sectionsTop + 12, 'Top Vocal', COLORS.blueA);
+    drawHeader(ctx, pad, pad, {
+        title: 'Top',
+        subtitle: `${guildName || 'Serveur'} · ${memberCount} membre(s) suivi(s) · depuis le ${dateLabel(startedAt)}`
+    });
 
-    // Vertical divider between columns.
-    const divX = pad + colW + colGap / 2;
-    ctx.strokeStyle = COLORS.divider;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(divX, sectionsTop + 4);
-    ctx.lineTo(divX, H - pad - footerH);
-    ctx.stroke();
+    const maxValue = Math.max(1, ...messageEntries.map((e) => e.value));
 
-    const rowsTop = sectionsTop + sectionH;
+    // --- Top Messages: dominant bar chart ---
+    let y = pad + headerH;
+    drawSectionTitle(ctx, pad, y + 10, 'Top Messages', COLORS.orangeA);
+    y += sectionH;
 
-    const drawColumn = (entries, colIndex, accent, isVoice) => {
-        const colX = pad + colIndex * (colW + colGap);
-        entries.forEach((entry, index) => {
-            const rowTop = rowsTop + index * (rowH + rowGap);
-            const valueText = isVoice
-                ? formatVoiceDuration(entry.value)
-                : entry.value.toLocaleString('fr-FR');
-            drawRankRow(ctx, {
-                colX,
-                colW,
-                rowTop,
-                rowH,
-                entry,
-                index,
-                avatarImages: avatars,
-                accent,
-                valueText
-            });
+    const labelW = 240;
+    const rankSize = 24;
+    const barTrackH = 8;
+    const barTrackX = pad + labelW;
+    const valueW = 90;
+    const barTrackW = W - pad - barTrackX - valueW - 8;
+
+    for (let i = 0; i < chartCount; i++) {
+        const entry = messageEntries[i];
+        const rowTop = y + i * (rowH + rowGap);
+        const rowCenter = rowTop + rowH / 2;
+        const leader = i === 0;
+
+        circle(ctx, pad + rankSize / 2, rowCenter, rankSize / 2);
+        ctx.fillStyle = leader ? 'rgba(255,255,255,0.12)' : COLORS.panel;
+        ctx.fill();
+        ctx.strokeStyle = leader ? 'rgba(255,255,255,0.5)' : COLORS.panelBorder;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = leader ? COLORS.text : COLORS.muted;
+        ctx.font = `700 12px ${FONT.bold}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(i + 1), pad + rankSize / 2, rowCenter + 0.5);
+
+        const avatarX = pad + rankSize + 14;
+        const avatarSize = 26;
+        drawAvatar(ctx, avatars.get(entry.avatarUrl) || null, avatarX, rowCenter - avatarSize / 2, avatarSize, {
+            fallbackText: (entry.name || '?').charAt(0).toUpperCase(),
+            hue: i * 47 + 190
         });
-    };
 
-    drawColumn(messageEntries, 0, COLORS.orangeA, false);
-    drawColumn(voiceEntries, 1, COLORS.blueA, true);
+        const nameX = avatarX + avatarSize + 12;
+        ctx.font = `600 17px ${FONT.semibold}`;
+        ctx.fillStyle = COLORS.body;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(fitText(ctx, entry.name || 'Membre', 170), nameX, rowCenter - 1);
+
+        const trackY = rowCenter - barTrackH / 2;
+        rounded(ctx, barTrackX, trackY, barTrackW, barTrackH, barTrackH / 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.fill();
+
+        const fraction = entry.value / maxValue;
+        const fillW = Math.max(4, fraction * barTrackW);
+        const grad = ctx.createLinearGradient(barTrackX, 0, barTrackX + fillW, 0);
+        grad.addColorStop(0, '#F0A868');
+        grad.addColorStop(0.55, COLORS.orangeA);
+        grad.addColorStop(1, COLORS.orangeB);
+        rounded(ctx, barTrackX, trackY, fillW, barTrackH, barTrackH / 2);
+        ctx.globalAlpha = leader ? 1 : 0.55;
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        ctx.font = `700 17px ${FONT.bold}`;
+        ctx.fillStyle = leader ? COLORS.text : COLORS.muted;
+        ctx.textAlign = 'right';
+        ctx.fillText(entry.value.toLocaleString('fr-FR'), W - pad, rowCenter - 1);
+    }
+
+    // --- Top Vocal: compact list ---
+    y = pad + headerH + sectionH + chartCount * (rowH + rowGap) + sectionGap;
+    drawSectionTitle(ctx, pad, y + 10, 'Top Vocal', COLORS.blueA);
+    y += sectionH;
+
+    for (let i = 0; i < listCount; i++) {
+        const entry = voiceEntries[i];
+        const rowTop = y + i * (listH + listGap);
+        const rowCenter = rowTop + listH / 2;
+        const leader = i === 0;
+
+        if (i > 0) {
+            ctx.strokeStyle = COLORS.divider;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(pad, rowTop);
+            ctx.lineTo(W - pad, rowTop);
+            ctx.stroke();
+        }
+
+        const rankSize = 20;
+        circle(ctx, pad + rankSize / 2, rowCenter, rankSize / 2);
+        ctx.fillStyle = leader ? 'rgba(255,255,255,0.12)' : COLORS.panel;
+        ctx.fill();
+        ctx.strokeStyle = leader ? 'rgba(255,255,255,0.5)' : COLORS.panelBorder;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.font = `700 11px ${FONT.bold}`;
+        ctx.fillStyle = leader ? COLORS.text : COLORS.muted;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(i + 1), pad + rankSize / 2, rowCenter + 0.5);
+
+        const avatarX = pad + rankSize + 12;
+        const avatarSize = 24;
+        drawAvatar(ctx, avatars.get(entry.avatarUrl) || null, avatarX, rowCenter - avatarSize / 2, avatarSize, {
+            fallbackText: (entry.name || '?').charAt(0).toUpperCase(),
+            hue: i * 47 + 190
+        });
+
+        const nameX = avatarX + avatarSize + 12;
+        ctx.font = `600 16px ${FONT.semibold}`;
+        ctx.fillStyle = COLORS.body;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(fitText(ctx, entry.name || 'Membre', 420), nameX, rowCenter);
+
+        ctx.font = `600 16px ${FONT.semibold}`;
+        ctx.fillStyle = leader ? COLORS.text : COLORS.muted;
+        ctx.textAlign = 'right';
+        ctx.fillText(formatVoiceDuration(entry.value), W - pad, rowCenter);
+    }
 
     ctx.font = `500 15px ${FONT.regular}`;
     ctx.fillStyle = COLORS.faint;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`s?t · données cumulées depuis le ${dateLabel(startedAt)}`, W / 2, H - pad / 2 - 2);
+    ctx.fillText(`s?t · données cumulées depuis le ${dateLabel(startedAt)}`, W / 2, pad + headerH + sectionH + chartCount * (rowH + rowGap) + sectionGap + sectionH + listCount * (listH + listGap) + footerH / 2);
 
     return canvas.toBuffer('image/png');
 }
