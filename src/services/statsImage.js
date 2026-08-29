@@ -139,6 +139,22 @@ function hexToRgba(hex, alpha) {
 }
 
 /**
+ * Cleans a user-supplied name for canvas rendering: strips invisible/control
+ * characters, emoji and symbols the Inter font cannot draw (they would render
+ * as hollow boxes), collapses zalgo-style combining marks and extra spaces.
+ */
+function sanitizeDisplayName(name) {
+    let s = String(name || '')
+        .normalize('NFKC')
+        .replace(/[\u0000-\u001F\u007F\u0080-\u009F\u200B-\u200F\u2028-\u202E\u2060-\u206F\uFEFF]/g, '')
+        .replace(/[\u{1F000}-\u{1FAFF}\u{1FB00}-\u{1FBFF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{FE0F}\u{200D}]/gu, '')
+        .replace(/([\u0300-\u036F\u1AB0-\u1AFF\u1DC0-\u1DFF])\1{2,}/g, '$1')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return s || 'Membre';
+}
+
+/**
  * Fills the page: very dark background, a barely-there colored bloom in the
  * top-left corner and a faint top-right glow. Kept subtle by design.
  */
@@ -276,7 +292,7 @@ export async function renderTopImage({
         const avatarX = pad + rankSize + 14;
         const avatarSize = 26;
         drawAvatar(ctx, avatars.get(entry.avatarUrl) || null, avatarX, rowCenter - avatarSize / 2, avatarSize, {
-            fallbackText: (entry.name || '?').charAt(0).toUpperCase(),
+            fallbackText: sanitizeDisplayName(entry.name).charAt(0).toUpperCase(),
             hue: i * 47 + 190
         });
 
@@ -285,7 +301,7 @@ export async function renderTopImage({
         ctx.fillStyle = COLORS.body;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(fitText(ctx, entry.name || 'Membre', 170), nameX, rowCenter - 1);
+        ctx.fillText(fitText(ctx, sanitizeDisplayName(entry.name), 170), nameX, rowCenter - 1);
 
         const trackY = rowCenter - barTrackH / 2;
         rounded(ctx, barTrackX, trackY, barTrackW, barTrackH, barTrackH / 2);
@@ -346,7 +362,7 @@ export async function renderTopImage({
         const avatarX = pad + rankSize + 12;
         const avatarSize = 24;
         drawAvatar(ctx, avatars.get(entry.avatarUrl) || null, avatarX, rowCenter - avatarSize / 2, avatarSize, {
-            fallbackText: (entry.name || '?').charAt(0).toUpperCase(),
+            fallbackText: sanitizeDisplayName(entry.name).charAt(0).toUpperCase(),
             hue: i * 47 + 190
         });
 
@@ -355,7 +371,7 @@ export async function renderTopImage({
         ctx.fillStyle = COLORS.body;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(fitText(ctx, entry.name || 'Membre', 420), nameX, rowCenter);
+        ctx.fillText(fitText(ctx, sanitizeDisplayName(entry.name), 420), nameX, rowCenter);
 
         ctx.font = `600 16px ${FONT.semibold}`;
         ctx.fillStyle = leader ? COLORS.text : COLORS.muted;
