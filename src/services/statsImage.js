@@ -139,15 +139,16 @@ function hexToRgba(hex, alpha) {
 }
 
 /**
- * Cleans a user-supplied name for canvas rendering: strips invisible/control
- * characters, emoji and symbols the Inter font cannot draw (they would render
- * as hollow boxes), collapses zalgo-style combining marks and extra spaces.
+ * Cleans a user-supplied name for canvas rendering. Keeps only characters the
+ * Inter font can actually draw: ASCII + Latin (incl. accents), Greek,
+ * Cyrillic, common punctuation/currency. Everything else — CJK kanji/kana,
+ * Hangul, emoji, invisible/control chars, zalgo combining marks — is removed
+ * so names never render as hollow boxes.
  */
 function sanitizeDisplayName(name) {
     let s = String(name || '')
         .normalize('NFKC')
-        .replace(/[\u0000-\u001F\u007F\u0080-\u009F\u200B-\u200F\u2028-\u202E\u2060-\u206F\uFEFF]/g, '')
-        .replace(/[\u{1F000}-\u{1FAFF}\u{1FB00}-\u{1FBFF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{FE0F}\u{200D}]/gu, '')
+        .replace(/[^\u0020-\u007E\u00A0-\u024F\u0300-\u036F\u0370-\u03FF\u0400-\u04FF\u1E00-\u1EFF\u2000-\u206F\u20AC\u2018-\u201F]/g, '')
         .replace(/([\u0300-\u036F\u1AB0-\u1AFF\u1DC0-\u1DFF])\1{2,}/g, '$1')
         .replace(/\s+/g, ' ')
         .trim();
