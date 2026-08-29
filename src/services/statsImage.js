@@ -131,9 +131,9 @@ function dateLabel(timestamp) {
 }
 
 /**
- * Fills the page: very dark background + Statbot-style colored "splash"
- * (diagonal gradient blob) anchored in the top-left corner, plus soft
- * decorative circles and a faint top-right glow.
+ * Fills the page: very dark background + a subtle diagonal colored blob
+ * anchored in the top-left corner (Statbot-style splash), a few soft
+ * decorative circles, and a faint top-right glow.
  */
 function drawStatPage(ctx, W, H, accent, accentB) {
     const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -143,26 +143,30 @@ function drawStatPage(ctx, W, H, accent, accentB) {
     ctx.fillRect(0, 0, W, H);
 
     ctx.save();
-    const splashH = Math.round(H * 0.3);
-    const grad = ctx.createLinearGradient(0, 0, W * 0.62, splashH);
-    grad.addColorStop(0, accent);
-    grad.addColorStop(0.4, accentB);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, splashH + 80);
+    const cx = -W * 0.08;
+    const cy = -H * 0.06;
+    const blobR = Math.max(W, H) * 0.42;
+    const blob = ctx.createRadialGradient(cx, cy, 10, cx, cy, blobR);
+    blob.addColorStop(0, accent);
+    blob.addColorStop(0.35, accentB);
+    blob.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = blob;
+    ctx.fillRect(0, 0, W, H);
 
-    ctx.globalAlpha = 0.07;
+    ctx.globalAlpha = 0.06;
     ctx.fillStyle = '#FFFFFF';
-    const dx = W * 0.09;
-    circle(ctx, dx + 70, 70, 130);
+    circle(ctx, cx + blobR * 0.62, cy + blobR * 0.34, blobR * 0.16);
     ctx.fill();
-    ctx.globalAlpha = 0.05;
-    circle(ctx, dx + 300, 150, 200);
+    ctx.globalAlpha = 0.04;
+    circle(ctx, cx + blobR * 0.42, cy + blobR * 0.62, blobR * 0.22);
     ctx.fill();
-    ctx.globalAlpha = 0.045;
-    ctx.fillRect(dx - 40, splashH - 90, 620, 3);
 
+    const glow = ctx.createRadialGradient(W * 0.98, -H * 0.05, 10, W * 0.98, -H * 0.05, W * 0.35);
+    glow.addColorStop(0, 'rgba(255,255,255,0.07)');
+    glow.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.globalAlpha = 1;
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
     ctx.restore();
 }
 
@@ -191,7 +195,7 @@ function drawSectionTitle(ctx, X, Y, label, accent) {
  */
 function drawRankRow(ctx, opts) {
     const {
-        colX, colW, rowTop, rowH, entry, index, avatarImages, accent, accentB, valueText, maxEntries
+        colX, colW, rowTop, rowH, entry, index, avatarImages, accent, valueText
     } = opts;
 
     if (index > 0) {
@@ -203,80 +207,55 @@ function drawRankRow(ctx, opts) {
         ctx.stroke();
     }
 
-    const rankSize = 38;
+    const rankSize = 34;
     const rankX = colX;
     const rankY = rowTop + (rowH - rankSize) / 2;
-    if (index < 3) {
-        const grad = ctx.createLinearGradient(rankX, rankY, rankX + rankSize, rankY + rankSize);
-        grad.addColorStop(0, index === 0 ? '#FFD75E' : index === 1 ? '#DDE3EA' : '#F0A868');
-        grad.addColorStop(1, index === 0 ? '#E8A622' : index === 1 ? '#A6B0BD' : '#C76A2A');
-        circle(ctx, rankX + rankSize / 2, rankY + rankSize / 2, rankSize / 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-        ctx.fillStyle = '#10141A';
-        ctx.font = `700 ${Math.floor(rankSize * 0.46)}px ${FONT.bold}`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(String(index + 1), rankX + rankSize / 2, rankY + rankSize / 2 + 1);
-    } else {
-        rounded(ctx, rankX, rankY, rankSize, rankSize, roundSmall(rankSize));
-        ctx.fillStyle = COLORS.panel;
-        ctx.fill();
-        ctx.strokeStyle = COLORS.panelBorder;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.fillStyle = COLORS.muted;
-        ctx.font = `700 ${Math.floor(rankSize * 0.44)}px ${FONT.bold}`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(String(index + 1), rankX + rankSize / 2, rankY + rankSize / 2 + 1);
-    }
+    const leader = index === 0;
+    circle(ctx, rankX + rankSize / 2, rankY + rankSize / 2, rankSize / 2);
+    ctx.fillStyle = leader ? 'rgba(255,255,255,0.10)' : COLORS.panel;
+    ctx.fill();
+    ctx.strokeStyle = leader ? 'rgba(255,255,255,0.55)' : COLORS.panelBorder;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = leader ? COLORS.text : COLORS.muted;
+    ctx.font = `700 ${Math.floor(rankSize * 0.46)}px ${FONT.bold}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(index + 1), rankX + rankSize / 2, rankY + rankSize / 2 + 1);
 
-    const avatarSize = 40;
-    const avatarX = colX + rankSize + 14;
+    const avatarSize = 38;
+    const avatarX = colX + rankSize + 13;
     const avatarY = rowTop + (rowH - avatarSize) / 2;
     drawAvatar(ctx, avatarImages.get(entry.avatarUrl) || null, avatarX, avatarY, avatarSize, {
-        ring: index < 3 ? '#FFFFFF66' : null,
         fallbackText: (entry.name || '?').charAt(0).toUpperCase(),
         hue: index * 47 + 190
     });
 
-    const nameX = avatarX + avatarSize + 14;
-    const nameMaxW = colW - (nameX - colX) - 170;
+    const nameX = avatarX + avatarSize + 13;
+    const nameMaxW = colW - (nameX - colX) - 130;
     ctx.font = `600 19px ${FONT.semibold}`;
     ctx.fillStyle = COLORS.body;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(fitText(ctx, entry.name || 'Membre', nameMaxW), nameX, rowTop + rowH / 2 - 3);
+    ctx.fillText(fitText(ctx, entry.name || 'Membre', nameMaxW), nameX, rowTop + rowH / 2 - 2);
 
-    ctx.font = `700 20px ${FONT.bold}`;
-    ctx.fillStyle = accent;
+    ctx.font = `600 19px ${FONT.semibold}`;
+    ctx.fillStyle = leader ? accent : COLORS.muted;
     ctx.textAlign = 'right';
-    ctx.fillText(valueText, colX + colW - 6, rowTop + rowH / 2 - 3);
-}
+    ctx.fillText(valueText, colX + colW - 6, rowTop + rowH / 2 - 2);
 
-function drawValueBar(ctx, x, y, w, h, fraction, accent) {
-    rounded(ctx, x, y, w, h, h / 2);
-    ctx.fillStyle = COLORS.panel;
+    const barW = colW - (nameX - colX) - 2;
+    rounded(ctx, nameX, rowTop + rowH - 1, barW, 2, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.fill();
-    const fillW = Math.max(0, Math.min(1, fraction)) * w;
-    if (fillW >= 2) {
-        const grad = ctx.createLinearGradient(x, 0, x + fillW, 0);
-        grad.addColorStop(0, accent);
-        grad.addColorStop(1, accent);
-        rounded(ctx, x, y, fillW, h, h / 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-    }
-}
-
-function roundSmall(size) {
-    return Math.max(8, Math.round(size * 0.28));
+    rounded(ctx, nameX, rowTop + rowH - 1, Math.max(2, barW * 0.55 * (index === 0 ? 1 : 0.65)), 2, 1);
+    ctx.fillStyle = leader ? accent : 'rgba(255,255,255,0.16)';
+    ctx.fill();
 }
 
 /**
  * Renders the "Top" card (Top Messages / Top Vocal), Statbot style: 1280px
- * wide, orange splash, two leaderboard columns.
+ * wide, orange corner splash, two leaderboard columns.
  */
 export async function renderTopImage({
     guildName,
@@ -344,18 +323,8 @@ export async function renderTopImage({
                 index,
                 avatarImages: avatars,
                 accent,
-                valueText,
-                maxEntries: entries.length
+                valueText
             });
-            drawValueBar(
-                ctx,
-                colX + 52 + 14 + 14,
-                rowTop + rowH - 9,
-                colW - 52 - 42 - 24,
-                3,
-                index === 0 ? 1 : 0.4,
-                accent
-            );
         });
     };
 
