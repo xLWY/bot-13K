@@ -14,6 +14,12 @@ import { recordMessage } from '../services/statsService.js';
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
 
+function isStatChannelExcluded(channelName) {
+    if (!channelName) return false;
+    const normalized = channelName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return normalized === 'mudae' || normalized === 'cmdbot';
+}
+
 export default {
   name: Events.MessageCreate,
   async execute(message, client) {
@@ -38,6 +44,7 @@ export default {
 
 async function recordMessageStat(message, client) {
   try {
+    if (isStatChannelExcluded(message.channel?.name)) return;
     await recordMessage(client, message.guild.id, message.author.id, message.channel.id);
   } catch (error) {
     logger.debug('Failed to record message stat:', error);
