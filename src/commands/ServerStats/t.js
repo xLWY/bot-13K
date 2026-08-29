@@ -115,7 +115,9 @@ export default {
                 startedAt,
                 memberCount: users.length,
                 messageEntries,
-                voiceEntries
+                voiceEntries,
+                totalMessages: users.reduce((sum, u) => sum + u.messages, 0),
+                totalVoiceSeconds: users.reduce((sum, u) => sum + u.voiceSeconds, 0)
             });
             await interaction.reply({ files: [{ attachment: imageBuffer, name: 'top.png' }] });
             return;

@@ -193,7 +193,9 @@ export async function renderTopImage({
     startedAt,
     memberCount,
     messageEntries,
-    voiceEntries
+    voiceEntries,
+    totalMessages,
+    totalVoiceSeconds
 }) {
     const W = 1280;
     const pad = 32;
@@ -226,6 +228,18 @@ export async function renderTopImage({
         title: 'Top',
         subtitle: `${guildName || 'Serveur'} · ${memberCount} membre(s) suivi(s) · depuis le ${dateLabel(startedAt)}`
     });
+
+    const grandTotalMessages = totalMessages ?? messageEntries.reduce((sum, e) => sum + e.value, 0);
+    const grandTotalVoice = totalVoiceSeconds ?? voiceEntries.reduce((sum, e) => sum + e.value, 0);
+    ctx.font = `600 18px ${FONT.semibold}`;
+    ctx.fillStyle = COLORS.muted;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(
+        `${grandTotalMessages.toLocaleString('fr-FR')} messages · ${formatVoiceDuration(grandTotalVoice)} en vocal`,
+        W - pad,
+        pad + 46
+    );
 
     const maxValue = Math.max(1, ...messageEntries.map((e) => e.value));
 
