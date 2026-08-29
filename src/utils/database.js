@@ -2192,6 +2192,26 @@ export async function unregisterTemporaryChannel(client, guildId, channelId) {
     }
 }
 
+export async function updateTemporaryChannelInfo(client, guildId, channelId, updates) {
+    try {
+        const config = await getJoinToCreateConfig(client, guildId);
+
+        if (!config.temporaryChannels[channelId]) {
+            return false;
+        }
+
+        config.temporaryChannels[channelId] = {
+            ...config.temporaryChannels[channelId],
+            ...updates
+        };
+
+        return await saveJoinToCreateConfig(client, guildId, config);
+    } catch (error) {
+        logger.error(`Error updating temporary channel info for guild ${guildId}:`, error);
+        return false;
+    }
+}
+
 
 
 

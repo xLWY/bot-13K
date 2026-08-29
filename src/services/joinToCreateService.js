@@ -284,6 +284,7 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
                 userLimit: options.userLimit !== undefined ? options.userLimit : config.userLimit,
                 bitrate: options.bitrate || config.bitrate,
                 categoryId: options.categoryId || null,
+                moderatorRoleId: options.moderatorRoleId || null,
                 createdAt: Date.now()
             };
         }

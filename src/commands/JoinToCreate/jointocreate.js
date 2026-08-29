@@ -58,6 +58,11 @@ export default {
                         .setName("bitrate")
                         .setDescription("Bitrate for temporary channels in kbps (8-96).")
                 )
+                .addRoleOption((option) =>
+                    option
+                        .setName("moderator_role")
+                        .setDescription("Role that can control every temporary channel (lock, rename, etc.).")
+                )
         )
         .addSubcommand((subcommand) =>
             subcommand
@@ -129,6 +134,7 @@ async function handleSetupSubcommand(interaction, client) {
         const nameTemplate = interaction.options.getString('channel_name') || "{username}'s Room";
         const userLimit = interaction.options.getInteger('user_limit') || 0;
         const bitrate = interaction.options.getInteger('bitrate') || 64;
+        const moderatorRole = interaction.options.getRole('moderator_role');
         const guildId = interaction.guild.id;
 
         logger.debug(`Setting up Join to Create in guild ${guildId} with template: ${nameTemplate}`);
@@ -177,7 +183,7 @@ async function handleSetupSubcommand(interaction, client) {
         // Create the trigger channel
         logger.debug('Creating Join to Create trigger channel...');
         let triggerChannel = await interaction.guild.channels.create({
-            name: 'Join to Create',
+            name: '➕ Créer votre salon',
             type: ChannelType.GuildVoice,
             parent: category?.id,
             userLimit: 0,
@@ -197,14 +203,16 @@ async function handleSetupSubcommand(interaction, client) {
             nameTemplate: nameTemplate,
             userLimit: userLimit,
             bitrate: bitrate * 1000,
-            categoryId: category?.id
+            categoryId: category?.id,
+            moderatorRoleId: moderatorRole?.id || undefined
         });
 
         await logConfigurationChange(client, guildId, interaction.user.id, 'Initialized Join to Create', {
             channelId: triggerChannel.id,
             nameTemplate,
             userLimit,
-            bitrate
+            bitrate,
+            moderatorRoleId: moderatorRole?.id
         });
 
         logger.info(`Successfully created Join to Create system in guild ${guildId}`);
@@ -216,7 +224,8 @@ async function handleSetupSubcommand(interaction, client) {
             `• Template: \`${nameTemplate}\`\n` +
             `• User Limit: ${userLimit === 0 ? 'Unlimited' : userLimit + ' users'}\n` +
             `• Bitrate: ${bitrate} kbps\n` +
-            `${category ? `• Category: ${category.name}` : '• Category: Root level'}`
+            `${category ? `• Category: ${category.name}` : '• Category: Root level'}` +
+            `${moderatorRole ? `\n• Moderator Role: ${moderatorRole}` : ''}`
         );
 
         return await InteractionHelper.safeEditReply(interaction, { embeds: [responseEmbed] });

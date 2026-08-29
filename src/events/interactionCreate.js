@@ -920,6 +920,14 @@ export default {
             return;
           }
 
+          if (interaction.customId.startsWith('tv_modal_')) {
+            logger.debug(`Skipping modal handler lookup for inline-awaited temp voice modal: ${interaction.customId}`, {
+              event: 'interaction.modal.inline_skipped',
+              traceId: interactionTraceContext.traceId
+            });
+            return;
+          }
+
           const [customId, ...args] = interaction.customId.split(':');
           const modal = client.modals.get(customId);
 

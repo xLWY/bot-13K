@@ -8,6 +8,12 @@ import {
 } from '../utils/database.js';
 import { sanitizeInput } from '../utils/sanitization.js';
 import { logger } from '../utils/logger.js';
+import {
+    createControlPanel,
+    refreshControlPanel,
+    sanitizeChannelName,
+    CONTROL_TEXT_PREFIX
+} from '../services/tempVoiceService.js';
 
 const channelCreationCooldown = new Map();
 const VOICE_CREATE_COOLDOWN_MS = 2000;
@@ -199,6 +205,8 @@ userLimit: userLimit === 0 ? undefined : userLimit,
 
                 await registerTemporaryChannel(client, guild.id, tempChannel.id, member.id, triggerChannel.id);
 
+                await createControlPanel(client, guild, tempChannel);
+
                 if (member.voice?.channel?.id === triggerChannel.id) {
                     await member.voice.setChannel(tempChannel);
                 } else {
@@ -224,6 +232,17 @@ userLimit: userLimit === 0 ? undefined : userLimit,
 
         async function deleteTemporaryChannel(client, channel, guildId) {
             try {
+                const tempInfo = await getTemporaryChannelInfo(client, guildId, channel.id);
+
+                if (tempInfo?.textChannelId) {
+                    const textChannel = await channel.guild.channels
+                        .fetch(tempInfo.textChannelId)
+                        .catch(() => null);
+                    if (textChannel) {
+                        await textChannel.delete('Salon temporaire vide - suppression du salon textuel lie').catch(() => {});
+                    }
+                }
+
                 await unregisterTemporaryChannel(client, guildId, channel.id);
 
                 await channel.delete('Temporary voice channel - empty');
@@ -259,6 +278,19 @@ userLimit: userLimit === 0 ? undefined : userLimit,
                     }));
 
                     await channel.setName(newChannelName);
+
+                    if (tempChannelInfo?.textChannelId) {
+                        const textChannel = await channel.guild.channels
+                            .fetch(tempChannelInfo.textChannelId)
+                            .catch(() => null);
+                        if (textChannel) {
+                            await textChannel.setName(
+                                sanitizeChannelName(`${CONTROL_TEXT_PREFIX}${newChannelName}`, 'Salon vocal')
+                            ).catch(() => {});
+                        }
+                    }
+
+                    await refreshControlPanel(client, channel.guild, channel.id, tempChannelInfo);
                 }
 
                 logger.info(`Transferred ownership of temporary channel ${channel.id} to user ${newOwnerId}`);

@@ -1,101 +1,44 @@
-import { 
-    getJoinToCreateConfig, 
-    removeJoinToCreateTrigger,
-    unregisterTemporaryChannel,
-    getTicketData,
-    saveTicketData
-} from '../utils/database.js';
-import { getServerCounters, saveServerCounters } from '../services/serverstatsService.js';
 import { logger } from '../utils/logger.js';
+import {
+    getTemporaryChannelInfo,
+    unregisterTemporaryChannel,
+    getJoinToCreateConfig
+} from '../utils/database.js';
+import { removeTriggerChannel } from '../services/joinToCreateService.js';
 
 export default {
     name: 'channelDelete',
     async execute(channel, client) {
-        // Handle ticket text channel deletion
-        if (channel.type === 0 && channel.guild) {
-            try {
-                const ticketData = await getTicketData(channel.guild.id, channel.id);
-                if (ticketData && ticketData.status === 'open') {
-                    ticketData.status = 'deleted';
-                    ticketData.closedAt = new Date().toISOString();
-                    await saveTicketData(channel.guild.id, channel.id, ticketData);
-                    logger.info(`Ticket channel ${channel.id} was manually deleted in guild ${channel.guild.id}, marked as deleted`);
-                }
-            } catch (err) {
-                logger.warn(`Could not clean up ticket record for deleted channel ${channel.id}:`, err);
-            }
-        }
+        if (!channel?.guild) return;
 
-if (channel.type !== 2 && channel.type !== 4) {
-            return;
-        }
-
-        const guildId = channel.guild.id;
+        const guild = channel.guild;
+        const guildId = guild.id;
 
         try {
-            // Check if this channel is a counter channel
-            const counters = await getServerCounters(client, guildId);
-            const orphanedCounter = counters.find(c => c.channelId === channel.id);
-            
-            if (orphanedCounter) {
-                logger.info(`Counter channel ${channel.name} (${channel.id}) was deleted, removing counter ${orphanedCounter.id} from database`);
-                
-                const updatedCounters = counters.filter(c => c.channelId !== channel.id);
-                const success = await saveServerCounters(client, guildId, updatedCounters);
-                
-                if (success) {
-                    logger.info(`Successfully removed orphaned counter ${orphanedCounter.id} (type: ${orphanedCounter.type}) from guild ${guildId}`);
-                } else {
-                    logger.warn(`Failed to remove orphaned counter ${orphanedCounter.id} from guild ${guildId}`);
+            const tempInfo = await getTemporaryChannelInfo(client, guildId, channel.id);
+
+            if (tempInfo) {
+                if (tempInfo.textChannelId && tempInfo.textChannelId !== channel.id) {
+                    const textChannel = await guild.channels
+                        .fetch(tempInfo.textChannelId)
+                        .catch(() => null);
+                    if (textChannel) {
+                        await textChannel.delete('Salon textuel orphelin - salon vocal supprimé').catch(() => {});
+                    }
                 }
-            }
 
-            const config = await getJoinToCreateConfig(client, guildId);
-
-            if (!config.enabled) {
+                await unregisterTemporaryChannel(client, guildId, channel.id);
+                logger.info(`Cleaned up temporary channel ${channel.id} removed manually (guild ${guildId})`);
                 return;
             }
 
-            if (config.triggerChannels.includes(channel.id)) {
-                logger.info(`Join to Create trigger channel ${channel.name} (${channel.id}) was deleted, removing from configuration`);
-                
-                const success = await removeJoinToCreateTrigger(client, guildId, channel.id);
-                if (success) {
-                    logger.info(`Successfully removed trigger channel ${channel.id} from Join to Create configuration`);
-                } else {
-                    logger.warn(`Failed to remove trigger channel ${channel.id} from Join to Create configuration`);
-                }
+            const config = await getJoinToCreateConfig(client, guildId);
+            if (Array.isArray(config.triggerChannels) && config.triggerChannels.includes(channel.id)) {
+                await removeTriggerChannel(client, guildId, channel.id);
+                logger.info(`Removed deleted Join to Create trigger channel ${channel.id} (guild ${guildId})`);
             }
-
-            if (config.temporaryChannels[channel.id]) {
-                logger.info(`Join to Create temporary channel ${channel.name} (${channel.id}) was deleted, cleaning up database`);
-                
-                const success = await unregisterTemporaryChannel(client, guildId, channel.id);
-                if (success) {
-                    logger.info(`Successfully cleaned up temporary channel ${channel.id} from database`);
-                } else {
-                    logger.warn(`Failed to cleanup temporary channel ${channel.id} from database`);
-                }
-            }
-
-            if (config.categoryId === channel.id) {
-                logger.warn(`Category ${channel.name} (${channel.id}) used for Join to Create temporary channels was deleted. Join to Create will be disabled.`);
-                
-                config.categoryId = null;
-                config.enabled = false;
-                
-                try {
-                    await client.db.set(`guild:${guildId}:jointocreate`, config);
-                    logger.info(`Disabled Join to Create for guild ${guildId} due to category deletion`);
-                } catch (error) {
-                    logger.error(`Failed to disable Join to Create for guild ${guildId}:`, error);
-                }
-            }
-
         } catch (error) {
-            logger.error(`Error in channelDelete event for guild ${guildId}:`, error);
+            logger.error(`Error in channelDelete cleanup for channel ${channel.id}:`, error);
         }
     }
 };
-
-
