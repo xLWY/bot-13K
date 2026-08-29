@@ -14,8 +14,10 @@ import {
     sanitizeChannelName,
     CONTROL_TEXT_PREFIX
 } from '../services/tempVoiceService.js';
+import { recordVoiceSession } from '../services/statsService.js';
 
 const channelCreationCooldown = new Map();
+const activeVoiceSessions = new Map();
 const VOICE_CREATE_COOLDOWN_MS = 2000;
 const DEFAULT_VOICE_BITRATE = 64000;
 const MAX_VOICE_BITRATE = 384000;
@@ -33,6 +35,8 @@ export default {
         const userId = newState.member.id;
         const cooldownKey = `${guildId}-${userId}`;
         cleanupCooldownEntries();
+
+        await trackVoiceStats(oldState, newState, client);
 
         try {
             const config = await getJoinToCreateConfig(client, guildId);
@@ -338,6 +342,40 @@ function trimCooldownMapIfNeeded() {
     const removeCount = channelCreationCooldown.size - MAX_TRACKED_COOLDOWNS;
     for (let index = 0; index < removeCount; index += 1) {
         channelCreationCooldown.delete(entries[index][0]);
+    }
+}
+
+async function trackVoiceStats(oldState, newState, client) {
+    try {
+        const guildId = newState.guild?.id || oldState.guild?.id;
+        if (!guildId) return;
+
+        const userId = (newState.member || oldState.member)?.id;
+        if (!userId) return;
+
+        const sessionKey = `${guildId}:${userId}`;
+        const joined = Boolean(newState.channel);
+        const wasJoined = Boolean(oldState.channel);
+
+        if (joined && !wasJoined) {
+            if (!activeVoiceSessions.has(sessionKey)) {
+                activeVoiceSessions.set(sessionKey, { joinedAt: Date.now() });
+            }
+            return;
+        }
+
+        if (!joined && wasJoined) {
+            const session = activeVoiceSessions.get(sessionKey);
+            if (session) {
+                activeVoiceSessions.delete(sessionKey);
+                const elapsedMs = Date.now() - session.joinedAt;
+                if (elapsedMs >= 1000) {
+                    await recordVoiceSession(client, guildId, userId, Math.floor(elapsedMs / 1000));
+                }
+            }
+        }
+    } catch (error) {
+        logger.warn('Error tracking voice stats session:', error.message);
     }
 }
 

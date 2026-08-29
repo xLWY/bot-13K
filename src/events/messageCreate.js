@@ -9,6 +9,7 @@ import { getLevelingConfig, getUserLevelData } from '../services/leveling.js';
 import { addXp } from '../services/xpSystem.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { handlePrefixCommand } from '../utils/prefixCommands.js';
+import { recordMessage } from '../services/statsService.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -19,6 +20,8 @@ export default {
     try {
       
       if (message.author.bot || !message.guild) return;
+
+      await recordMessageStat(message, client);
 
       const handledAsCommand = await handlePrefixCommand(message, client).catch((error) => {
         logger.error('Error handling prefix command:', error);
@@ -32,6 +35,14 @@ export default {
     }
   }
 };
+
+async function recordMessageStat(message, client) {
+  try {
+    await recordMessage(client, message.guild.id, message.author.id, message.channel.id);
+  } catch (error) {
+    logger.debug('Failed to record message stat:', error);
+  }
+}
 
 
 
