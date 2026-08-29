@@ -101,23 +101,12 @@ async function findTicketEmbedMessage(channel) {
 }
 
 function buildTicketEmbed({ ticketData, guild, member, ticketNumber }) {
-  const type = {
-    emoji: ticketData.ticketTypeEmoji || getTicketType(ticketData.ticketType).emoji,
-    label: ticketData.ticketTypeLabel || getTicketType(ticketData.ticketType).label,
-  };
   const status = ticketData.status === 'closed' ? '🔴 Fermé' : '🟢 Ouvert';
-  const claimedBy = ticketData.claimedBy ? `<@${ticketData.claimedBy}>` : 'Personne';
   const number = ticketNumber ?? ticketData.ticketNumber ?? '';
 
   const fields = [
-    { name: '🏷️ Type', value: `${type.emoji} ${type.label}`, inline: true },
     { name: '🟢 Statut', value: status, inline: true },
-    { name: '🙋 Réclamé par', value: claimedBy, inline: true },
   ];
-
-  if (ticketData.reason) {
-    fields.push({ name: '📝 Demande', value: ticketData.reason, inline: false });
-  }
 
   const creator = member ? member.toString() : `<@${ticketData.userId}>`;
 

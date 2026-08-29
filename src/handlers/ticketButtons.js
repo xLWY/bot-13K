@@ -101,7 +101,7 @@ export const createTicketHandler = {
 
       if (result.success) {
         return await interaction.editReply({
-          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
+          content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
         }).catch(() => {});
       }
 
@@ -158,7 +158,7 @@ export const createTicketDirectHandler = {
 
       if (result.success) {
         return await interaction.editReply({
-          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
+          content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
         }).catch(() => {});
       }
 
@@ -193,7 +193,7 @@ export const createTicketModalHandler = {
 
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
+          content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
         });
       } else {
         await interaction.editReply({

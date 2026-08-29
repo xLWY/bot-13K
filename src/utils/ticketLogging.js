@@ -180,14 +180,6 @@ async function createTicketLogEmbed(guild, event) {
     }
   }
   
-  if (event.reason) {
-    fields.push({
-      name: '📝 Motif',
-      value: event.reason,
-      inline: false
-    });
-  }
-  
   if (event.priority) {
     const priorityEmojis = {
       none: '⚪',
@@ -205,7 +197,9 @@ async function createTicketLogEmbed(guild, event) {
   }
   
   if (event.metadata) {
+    const skipKeys = new Set(['ticketType', 'claimedAt', 'previousClaimer']);
     Object.entries(event.metadata).forEach(([key, value]) => {
+      if (skipKeys.has(key)) return;
       if (value !== undefined && value !== null) {
         const knownLabels = {
           channelId: 'Salon',

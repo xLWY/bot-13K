@@ -98,7 +98,7 @@ async function fallbackTicketButton(interaction, client) {
 
     if (result.success) {
       return await interaction.editReply({
-        embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
+        content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
       }).catch(() => {});
     }
 
@@ -181,10 +181,7 @@ async function createTicketFallback(guild, member, options = {}) {
       description: `${member}, un membre de l'équipe va s'occuper de votre demande très vite.\n\nMerci de décrire précisément votre besoin dans ce salon.`,
       color: 'info',
       fields: [
-        { name: '🏷️ Type', value: `${type.emoji} ${type.label}`, inline: true },
         { name: '🟢 Statut', value: '🟢 Ouvert', inline: true },
-        { name: '🙋 Réclamé par', value: 'Personne', inline: true },
-        ...(ticketData.reason ? [{ name: '📝 Demande', value: ticketData.reason, inline: false }] : []),
       ],
       footer: { text: `Ticket #${ticketNumber} • ${guild?.name || ''}` },
       timestamp: false,
@@ -237,7 +234,7 @@ async function fallbackTicketModal(interaction, client) {
 
     if (result.success) {
       return await interaction.reply({
-        embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
+        content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -543,7 +540,7 @@ async function fallbackTicketSelect(interaction, client) {
 
     if (result.success) {
       return await interaction.editReply({
-        embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
+        content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
       }).catch(() => {});
     }
 

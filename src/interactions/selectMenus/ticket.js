@@ -4,7 +4,7 @@ import {
 } from 'discord.js';
 import { createTicket, getTicketTypeForGuild } from '../../services/ticket.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 
 const ticketTypeSelectHandler = {
@@ -31,7 +31,7 @@ const ticketTypeSelectHandler = {
 
       if (result.success) {
         return await interaction.editReply({
-          embeds: [successEmbed(`Votre ticket a été créé dans ${result.channel} !`, '✅ Ticket Créé (TF v4)')],
+          content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
         }).catch(() => {});
       }
 
