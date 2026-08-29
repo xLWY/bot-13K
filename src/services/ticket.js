@@ -140,7 +140,7 @@ function buildTicketButtons(ticketData) {
         .setCustomId('ticket_close')
         .setLabel('Fermer')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('?')
+        .setEmoji('🔒')
         .setDisabled(ticketData.status === 'closed'),
     ),
   );
