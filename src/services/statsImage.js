@@ -446,7 +446,7 @@ export async function renderTopImage({
     drawColumnRows(messageEntries, messageFractions, 0);
     drawColumnRows(voiceEntries, voiceFractions, 1);
 
-    drawFooter(ctx, W, H, `Données cumulées depuis le ${dateLabel(startedAt)} · titan-bot`);
+    drawFooter(ctx, W, H, `Données cumulées depuis le ${dateLabel(startedAt)} · xlwy bot`);
 
     return canvas.toBuffer('image/png');
 }
@@ -610,7 +610,7 @@ export async function renderUserImage({
         ctx.fillText('Aucun message enregistré.', contentX, channelsTop + 4);
     }
 
-    drawFooter(ctx, W, H, `Données cumulées depuis le ${dateLabel(startedAt)} · titan-bot`);
+    drawFooter(ctx, W, H, `Données cumulées depuis le ${dateLabel(startedAt)} · xlwy bot`);
 
     return canvas.toBuffer('image/png');
 }
