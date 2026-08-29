@@ -15,6 +15,7 @@ import {
     CONTROL_TEXT_PREFIX
 } from '../services/tempVoiceService.js';
 import { recordVoiceSession } from '../services/statsService.js';
+import { Mutex } from '../utils/mutex.js';
 
 const channelCreationCooldown = new Map();
 const activeVoiceSessions = new Map();
@@ -25,6 +26,8 @@ const MIN_VOICE_BITRATE = 8000;
 const MAX_CHANNEL_NAME_LENGTH = 100;
 const FALLBACK_CHANNEL_NAME = 'Voice Room';
 const MAX_TRACKED_COOLDOWNS = 10000;
+const ACTIVE_VOICE_FLUSH_MS = 60000;
+let voiceFlushTimer = null;
 
 export default {
     name: 'voiceStateUpdate',
@@ -365,17 +368,77 @@ async function trackVoiceStats(oldState, newState, client) {
         }
 
         if (!joined && wasJoined) {
-            const session = activeVoiceSessions.get(sessionKey);
-            if (session) {
-                activeVoiceSessions.delete(sessionKey);
-                const elapsedMs = Date.now() - session.joinedAt;
-                if (elapsedMs >= 1000) {
-                    await recordVoiceSession(client, guildId, userId, Math.floor(elapsedMs / 1000));
-                }
-            }
+            await closeVoiceSession(client, sessionKey);
         }
     } catch (error) {
         logger.warn('Error tracking voice stats session:', error.message);
+    }
+}
+
+export function seedActiveVoiceSessions(client) {
+    let seeded = 0;
+    for (const guild of client.guilds.cache.values()) {
+        for (const state of guild.voiceStates.cache.values()) {
+            if (!state.channelId) continue;
+            const member = state.member;
+            if (!member || member.user.bot) continue;
+            const sessionKey = `${guild.id}:${state.id}`;
+            if (!activeVoiceSessions.has(sessionKey)) {
+                activeVoiceSessions.set(sessionKey, { joinedAt: Date.now() });
+                seeded += 1;
+            }
+        }
+    }
+    if (seeded > 0) {
+        logger.info(`Seeded ${seeded} active voice session(s) from voice states on startup`);
+    }
+    if (!voiceFlushTimer) {
+        voiceFlushTimer = setInterval(() => {
+            flushAllVoiceSessions(client);
+        }, ACTIVE_VOICE_FLUSH_MS);
+        if (voiceFlushTimer.unref) voiceFlushTimer.unref();
+        logger.info('Started active voice stats flusher');
+    }
+    return seeded;
+}
+
+async function closeVoiceSession(client, sessionKey) {
+    try {
+        const [guildId, userId] = sessionKey.split(':');
+        await Mutex.runExclusive(`voice:${sessionKey}`, async () => {
+            const session = activeVoiceSessions.get(sessionKey);
+            if (!session) return;
+            activeVoiceSessions.delete(sessionKey);
+            const elapsedSec = Math.floor((Date.now() - session.joinedAt) / 1000);
+            if (elapsedSec > 0) {
+                await recordVoiceSession(client, guildId, userId, elapsedSec);
+            }
+        });
+    } catch (error) {
+        logger.warn('Error closing voice session:', error.message);
+    }
+}
+
+async function flushAllVoiceSessions(client) {
+    const keys = [...activeVoiceSessions.keys()];
+    await Promise.all(keys.map((key) => flushVoiceSession(client, key)));
+}
+
+async function flushVoiceSession(client, sessionKey) {
+    try {
+        const [guildId, userId] = sessionKey.split(':');
+        await Mutex.runExclusive(`voice:${sessionKey}`, async () => {
+            const session = activeVoiceSessions.get(sessionKey);
+            if (!session) return;
+            const now = Date.now();
+            const elapsedSec = Math.floor((now - session.joinedAt) / 1000);
+            session.joinedAt = now;
+            if (elapsedSec > 0) {
+                await recordVoiceSession(client, guildId, userId, elapsedSec);
+            }
+        });
+    } catch (error) {
+        logger.warn('Error flushing voice session:', error.message);
     }
 }
 

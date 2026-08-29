@@ -2,6 +2,7 @@ import { Events } from "discord.js";
 import { logger, startupLog } from "../utils/logger.js";
 import config from "../config/application.js";
 import { reconcileReactionRoleMessages } from "../services/reactionRoleService.js";
+import { seedActiveVoiceSessions } from "./voiceStateUpdate.js";
 
 export default {
   name: Events.ClientReady,
@@ -14,6 +15,8 @@ export default {
       startupLog(`Ready! Logged in as ${client.user.tag}`);
       startupLog(`Serving ${client.guilds.cache.size} guild(s)`);
       startupLog(`Loaded ${client.commands.size} commands`);
+
+      seedActiveVoiceSessions(client);
 
       const reconciliationSummary = await reconcileReactionRoleMessages(client);
       startupLog(
