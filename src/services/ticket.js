@@ -325,7 +325,8 @@ return { success: true, channel, ticketData };
       guildId: guild?.id,
       userId: member?.id,
       error: typedError.message,
-      errorCode: typedError.context?.errorCode
+      errorCode: typedError.context?.errorCode,
+      originalError: typedError.context?.originalErrorMessage || String(error)
     });
 
     if (channelCreated && channel && channel.deletable) {
@@ -343,7 +344,7 @@ return { success: true, channel, ticketData };
       success: false,
       error: typedError.userMessage || typedError.message,
       errorCode: typedError.context?.errorCode,
-      debug: typedError.message
+      debug: typedError.context?.originalErrorMessage || typedError.message
 };
   }
 }

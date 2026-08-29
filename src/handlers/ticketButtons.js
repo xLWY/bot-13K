@@ -106,7 +106,7 @@ export const createTicketHandler = {
       }
 
       return await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
+        embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.') + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
       }).catch(() => {});
     } catch (error) {
       logger.error('Error opening ticket type menu:', error);
@@ -163,7 +163,7 @@ export const createTicketDirectHandler = {
       }
 
       return await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
+        embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.') + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
       }).catch(() => {});
     } catch (error) {
       logger.error('Error creating ticket:', error);
