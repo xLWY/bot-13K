@@ -10,13 +10,7 @@ export default {
     data: new SlashCommandBuilder()
         .setName("close")
         .setDescription("Ferme le ticket actuel.")
-        .setDMPermission(false)
-        .addStringOption((option) =>
-            option
-                .setName("reason")
-                .setDescription("Le motif de fermeture du ticket.")
-                .setRequired(false),
-        ),
+        .setDMPermission(false),
 
     async execute(interaction, guildConfig, client) {
         try {
@@ -50,11 +44,8 @@ export default {
             }
 
             const channel = interaction.channel;
-            const reason =
-                interaction.options?.getString("reason") ||
-                "Fermé via la commande sans motif précisé.";
 
-            const result = await closeTicket(channel, interaction.user, reason);
+            const result = await closeTicket(channel, interaction.user, 'Aucun motif précisé.');
             
             if (!result.success) {
                 logger.warn('Ticket close failed - not a valid ticket channel', {
@@ -88,7 +79,7 @@ export default {
                 channelId: channel.id,
                 channelName: channel.name,
                 guildId: interaction.guildId,
-                reason: reason,
+                reason: 'Aucun motif précisé.',
                 commandName: 'close'
             });
 

@@ -221,6 +221,7 @@ export const createTicketModalHandler = {
 export const closeTicketHandler = {
   name: 'ticket_close',
   async execute(interaction, client) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
@@ -233,40 +234,27 @@ export const closeTicketHandler = {
       );
 
       if (!permissionCheck.success) {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral,
-          });
-        }
-        return;
+        return await interaction.editReply({
+          embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
+        }).catch(() => {});
       }
 
-      const modal = new ModalBuilder()
-        .setCustomId('ticket_close_modal')
-        .setTitle('Fermer le ticket');
+      const result = await closeTicket(interaction.channel, interaction.user, 'Aucun motif précisé.');
 
-      const reasonInput = new TextInputBuilder()
-        .setCustomId('reason')
-        .setLabel('Motif de fermeture (facultatif)')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Ajoutez un motif éventuel de fermeture…')
-        .setRequired(false)
-        .setMaxLength(1000);
+      if (result.success) {
+        return await interaction.editReply({
+          embeds: [successEmbed('Ce ticket a été fermé.', '🔒 Ticket Fermé')],
+        }).catch(() => {});
+      }
 
-      const actionRow = new ActionRowBuilder().addComponents(reasonInput);
-      modal.addComponents(actionRow);
-
-      await interaction.showModal(modal);
+      return await interaction.editReply({
+        embeds: [errorEmbed('Erreur', result.error || 'Impossible de fermer le ticket.')],
+      }).catch(() => {});
     } catch (error) {
       logger.error('Error closing ticket:', error);
-
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Impossible d\'ouvrir le formulaire de fermeture.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await interaction.editReply({
+        embeds: [errorEmbed('Erreur', 'Impossible de fermer le ticket.')],
+      }).catch(() => {});
     }
   }
 };
