@@ -1,4 +1,4 @@
-﻿import {
+import {
   ChannelType,
   ActionRowBuilder,
   ButtonBuilder,
@@ -16,10 +16,10 @@ import { BotConfig } from '../config/bot.js';
 import { ensureTypedServiceError } from '../utils/serviceErrorBoundary.js';
 
 const DEFAULT_TYPES = {
-  support: { emoji: 'ðŸ›Ÿ', label: 'Support', description: 'Une question ou un problÃ¨me Ã  rÃ©gler', slug: 'support' },
-  prize: { emoji: 'ðŸŽ', label: 'Lot Giveaway', description: "RÃ©cupÃ©rer un lot gagnÃ© lors d'un concours", slug: 'lot' },
-  partner: { emoji: 'ðŸ¤', label: 'Partenariat', description: 'Proposer un partenariat ou une collaboration', slug: 'partenariat' },
-  other: { emoji: 'ðŸ“©', label: 'Autre', description: 'Toute autre demande', slug: 'autre' },
+  support: { emoji: '🛟', label: 'Support', description: 'Une question ou un problème à régler', slug: 'support' },
+  prize: { emoji: '🎁', label: 'Lot Giveaway', description: "Récupérer un lot gagné lors d'un concours", slug: 'lot' },
+  partner: { emoji: '🤝', label: 'Partenariat', description: 'Proposer un partenariat ou une collaboration', slug: 'partenariat' },
+  other: { emoji: '📩', label: 'Autre', description: 'Toute autre demande', slug: 'autre' },
 };
 
 function getTicketTypesMap() {
@@ -42,7 +42,7 @@ const TICKET_TYPES = getTicketTypesMap();
 const TICKET_DELETE_DELAY_MS = 3000;
 const TICKET_DELETE_DELAY_SECONDS = Math.floor(TICKET_DELETE_DELAY_MS / 1000);
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 
 export function getTicketTypes() {
   return TICKET_TYPES;
@@ -68,7 +68,7 @@ export function resolveTicketTypes(guildConfig = {}) {
           .replace(/^-+|-+$/g, '') || 'ticket';
       return {
         id,
-        emoji: type.emoji || 'ðŸŽ«',
+        emoji: type.emoji || '🎫',
         label: type.label || 'Ticket',
         description: type.description || '',
         slug,
@@ -97,7 +97,7 @@ export function getTicketTypeForGuild(guildConfig, typeId) {
 
 async function findTicketEmbedMessage(channel) {
   const messages = await channel.messages.fetch();
-  return messages.find((m) => m.embeds.length > 0 && m.embeds[0].title?.startsWith('ðŸŽ« Ticket #'));
+  return messages.find((m) => m.embeds.length > 0 && m.embeds[0].title?.startsWith('🎫 Ticket #'));
 }
 
 function buildTicketEmbed({ ticketData, guild, member, ticketNumber }) {
@@ -105,28 +105,28 @@ function buildTicketEmbed({ ticketData, guild, member, ticketNumber }) {
     emoji: ticketData.ticketTypeEmoji || getTicketType(ticketData.ticketType).emoji,
     label: ticketData.ticketTypeLabel || getTicketType(ticketData.ticketType).label,
   };
-  const status = ticketData.status === 'closed' ? 'ðŸ”´ FermÃ©' : 'ðŸŸ¢ Ouvert';
+  const status = ticketData.status === 'closed' ? '🔴 Fermé' : '🟢 Ouvert';
   const claimedBy = ticketData.claimedBy ? `<@${ticketData.claimedBy}>` : 'Personne';
   const number = ticketNumber ?? ticketData.ticketNumber ?? '';
 
   const fields = [
-    { name: 'ðŸ·ï¸ Type', value: `${type.emoji} ${type.label}`, inline: true },
-    { name: 'ðŸŸ¢ Statut', value: status, inline: true },
-    { name: 'ðŸ™‹ RÃ©clamÃ© par', value: claimedBy, inline: true },
+    { name: '🏷️ Type', value: `${type.emoji} ${type.label}`, inline: true },
+    { name: '🟢 Statut', value: status, inline: true },
+    { name: '🙋 Réclamé par', value: claimedBy, inline: true },
   ];
 
   if (ticketData.reason) {
-    fields.push({ name: 'ðŸ“ Demande', value: ticketData.reason, inline: false });
+    fields.push({ name: '📝 Demande', value: ticketData.reason, inline: false });
   }
 
   const creator = member ? member.toString() : `<@${ticketData.userId}>`;
 
   return createEmbed({
-    title: `ðŸŽ« Ticket #${number}`,
-    description: `${creator}, un membre de l'Ã©quipe va s'occuper de votre demande trÃ¨s vite.\n\nMerci de dÃ©crire prÃ©cisÃ©ment votre besoin dans ce salon.`,
+    title: `🎫 Ticket #${number}`,
+    description: `${creator}, un membre de l'équipe va s'occuper de votre demande très vite.\n\nMerci de décrire précisément votre besoin dans ce salon.`,
     color: 'info',
     fields,
-    footer: { text: `Ticket #${number} â€¢ ${guild?.name || ''}` },
+    footer: { text: `Ticket #${number} • ${guild?.name || ''}` },
     timestamp: false,
   });
 }
@@ -140,7 +140,7 @@ function buildTicketButtons(ticketData) {
         .setCustomId('ticket_close')
         .setLabel('Fermer')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('🔒')
+        .setEmoji('?')
         .setDisabled(ticketData.status === 'closed'),
     ),
   );
@@ -160,7 +160,7 @@ export function buildTicketTypeButtons(label = 'Ouvrir un ticket') {
   ];
 }
 
-// â”€â”€â”€ Counts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Counts ────────────────────────────────────────────────────────────────────
 
 export async function getUserTicketCount(guildId, userId) {
   try {
@@ -183,7 +183,7 @@ export async function getUserTicketCount(guildId, userId) {
   }
 }
 
-// â”€â”€â”€ Create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Create ────────────────────────────────────────────────────────────────────
 
 export async function createTicket(guild, member, options = {}) {
   const typeId = options.type || 'support';
@@ -200,7 +200,7 @@ export async function createTicket(guild, member, options = {}) {
     if (currentTicketCount >= maxTicketsPerUser) {
       return {
         success: false,
-        error: `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\nVeuillez fermer vos tickets existants avant d'en crÃ©er un nouveau.`,
+        error: `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.`,
       };
     }
 
@@ -348,9 +348,9 @@ return { success: true, channel, ticketData };
   }
 }
 
-// â”€â”€â”€ Close â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Close ─────────────────────────────────────────────────────────────────────
 
-export async function closeTicket(channel, closer, reason = 'Aucun motif prÃ©cisÃ©.') {
+export async function closeTicket(channel, closer, reason = 'Aucun motif précisé.') {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
@@ -391,35 +391,35 @@ export async function closeTicket(channel, closer, reason = 'Aucun motif prÃ©c
         const ticketCreator = await channel.client.users.fetch(ticketData.userId).catch(() => null);
         if (ticketCreator) {
           const dmEmbed = createEmbed({
-            title: 'ðŸŽ« Votre ticket a Ã©tÃ© fermÃ©',
-            description: `Votre ticket **${channel.name}** a Ã©tÃ© fermÃ©.\n\n**Motif :** ${reason}\n**FermÃ© par :** ${closer.tag}\n**FermÃ© le :** <t:${Math.floor(Date.now() / 1000)}:F>\n\nMerci d'avoir utilisÃ© notre support ! Si vous avez d'autres questions, n'hÃ©sitez pas Ã  crÃ©er un nouveau ticket.`,
+            title: '🎫 Votre ticket a été fermé',
+            description: `Votre ticket **${channel.name}** a été fermé.\n\n**Motif :** ${reason}\n**Fermé par :** ${closer.tag}\n**Fermé le :** <t:${Math.floor(Date.now() / 1000)}:F>\n\nMerci d'avoir utilisé notre support ! Si vous avez d'autres questions, n'hésitez pas à créer un nouveau ticket.`,
             color: '#e74c3c',
             footer: { text: `Ticket ID: ${ticketData.id}` }
           });
 
           await ticketCreator.send({ embeds: [dmEmbed] });
 
-          // Sondage de satisfaction â€” message DM sÃ©parÃ© pour Ãªtre modifiable aprÃ¨s rÃ©ponse
+          // Sondage de satisfaction — message DM séparé pour être modifiable après réponse
           try {
             const feedbackEmbed = createEmbed({
-              title: 'â­ Comment s\'est passÃ©e votre expÃ©rience ?',
-              description: `Nous aimerions connaÃ®tre votre avis sur le ticket **${channel.name}**.\nChoisissez une note ci-dessous â€” cela ne prend qu'une seconde !`,
+              title: '⭐ Comment s\'est passée votre expérience ?',
+              description: `Nous aimerions connaître votre avis sur le ticket **${channel.name}**.\nChoisissez une note ci-dessous — cela ne prend qu'une seconde !`,
               color: '#F1C40F',
-              footer: { text: 'Votre avis nous aide Ã  nous amÃ©liorer.' },
+              footer: { text: 'Votre avis nous aide à nous améliorer.' },
             });
 
             const base = `ticket_feedback:${channel.guild.id}:${channel.id}`;
             const starsRow = new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId(`${base}:1`).setLabel('â­ 1').setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder().setCustomId(`${base}:2`).setLabel('â­â­ 2').setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder().setCustomId(`${base}:3`).setLabel('â­â­â­ 3').setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder().setCustomId(`${base}:4`).setLabel('â­â­â­â­ 4').setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder().setCustomId(`${base}:5`).setLabel('â­â­â­â­â­ 5').setStyle(ButtonStyle.Secondary),
+new ButtonBuilder().setCustomId(`${base}:1`).setLabel('⭐ 1').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId(`${base}:2`).setLabel('⭐⭐ 2').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId(`${base}:3`).setLabel('⭐⭐⭐ 3').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId(`${base}:4`).setLabel('⭐⭐⭐⭐ 4').setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder().setCustomId(`${base}:5`).setLabel('⭐⭐⭐⭐⭐ 5').setStyle(ButtonStyle.Secondary),
             );
             const declineRow = new ActionRowBuilder().addComponents(
               new ButtonBuilder()
                 .setCustomId(`ticket_feedback_decline:${channel.guild.id}:${channel.id}`)
-                .setLabel('âŒ Non merci')
+                .setLabel('❌ Non merci')
                 .setStyle(ButtonStyle.Secondary),
             );
 
@@ -473,8 +473,8 @@ try {
     }
 
     const closeEmbed = createEmbed({
-      title: 'ðŸ”’ Ticket FermÃ©',
-      description: `Ce ticket a Ã©tÃ© fermÃ© par ${closer}.\n**Motif :** ${reason}${dmOnClose ? '\n\nðŸ“© Un message a Ã©tÃ© envoyÃ© au crÃ©ateur du ticket.' : ''}`,
+      title: '🔒 Ticket Fermé',
+      description: `Ce ticket a été fermé par ${closer}.\n**Motif :** ${reason}${dmOnClose ? '\n\n📩 Un message a été envoyé au créateur du ticket.' : ''}`,
       color: '#e74c3c',
       footer: { text: `Ticket ID: ${ticketData.id}` }
     });
@@ -484,12 +484,12 @@ try {
         .setCustomId('ticket_reopen')
         .setLabel('Rouvrir')
         .setStyle(ButtonStyle.Success)
-        .setEmoji('ðŸ”“'),
+        .setEmoji('🔓'),
       new ButtonBuilder()
         .setCustomId('ticket_delete')
         .setLabel('Supprimer')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('ðŸ—‘ï¸'),
+        .setEmoji('🗑️'),
     );
 
     try {
@@ -522,7 +522,7 @@ try {
       service: 'ticketService',
       operation: 'closeTicket',
       message: 'Ticket operation failed: closeTicket',
-      userMessage: 'Impossible de fermer le ticket. RÃ©essayez dans un instant.',
+      userMessage: 'Impossible de fermer le ticket. Réessayez dans un instant.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, closerId: closer?.id }
     });
     logger.error('Error closing ticket:', {
@@ -541,7 +541,7 @@ userId: closer?.id,
   }
 }
 
-// â”€â”€â”€ Claim â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Claim ─────────────────────────────────────────────────────────────────────
 
 export async function claimTicket(channel, claimer) {
   try {
@@ -553,7 +553,7 @@ export async function claimTicket(channel, claimer) {
     if (ticketData.claimedBy) {
       return {
         success: false,
-        error: `Ce ticket est dÃ©jÃ  rÃ©clamÃ© par <@${ticketData.claimedBy}>`,
+        error: `Ce ticket est déjà réclamé par <@${ticketData.claimedBy}>`,
       };
     }
 
@@ -574,24 +574,24 @@ export async function claimTicket(channel, claimer) {
     }
 
     const claimEmbed = createEmbed({
-      title: 'ðŸ™‹ Ticket RÃ©clamÃ©',
-      description: `${claimer} a rÃ©clamÃ© ce ticket !`,
+      title: '🙋 Ticket Réclamé',
+      description: `${claimer} a réclamé ce ticket !`,
       color: '#2ecc71',
     });
 
     const unclaimRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('ticket_unclaim')
-        .setLabel('Ne plus rÃ©clamer')
+        .setLabel('Ne plus réclamer')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji('ðŸ”“'),
+        .setEmoji('🔓'),
     );
 
     const messages = await channel.messages.fetch();
     const claimStatusMessage = messages.find(
       (m) =>
         m.embeds.length > 0 &&
-        (m.embeds[0].title === 'ðŸ™‹ Ticket RÃ©clamÃ©' || m.embeds[0].title === 'ðŸ”“ Ticket Non RÃ©clamÃ©'),
+        (m.embeds[0].title === '🙋 Ticket Réclamé' || m.embeds[0].title === '🔓 Ticket Non Réclamé'),
     );
 
     if (claimStatusMessage) {
@@ -621,7 +621,7 @@ export async function claimTicket(channel, claimer) {
       service: 'ticketService',
       operation: 'claimTicket',
       message: 'Ticket operation failed: claimTicket',
-      userMessage: 'Impossible de rÃ©clamer le ticket. RÃ©essayez dans un instant.',
+      userMessage: 'Impossible de réclamer le ticket. Réessayez dans un instant.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, claimerId: claimer?.id }
     });
     logger.error('Error claiming ticket:', {
@@ -639,7 +639,7 @@ export async function claimTicket(channel, claimer) {
   }
 }
 
-// â”€â”€â”€ Reopen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Reopen ────────────────────────────────────────────────────────────────────
 
 export async function reopenTicket(channel, reopener) {
   try {
@@ -651,7 +651,7 @@ export async function reopenTicket(channel, reopener) {
     if (ticketData.status !== 'closed') {
       return {
         success: false,
-        error: 'Ce ticket n\'est actuellement pas fermÃ©',
+        error: 'Ce ticket n\'est actuellement pas fermé',
       };
     }
 
@@ -712,7 +712,7 @@ export async function reopenTicket(channel, reopener) {
     }
 
     const reopenEmbed = createEmbed({
-      title: 'ðŸ”“ Ticket Rouvert',
+      title: '🔓 Ticket Rouvert',
       description: `${reopener} a rouvert ce ticket !`,
       color: '#2ecc71',
     });
@@ -721,7 +721,7 @@ export async function reopenTicket(channel, reopener) {
     const closeStatusMessage = messages.find(
       (m) =>
         m.embeds.length > 0 &&
-        m.embeds[0].title === 'ðŸ”’ Ticket FermÃ©' &&
+        m.embeds[0].title === '🔒 Ticket Fermé' &&
         m.components.length > 0 &&
         m.components[0].components.some((c) => c.customId === 'ticket_reopen'),
     );
@@ -743,7 +743,7 @@ export async function reopenTicket(channel, reopener) {
       service: 'ticketService',
       operation: 'reopenTicket',
       message: 'Ticket operation failed: reopenTicket',
-      userMessage: 'Impossible de rouvrir le ticket. RÃ©essayez dans un instant.',
+      userMessage: 'Impossible de rouvrir le ticket. Réessayez dans un instant.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, reopenerId: reopener?.id }
     });
     logger.error('Error reopening ticket:', {
@@ -761,7 +761,7 @@ export async function reopenTicket(channel, reopener) {
   }
 }
 
-// â”€â”€â”€ Transcript â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Transcript ─────────────────────────────────────────────────────────────────
 
 function escapeHtml(text) {
   if (!text) return '';
@@ -813,7 +813,7 @@ async function generateTranscript(channel) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Transcript â€“ #${escape(channel.name)}</title>
+<title>Transcript – #${escape(channel.name)}</title>
 <style>
 body{font-family:sans-serif;background:#36393f;color:#dcddde;margin:0;padding:16px}
 h1{color:#fff;font-size:1.2rem;margin-bottom:8px}
@@ -826,8 +826,8 @@ td{padding:4px 8px;border-bottom:1px solid #40444b;vertical-align:top}
 </style>
 </head>
 <body>
-<h1>ðŸ“œ Transcript â€“ #${escape(channel.name)}</h1>
-<p style="color:#72767d">${messages.length} message(s) exportÃ©s le ${new Date().toUTCString()}</p>
+<h1>📜 Transcript – #${escape(channel.name)}</h1>
+<p style="color:#72767d">${messages.length} message(s) exportés le ${new Date().toUTCString()}</p>
 <table>
 <thead><tr><th>Horodatage (UTC)</th><th>Auteur</th><th>Message</th></tr></thead>
 <tbody>
@@ -840,7 +840,7 @@ ${rows}
     const buffer = Buffer.from(html, 'utf8');
     const attachment = new AttachmentBuilder(buffer, { name: `ticket-${channel.id}.html` });
 
-    logger.info('âœ… Successfully generated transcript', {
+    logger.info('✅ Successfully generated transcript', {
       channelId: channel.id,
       channelName: channel.name,
       messageCount: messages.length,
@@ -849,7 +849,7 @@ ${rows}
 
     return attachment;
   } catch (error) {
-    logger.error('âŒ Failed to generate transcript:', {
+    logger.error('❌ Failed to generate transcript:', {
       channelId: channel.id,
       channelName: channel.name,
       errorMessage: error.message,
@@ -860,7 +860,7 @@ ${rows}
   }
 }
 
-// â”€â”€â”€ Delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Delete ────────────────────────────────────────────────────────────────────
 
 export async function deleteTicket(channel, deleter) {
   try {
@@ -870,8 +870,8 @@ export async function deleteTicket(channel, deleter) {
     }
 
     const deleteEmbed = createEmbed({
-      title: 'ðŸ—‘ï¸ Ticket SupprimÃ©',
-      description: `Ce ticket sera dÃ©finitivement supprimÃ© dans ${TICKET_DELETE_DELAY_SECONDS} secondes.`,
+      title: '🗑️ Ticket Supprimé',
+      description: `Ce ticket sera définitivement supprimé dans ${TICKET_DELETE_DELAY_SECONDS} secondes.`,
       color: '#e74c3c',
       footer: { text: `Ticket ID: ${ticketData.id}` },
     });
@@ -893,7 +893,7 @@ export async function deleteTicket(channel, deleter) {
       },
     });
 
-    // Suppression effective aprÃ¨s un court dÃ©lai (avec transcript si configurÃ©)
+    // Suppression effective après un court délai (avec transcript si configuré)
     setTimeout(async () => {
       try {
         let guildConfig = null;
@@ -930,18 +930,18 @@ export async function deleteTicket(channel, deleter) {
               });
             } else {
               const transcriptEmbed = new EmbedBuilder()
-                .setTitle('ðŸ“œ Transcript du ticket')
+                .setTitle('📜 Transcript du ticket')
                 .setDescription(`Transcript du ticket #${ticketData.ticketNumber || ticketData.id}`)
                 .setColor('#3498db')
                 .addFields(
                   { name: 'ID du ticket', value: `\`${ticketData.ticketNumber || ticketData.id}\``, inline: true },
                   { name: 'Salon', value: `#${channel.name}`, inline: true },
-                  { name: 'GÃ©nÃ©rÃ© le', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false },
+                  { name: 'Généré le', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false },
                 );
 
               if (deleter?.username) {
                 transcriptEmbed.setFooter({
-                  text: `SupprimÃ© par : ${deleter.username}`,
+                  text: `Supprimé par : ${deleter.username}`,
                   iconURL: deleter.displayAvatarURL?.(),
                 });
               }
@@ -951,7 +951,7 @@ export async function deleteTicket(channel, deleter) {
                 files: [attachment],
               });
 
-              logger.info('âœ… Transcript sent successfully', {
+              logger.info('✅ Transcript sent successfully', {
                 channelId: channel.id,
                 ticketNumber: ticketData.ticketNumber || ticketData.id,
                 transcriptChannelId,
@@ -969,13 +969,13 @@ export async function deleteTicket(channel, deleter) {
         try {
           await channel.delete('Ticket deleted permanently');
           await deleteTicketData(channel.guild.id, channel.id);
-          logger.info('âœ… Channel deleted', {
+          logger.info('✅ Channel deleted', {
             channelId: channel.id,
             channelName: channel.name,
             ticketNumber: ticketData.ticketNumber || ticketData.id,
           });
         } catch (deleteError) {
-          logger.error('âŒ Failed to delete ticket channel:', {
+          logger.error('❌ Failed to delete ticket channel:', {
             channelId: channel.id,
             channelName: channel.name,
             ticketNumber: ticketData.ticketNumber || ticketData.id,
@@ -985,7 +985,7 @@ export async function deleteTicket(channel, deleter) {
           });
         }
       } catch (error) {
-        logger.error('âŒ Unexpected error during ticket deletion:', {
+        logger.error('❌ Unexpected error during ticket deletion:', {
           channelId: channel.id,
           channelName: channel?.name,
           ticketNumber: ticketData?.ticketNumber || ticketData?.id,
@@ -1002,7 +1002,7 @@ export async function deleteTicket(channel, deleter) {
       service: 'ticketService',
       operation: 'deleteTicket',
       message: 'Ticket operation failed: deleteTicket',
-      userMessage: 'Impossible de supprimer le ticket. RÃ©essayez dans un instant.',
+      userMessage: 'Impossible de supprimer le ticket. Réessayez dans un instant.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, deleterId: deleter?.id }
     });
     logger.error('Error deleting ticket:', {
@@ -1020,7 +1020,7 @@ export async function deleteTicket(channel, deleter) {
   }
 }
 
-// â”€â”€â”€ Unclaim â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Unclaim ───────────────────────────────────────────────────────────────────
 
 export async function unclaimTicket(channel, unclaimer) {
   try {
@@ -1032,14 +1032,14 @@ export async function unclaimTicket(channel, unclaimer) {
     if (!ticketData.claimedBy) {
       return {
         success: false,
-        error: "Ce ticket n'est actuellement rÃ©clamÃ© par personne",
+        error: "Ce ticket n'est actuellement réclamé par personne",
       };
     }
 
     if (ticketData.claimedBy !== unclaimer.id && !unclaimer.permissions.has(PermissionFlagsBits.ManageChannels)) {
       return {
         success: false,
-        error: 'Vous ne pouvez retirer le rÃ©clamant que de vos propres tickets (ou avec la permission GÃ©rer les salons).',
+        error: 'Vous ne pouvez retirer le réclamant que de vos propres tickets (ou avec la permission Gérer les salons).',
       };
     }
 
@@ -1061,8 +1061,8 @@ export async function unclaimTicket(channel, unclaimer) {
     }
 
     const unclaimEmbed = createEmbed({
-      title: 'ðŸ”“ Ticket Non RÃ©clamÃ©',
-      description: `${unclaimer} ne rÃ©clame plus ce ticket !`,
+      title: '🔓 Ticket Non Réclamé',
+      description: `${unclaimer} ne réclame plus ce ticket !`,
       color: '#f39c12',
     });
 
@@ -1070,7 +1070,7 @@ export async function unclaimTicket(channel, unclaimer) {
     const claimMessage = messages.find(
       (m) =>
         m.embeds.length > 0 &&
-        (m.embeds[0].title === 'ðŸ™‹ Ticket RÃ©clamÃ©' || m.embeds[0].title === 'ðŸ”“ Ticket Non RÃ©clamÃ©'),
+        (m.embeds[0].title === '🙋 Ticket Réclamé' || m.embeds[0].title === '🔓 Ticket Non Réclamé'),
     );
 
     if (claimMessage) {
@@ -1100,7 +1100,7 @@ export async function unclaimTicket(channel, unclaimer) {
       service: 'ticketService',
       operation: 'unclaimTicket',
       message: 'Ticket operation failed: unclaimTicket',
-      userMessage: 'Impossible de retirer la rÃ©clamation. RÃ©essayez dans un instant.',
+      userMessage: 'Impossible de retirer la réclamation. Réessayez dans un instant.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, unclaimerId: unclaimer?.id }
     });
     logger.error('Error unclaiming ticket:', {
