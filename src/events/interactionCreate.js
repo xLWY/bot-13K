@@ -570,6 +570,7 @@ export default {
         InteractionHelper.patchInteractionResponses(interaction);
 
         if (interaction.isChatInputCommand()) {
+          await interaction.deferReply().catch(() => {});
           try {
             logger.info(`Command executed: /${interaction.commandName} by ${interaction.user.tag}`, {
               event: 'interaction.command.received',
