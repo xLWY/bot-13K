@@ -110,7 +110,29 @@ export default {
             await interaction.reply({ files: [{ attachment: imageBuffer, name: 'top.png' }] });
             return;
         } catch (imageError) {
-            logger.warn('Failed to render top image, falling back to embed:', imageError.message);
+            logger.warn('Failed to render top image, falling back to embed:', imageError);
+            const fallbackEmbed = createEmbed({
+                title: "📊 Top activité",
+                description: `Statistiques cumulées depuis le <t:${Math.floor(startedAt / 1000)}:d> — ${users.length} membre(s) suivi(s).`,
+                color: 'primary',
+                fields: [
+                    {
+                        name: "✉️ Messages",
+                        value: messagesText,
+                        inline: true
+                    },
+                    {
+                        name: "🎙️ Vocal",
+                        value: voiceText,
+                        inline: true
+                    }
+                ]
+            });
+            if (typeof imageError?.stack === 'string') {
+                fallbackEmbed.addFields({ name: "🔧 Rendu image", value: `Échec de la génération :\n\`\`\`${(imageError.stack || '').split('\n').slice(0, 3).join('\n')}\`\`\`` });
+            }
+            await interaction.reply({ embeds: [fallbackEmbed] });
+            return;
         }
 
         const decoratedMessages = byMessages.map((u) => ({ ...u, displayName: members.get(u.userId)?.name }));
