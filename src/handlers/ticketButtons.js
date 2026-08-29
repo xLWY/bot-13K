@@ -3,12 +3,10 @@ import {
   TextInputBuilder,
   TextInputStyle,
   ActionRowBuilder,
-  StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
   MessageFlags,
 } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
-import { createTicket, closeTicket, claimTicket, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
+import { createTicket, closeTicket, claimTicket, getTicketTypeForGuild } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
 import { logger } from '../utils/logger.js';

@@ -5,8 +5,6 @@ import {
   TextInputBuilder,
   TextInputStyle,
   ActionRowBuilder,
-  StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
   ButtonBuilder,
   ButtonStyle,
   ChannelType,
@@ -25,9 +23,9 @@ import { createInteractionTraceContext, runWithTraceContext } from '../utils/tra
 import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation.js';
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
-import { getUserTicketCount, getTicketTypeForGuild, resolveTicketTypes } from '../services/ticket.js';
+import { getUserTicketCount, getTicketTypeForGuild } from '../services/ticket.js';
 
-logger.info('[TicketFallback] v4 chargé — création + fermeture + suppression + réouverture autonomes.');
+logger.info('[TicketFallback] v5 chargé — création en un clic + boutons autonomes.');
 
 function withTraceContext(context = {}, traceContext = {}) {
   return {
