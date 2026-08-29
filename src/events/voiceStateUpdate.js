@@ -162,7 +162,7 @@ if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
                 }
 
                 const channelOptions = config.channelOptions?.[triggerChannel.id] || {};
-                const nameTemplate = channelOptions.nameTemplate || config.channelNameTemplate || "{username}'s Room";
+                const nameTemplate = channelOptions.nameTemplate || config.channelNameTemplate || "{username} · Salon";
                 
                 let userLimit = channelOptions.userLimit ?? config.userLimit ?? 0;
                 const bitrate = clampVoiceBitrate(channelOptions.bitrate ?? config.bitrate ?? DEFAULT_VOICE_BITRATE);
@@ -222,7 +222,7 @@ userLimit: userLimit === 0 ? undefined : userLimit,
                 
                 try {
                     await member.send({
-                        content: `❌ Failed to create your temporary voice channel. Please contact a server administrator.`
+                        content: `❌ Impossible de créer votre salon vocal temporaire. Contactez un administrateur du serveur.`
                     });
                 } catch (dmError) {
                     logger.debug(`Unable to send temporary channel failure DM to user ${member.id}:`, dmError);

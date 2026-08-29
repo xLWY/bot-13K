@@ -1999,7 +1999,7 @@ export async function getJoinToCreateConfig(client, guildId) {
             enabled: false,
             triggerChannels: [],
             categoryId: null,
-            channelNameTemplate: "{username}'s Room",
+            channelNameTemplate: "{username} · Salon",
             userLimit: 0,
             bitrate: 64000,
             temporaryChannels: {}
@@ -2015,7 +2015,7 @@ export async function getJoinToCreateConfig(client, guildId) {
             enabled: unwrapped.enabled || false,
             triggerChannels: unwrapped.triggerChannels || [],
             categoryId: unwrapped.categoryId || null,
-            channelNameTemplate: unwrapped.channelNameTemplate || "{username}'s Room",
+            channelNameTemplate: unwrapped.channelNameTemplate || "{username} · Salon",
             userLimit: unwrapped.userLimit || 0,
             bitrate: unwrapped.bitrate || 64000,
             temporaryChannels: unwrapped.temporaryChannels || {},
@@ -2027,7 +2027,7 @@ export async function getJoinToCreateConfig(client, guildId) {
             enabled: false,
             triggerChannels: [],
             categoryId: null,
-            channelNameTemplate: "{username}'s Room",
+            channelNameTemplate: "{username} · Salon",
             userLimit: 0,
             bitrate: 64000,
             temporaryChannels: {}

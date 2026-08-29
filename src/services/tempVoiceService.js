@@ -328,7 +328,7 @@ export async function transferTemporaryChannel(client, voiceChannel, newOwnerId)
     const nameTemplate =
         channelOptions.nameTemplate ||
         config.channelNameTemplate ||
-        "{username}'s Room";
+        "{username} · Salon";
 
     const newOwner = await guild.members.fetch(newOwnerId).catch(() => null);
     const triggerChannel = guild.channels.cache.get(tempInfo.triggerChannelId);
