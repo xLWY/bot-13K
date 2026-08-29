@@ -686,13 +686,3 @@ export const deleteTicketHandler = {
 };
 
 export default createTicketHandler;
-export {
-  createTicketModalHandler,
-  closeTicketModalHandler,
-  closeTicketHandler,
-  claimTicketHandler,
-  pinTicketHandler,
-  unclaimTicketHandler,
-  reopenTicketHandler,
-  deleteTicketHandler,
-};
