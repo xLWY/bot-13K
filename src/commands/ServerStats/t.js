@@ -1,9 +1,11 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { createEmbed } from '../../utils/embeds.js';
+import { logger } from '../../utils/logger.js';
 import {
     getGuildStatsSummary,
     formatVoiceDuration
 } from '../../services/statsService.js';
+import { renderTopImage } from '../../services/statsImage.js';
 
 const MAX_DISPLAY = 25;
 const DEFAULT_DISPLAY = 10;
@@ -21,20 +23,19 @@ function formatTopLines(entries, formatter) {
         .join('\n');
 }
 
-async function resolveDisplayNames(guild, userIds) {
-    const displayNames = new Map();
+async function resolveMembers(guild, userIds) {
+    const members = new Map();
     await Promise.all(userIds.map(async (userId) => {
         const cached = guild.members.cache.get(userId);
-        if (cached) {
-            displayNames.set(userId, cached.displayName || cached.user.username);
-            return;
-        }
-        const member = await guild.members.fetch(userId).catch(() => null);
+        const member = cached || (await guild.members.fetch(userId).catch(() => null));
         if (member) {
-            displayNames.set(userId, member.displayName || member.user.username);
+            members.set(userId, {
+                name: member.displayName || member.user.username,
+                avatarUrl: member.user.displayAvatarURL({ extension: 'png', size: 128 })
+            });
         }
     }));
-    return displayNames;
+    return members;
 }
 
 export default {
@@ -81,13 +82,39 @@ export default {
             .sort((a, b) => b.voiceSeconds - a.voiceSeconds)
             .slice(0, limit);
 
-        const displayNames = await resolveDisplayNames(
+        const members = await resolveMembers(
             interaction.guild,
             [...new Set([...byMessages, ...byVoice].map((u) => u.userId))]
         );
 
-        const decoratedMessages = byMessages.map((u) => ({ ...u, displayName: displayNames.get(u.userId) }));
-        const decoratedVoice = byVoice.map((u) => ({ ...u, displayName: displayNames.get(u.userId) }));
+        const messageEntries = byMessages.map((u) => ({
+            name: members.get(u.userId)?.name || 'Membre',
+            avatarUrl: members.get(u.userId)?.avatarUrl || null,
+            value: u.messages
+        }));
+        const voiceEntries = byVoice.map((u) => ({
+            name: members.get(u.userId)?.name || 'Membre',
+            avatarUrl: members.get(u.userId)?.avatarUrl || null,
+            value: u.voiceSeconds
+        }));
+
+        try {
+            const imageBuffer = await renderTopImage({
+                guildName: interaction.guild.name,
+                guildIconUrl: interaction.guild.iconURL({ extension: 'png', size: 128 }),
+                startedAt,
+                memberCount: users.length,
+                messageEntries,
+                voiceEntries
+            });
+            await interaction.reply({ files: [{ attachment: imageBuffer, name: 'top.png' }] });
+            return;
+        } catch (imageError) {
+            logger.warn('Failed to render top image, falling back to embed:', imageError.message);
+        }
+
+        const decoratedMessages = byMessages.map((u) => ({ ...u, displayName: members.get(u.userId)?.name }));
+        const decoratedVoice = byVoice.map((u) => ({ ...u, displayName: members.get(u.userId)?.name }));
 
         const messagesText = decoratedMessages.length > 0
             ? formatTopLines(decoratedMessages, (u) => `${u.messages.toLocaleString('fr-FR')} msg`)
