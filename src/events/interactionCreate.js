@@ -419,7 +419,7 @@ async function reopenTicketFallback(interaction) {
     }
     if (ticketData.status !== 'closed') {
       return await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'Ce ticket n'est pas fermé.')],
+        embeds: [errorEmbed('Erreur', "Ce ticket n'est pas fermé.")],
       });
     }
 
