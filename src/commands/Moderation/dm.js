@@ -98,7 +98,7 @@ export default {
             });
 
             const replySent = await InteractionHelper.safeEditReply(interaction, {
-                content: `@${targetUser.displayName || targetUser.username} message bien envoyé`
+                content: `<@${targetUser.id}> message bien envoyé`
             });
 
             if (replySent) {
@@ -109,7 +109,7 @@ export default {
                     } catch (_) {
                         // already deleted
                     }
-                }, 2000).unref?.();
+                }, 3000).unref?.();
             }
         } catch (error) {
             logger.error('DM command error:', error);
