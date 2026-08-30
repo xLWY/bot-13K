@@ -195,6 +195,39 @@ if (error.code === 40060) {
         }
     }
 
+    static async sendErrorNotice(interaction, text) {
+        if (!this.isInteractionValid(interaction)) {
+            logger.warn(`Interaction ${interaction.id} is invalid for sendErrorNotice, ignoring`);
+            return false;
+        }
+
+        const content = `<@${interaction.user.id}> ${text}`;
+        let sentMessage = null;
+
+        try {
+            if (!interaction.replied && !interaction.deferred) {
+                sentMessage = await interaction.reply({ content });
+            } else if (interaction.deferred && !interaction.replied) {
+                sentMessage = await interaction.editReply({ content });
+            } else {
+                sentMessage = await interaction.followUp({ content });
+            }
+        } catch (error) {
+            logger.debug(`Failed to send error notice:`, error.message);
+            return false;
+        }
+
+        if (sentMessage && typeof sentMessage.delete === 'function') {
+            setTimeout(async () => {
+                try { await sentMessage.delete(); } catch (_) {
+                    // already deleted
+                }
+            }, 5000).unref?.();
+        }
+
+        return true;
+    }
+
     
 
 
@@ -235,19 +268,17 @@ if (Date.now() - deferStartTime > 3000) {
                 return;
             }
 
-            let errorResponse;
+            let errorText;
             if (typeof errorEmbed === 'string') {
-                const { errorEmbed: createErrorEmbed } = await import('./embeds.js');
-                errorResponse = { embeds: [createErrorEmbed(errorEmbed, error)] };
+                errorText = errorEmbed;
             } else if (errorEmbed && typeof errorEmbed === 'object') {
-                errorResponse = { embeds: [errorEmbed] };
+                errorText = errorEmbed.description || errorEmbed.title || 'Commande en erreur. Réessaie plus tard.';
             } else {
-                const { errorEmbed: createErrorEmbed } = await import('./embeds.js');
-                errorResponse = { embeds: [createErrorEmbed('Command execution failed.', error)] };
+                errorText = 'Commande en erreur. Réessaie plus tard.';
             }
 
-            const editSuccess = await this.safeEditReply(interaction, errorResponse);
-            if (!editSuccess) {
+            const success = await this.sendErrorNotice(interaction, errorText);
+            if (!success) {
                 logger.warn(`Failed to send error response for interaction ${interaction.id}, interaction may have expired`);
             }
         }

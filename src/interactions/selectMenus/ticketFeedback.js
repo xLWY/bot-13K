@@ -3,6 +3,7 @@ import { getTicketData, saveTicketData } from '../../utils/database.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const STAR_LABELS = {
     '1': '⭐ 1 — Mauvaise',
@@ -20,15 +21,7 @@ export default {
         const [guildId, channelId] = args;
 
         if (!guildId || !channelId) {
-            await interaction.update({
-                embeds: [
-                    new EmbedBuilder()
-                        .setTitle('⚠️ Lien de sondage invalide')
-                        .setDescription('Ce lien de sondage semble invalide.')
-                        .setColor(getColor('error')),
-                ],
-                components: [],
-            });
+            await InteractionHelper.sendErrorNotice(interaction, 'Ce lien de sondage semble invalide.');
             return;
         }
 
@@ -41,28 +34,12 @@ export default {
         }
 
         if (!ticketData) {
-            await interaction.update({
-                embeds: [
-                    new EmbedBuilder()
-                        .setTitle('⚠️ Ticket introuvable')
-                        .setDescription('Impossible de trouver le ticket associé à ce sondage.')
-                        .setColor(getColor('error')),
-                ],
-                components: [],
-            });
+            await InteractionHelper.sendErrorNotice(interaction, 'Impossible de trouver le ticket associé à ce sondage.');
             return;
         }
 
         if (interaction.user.id !== ticketData.userId) {
-            await interaction.reply({
-                embeds: [
-                    new EmbedBuilder()
-                        .setTitle('❌ Non autorisé')
-                        .setDescription('Seul le créateur du ticket peut donner son avis pour ce ticket.')
-                        .setColor(getColor('error')),
-                ],
-                ephemeral: true,
-            });
+            await InteractionHelper.sendErrorNotice(interaction, 'Seul le créateur du ticket peut donner son avis pour ce ticket.');
             return;
         }
 

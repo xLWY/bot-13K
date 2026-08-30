@@ -168,15 +168,7 @@ time: 120000
 
         } catch (error) {
             logger.error('Error in cases command:', error);
-            return InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        'Erreur système',
-                        'Une erreur est survenue lors de la récupération des cas de modération. Réessaie plus tard.'
-                    )
-                ],
-                flags: MessageFlags.Ephemeral
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la récupération des cas de modération. Réessaie plus tard.');
         }
     }
 };

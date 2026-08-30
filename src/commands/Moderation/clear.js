@@ -35,27 +35,13 @@ export default {
     }
 
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages))
-      return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "Permission refusée",
-            "Tu as besoin de la permission `Gérer les messages` pour supprimer des messages.",
-          ),
-        ],
-      });
+      return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission `Gérer les messages` pour supprimer des messages.");
 
     const amount = interaction.options.getInteger("amount");
     const channel = interaction.channel;
 
     if (amount < 1 || amount > 100)
-      return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "Nombre invalide",
-            "Spécifie un nombre entre 1 et 100.",
-          ),
-        ],
-      });
+      return await InteractionHelper.sendErrorNotice(interaction, "Spécifie un nombre entre 1 et 100.");
 
     try {
       
@@ -129,14 +115,7 @@ export default {
       }
     } catch (error) {
       logger.error('Purge command error:', error);
-      await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "Une erreur inattendue est survenue lors de la suppression des messages. Remarque : les messages de plus de 14 jours ne peuvent pas être supprimés en masse.",
-          ),
-        ],
-        flags: MessageFlags.Ephemeral,
-      });
+      return await InteractionHelper.sendErrorNotice(interaction, "Une erreur inattendue est survenue lors de la suppression des messages. Remarque : les messages de plus de 14 jours ne peuvent pas être supprimés en masse.");
     }
   }
 };

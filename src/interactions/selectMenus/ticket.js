@@ -4,8 +4,8 @@ import {
 } from 'discord.js';
 import { createTicket, getTicketTypeForGuild } from '../../services/ticket.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
-import { errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const ticketTypeSelectHandler = {
   name: 'ticket_type_select',
@@ -20,9 +20,7 @@ const ticketTypeSelectHandler = {
       const type = getTicketTypeForGuild(guildConfig, typeId);
 
       if (!type) {
-        return await interaction.editReply({
-          embeds: [errorEmbed('Type inconnu', `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur.`)],
-        }).catch(() => {});
+        return await InteractionHelper.sendErrorNotice(interaction, `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur.`);
       }
 
       const result = await createTicket(interaction.guild, interaction.member, {
@@ -35,14 +33,10 @@ const ticketTypeSelectHandler = {
         }).catch(() => {});
       }
 
-      return await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.') + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
-      }).catch(() => {});
+      return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.') + (result.debug ? `\n\n\`${result.debug}\`` : ''));
     } catch (error) {
       logger.error('Error creating ticket from type select:', error);
-      await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
-      }).catch(() => {});
+      await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de créer le ticket.');
     }
   },
 };

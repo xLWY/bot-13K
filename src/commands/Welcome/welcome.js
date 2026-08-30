@@ -1,6 +1,5 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags } from 'discord.js';
-import { errorEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } from 'discord.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 import { formatWelcomeMessage } from '../../utils/welcome.js';
 import { logger } from '../../utils/logger.js';
@@ -52,10 +51,7 @@ export default {
         const { options, guild, client } = interaction;
 
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Permissions manquantes', 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/welcome`.')],
-                flags: MessageFlags.Ephemeral
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/welcome`.');
         }
 
         const subcommand = options.getSubcommand();
@@ -69,21 +65,12 @@ export default {
             const existingConfig = await getWelcomeConfig(client, guild.id);
             if (existingConfig?.channelId) {
                 logger.info(`[Welcome] Setup blocked because config already exists in channel ${existingConfig.channelId} for guild ${guild.id}`);
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(
-                        'Configuration de bienvenue déjà existante',
-                        `La bienvenue est déjà configurée pour <#${existingConfig.channelId}>. Utilise **/welcome config** pour personnaliser le canal, le message, le ping ou l\'image.`
-                    )],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, `La bienvenue est déjà configurée pour <#${existingConfig.channelId}>. Utilise **/welcome config** pour personnaliser le canal, le message, le ping ou l\'image.`);
             }
             
             if (!message || message.trim().length === 0) {
                 logger.warn(`[Welcome] Empty message provided by ${interaction.user.tag} in ${guild.name}`);
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Entrée invalide', 'Le message de bienvenue ne peut pas être vide')],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Le message de bienvenue ne peut pas être vide');
             }
 
             
@@ -92,10 +79,7 @@ export default {
                     new URL(image);
                 } catch (e) {
                     logger.warn(`[Welcome] Invalid image URL provided by ${interaction.user.tag}: ${image}`);
-                    return await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed("URL d'image invalide", "Veuillez fournir une URL d'image valide (doit commencer par http:// ou https://)")],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return await InteractionHelper.sendErrorNotice(interaction, "Veuillez fournir une URL d'image valide (doit commencer par http:// ou https://)");
                 }
             }
 
@@ -133,14 +117,7 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             } catch (error) {
                 logger.error(`[Welcome] Failed to setup welcome system for guild ${guild.id}:`, error);
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(
-                        'Échec de la configuration',
-                        'Une erreur est survenue lors de la configuration du système de bienvenue. Veuillez réessayer.',
-                        { showDetails: true }
-                    )],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la configuration du système de bienvenue. Veuillez réessayer.');
             }
         }
     },

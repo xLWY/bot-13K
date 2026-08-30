@@ -27,8 +27,6 @@
  */
 
 import { logger } from './logger.js';
-import { createEmbed } from './embeds.js';
-import { MessageFlags } from 'discord.js';
 import { getErrorMetadata, getDefaultErrorCodeByType, resolveErrorCode, ErrorCodes } from './errorRegistry.js';
 
 
@@ -227,29 +225,7 @@ export async function handleInteractionError(interaction, error, context = {}) {
         });
     }
 
-    const embed = createEmbed({
-        title: getErrorTitle(errorType),
-        description: userMessage,
-        color: 'error',
-        timestamp: true
-    });
-
-    if (errorType === ErrorTypes.RATE_LIMIT) {
-        embed.addFields({
-            name: "💡 Astuce",
-            value: "Les limites de débit aident à lutter contre le spam. Patientez un instant avant de réessayer."
-        });
-    } else if (errorType === ErrorTypes.PERMISSION) {
-        embed.addFields({
-            name: "🔧 Besoin d'aide ?",
-            value: "Contactez un administrateur du serveur si vous pensez qu'il s'agit d'une erreur."
-        });
-    } else if (errorType === ErrorTypes.CONFIGURATION) {
-        embed.addFields({
-            name: "📋 Configuration",
-            value: "Cette fonctionnalité doit être configurée par un administrateur du serveur."
-        });
-    }
+    const content = `<@${interaction.user.id}> ${userMessage}`;
 
     try {
         
@@ -277,18 +253,21 @@ export async function handleInteractionError(interaction, error, context = {}) {
             return;
         }
 
-        const errorMessage = { 
-            embeds: [embed]
-        };
-        
-        if (!interaction.deferred && !interaction.replied) {
-            errorMessage.flags = MessageFlags.Ephemeral;
-        }
-        
-        if (interaction.deferred || interaction.replied) {
-            await interaction.editReply(errorMessage);
+        let sentMessage = null;
+        if (!interaction.replied && !interaction.deferred) {
+            sentMessage = await interaction.reply({ content });
+        } else if (interaction.deferred && !interaction.replied) {
+            sentMessage = await interaction.editReply({ content });
         } else {
-            await interaction.reply(errorMessage);
+            sentMessage = await interaction.followUp({ content });
+        }
+
+        if (sentMessage && typeof sentMessage.delete === 'function') {
+            setTimeout(async () => {
+                try { await sentMessage.delete(); } catch (_) {
+                    // already deleted
+                }
+            }, 5000).unref?.();
         }
     } catch (replyError) {
         
@@ -315,25 +294,6 @@ export async function handleInteractionError(interaction, error, context = {}) {
             error: replyError
         });
     }
-}
-
-
-
-
-function getErrorTitle(errorType) {
-    const titles = {
-        [ErrorTypes.VALIDATION]: "❌ Entrée invalide",
-        [ErrorTypes.PERMISSION]: "🚫 Permission refusée",
-        [ErrorTypes.CONFIGURATION]: "⚙️ Erreur de configuration",
-        [ErrorTypes.DATABASE]: "🗄️ Erreur de base de données",
-        [ErrorTypes.NETWORK]: "🌐 Erreur réseau",
-        [ErrorTypes.DISCORD_API]: "🔌 Erreur API Discord",
-        [ErrorTypes.USER_INPUT]: "💬 Erreur de saisie",
-        [ErrorTypes.RATE_LIMIT]: "⏱️ Trop rapide !",
-        [ErrorTypes.UNKNOWN]: "❓ Erreur inattendue"
-    };
-    
-    return titles[errorType] || titles[ErrorTypes.UNKNOWN];
 }
 
 

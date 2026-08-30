@@ -120,14 +120,7 @@ export default {
                     guildId: interaction.guildId,
                     commandName: 'ticket'
                 });
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Permission refusée",
-                            "Vous avez besoin de la permission `Gérer les salons` pour cette action.",
-                        ),
-                    ],
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, "Vous avez besoin de la permission `Gérer les salons` pour cette action.");
             }
 
             const subcommand = interaction.options.getSubcommand();

@@ -42,14 +42,7 @@ export default {
         }
 
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageWebhooks)) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        "Permission refusée",
-                        "Tu as besoin de la permission **Gérer les webhooks** pour utiliser cette commande."
-                    ),
-                ],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission **Gérer les webhooks** pour utiliser cette commande.");
         }
 
         const targetUser = interaction.options.getUser("user");
@@ -57,25 +50,11 @@ export default {
         const channel = interaction.options.getChannel("channel") || interaction.channel;
 
         if (message.length > 2000) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        "Message trop long",
-                        "Les messages doivent faire moins de 2000 caractères."
-                    ),
-                ],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, "Les messages doivent faire moins de 2000 caractères.");
         }
 
         if (!channel || channel.type !== ChannelType.GuildText) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        "Salon invalide",
-                        "Choisis un salon textuel."
-                    ),
-                ],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, "Choisis un salon textuel.");
         }
 
         try {

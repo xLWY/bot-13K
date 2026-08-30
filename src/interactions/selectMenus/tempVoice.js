@@ -2,6 +2,7 @@ import { MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { getJoinToCreateConfig, getTemporaryChannelInfo } from '../../utils/database.js';
 import { canControlMember, refreshControlPanel } from '../../services/tempVoiceService.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 async function resolveChannel(interaction, client, args) {
     const voiceChannelId = args?.[0];

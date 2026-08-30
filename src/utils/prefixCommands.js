@@ -285,6 +285,17 @@ async function tryDeletePrefixMessage(message) {
     }
 }
 
+async function replyWithNotice(message, text) {
+    const sent = await message.reply(`<@${message.author.id}> ${text}`).catch(() => null);
+    if (sent) {
+        setTimeout(async () => {
+            try { await sent.delete(); } catch (_) {
+                // already deleted
+            }
+        }, 5000).unref?.();
+    }
+}
+
 export async function handlePrefixCommand(message, client) {
     if (message.author.bot || !message.guild) return false;
     if (!message.content) return false;
@@ -319,12 +330,12 @@ export async function handlePrefixCommand(message, client) {
         );
         if (!abuseProtection.allowed) {
             const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
-            await message.reply(`⏳ Cette commande est en temps de recharge. Attends ${formattedCooldown} avant de réessayer.`);
+            await replyWithNotice(message, `cette commande est en temps de recharge, attends ${formattedCooldown} avant de réessayer`);
             return true;
         }
 
         if (guildConfig?.disabledCommands?.[commandName]) {
-            await message.reply('❌ Cette commande a été désactivée sur ce serveur.');
+            await replyWithNotice(message, 'cette commande a été désactivée sur ce serveur');
             return true;
         }
 
@@ -337,14 +348,14 @@ export async function handlePrefixCommand(message, client) {
             const groupToken = tokens.shift();
             const group = optionDefs.find(o => o.name === groupToken?.toLowerCase());
             if (!group) {
-                await message.reply(`Utilisation : ${usageLine(matchedPrefix, commandName, null, [])} — groupes disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
+                await replyWithNotice(message, `utilisation : ${usageLine(matchedPrefix, commandName, null, [])} — groupes disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommandGroup = group.name;
             const subToken = tokens.shift();
             const sub = group.options?.find(o => o.name === subToken?.toLowerCase());
             if (!sub) {
-                await message.reply(`Utilisation : \`${matchedPrefix}${commandName} ${group.name} <sous-commande>\` — disponibles : ${(group.options || []).map(o => o.name).join(', ')}`);
+                await replyWithNotice(message, `utilisation : \`${matchedPrefix}${commandName} ${group.name} <sous-commande>\` — disponibles : ${(group.options || []).map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommand = sub.name;
@@ -353,7 +364,7 @@ export async function handlePrefixCommand(message, client) {
             const subToken = tokens.shift();
             const sub = optionDefs.find(o => o.name === subToken?.toLowerCase());
             if (!sub) {
-                await message.reply(`Utilisation : \`${matchedPrefix}${commandName} <sous-commande>\` — disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
+                await replyWithNotice(message, `utilisation : \`${matchedPrefix}${commandName} <sous-commande>\` — disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommand = sub.name;
@@ -364,14 +375,14 @@ export async function handlePrefixCommand(message, client) {
         if (requiredPerms !== undefined && requiredPerms !== null) {
             const perms = new PermissionsBitField(BigInt(requiredPerms));
             if (!message.member.permissions.has(perms)) {
-                await message.reply('❌ Tu n\'as pas la permission d\'utiliser cette commande.');
+                await replyWithNotice(message, 'tu n\'as pas la permission d\'utiliser cette commande');
                 return true;
             }
         }
 
         const parsed = buildOptionsFromTokens(message, optionDefs, tokens);
         if (parsed.error) {
-            await message.reply(`❌ ${parsed.error}\nUtilisation : ${usageLine(matchedPrefix, commandName, subcommand, optionDefs)}`);
+            await replyWithNotice(message, `${parsed.error} — utilisation : ${usageLine(matchedPrefix, commandName, subcommand, optionDefs)}`);
             return true;
         }
 
