@@ -69,7 +69,7 @@ export async function logEvent({ client, guild, guildId, event }) {
 
     if (event.action === 'DM Sent') {
       try {
-        const { renderDmLogImage } = await import('./dmLogImage.js');
+        const { renderDmLogImage } = await import('../services/dmLogImage.js');
         const guildIconUrl = guild.iconURL({ extension: 'png', size: 128 }) || undefined;
         const buffer = await renderDmLogImage({
           guildName: guild.name,
