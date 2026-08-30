@@ -275,6 +275,16 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
  * (whether it succeeded or errored), false if it should be treated as
  * a normal chat message instead.
  */
+
+async function tryDeletePrefixMessage(message) {
+    if (!message.deletable) return;
+    try {
+        await message.delete();
+    } catch (error) {
+        logger.debug(`Could not delete prefix command message (${error.code || error.message}):`);
+    }
+}
+
 export async function handlePrefixCommand(message, client) {
     if (message.author.bot || !message.guild) return false;
     if (!message.content) return false;
@@ -289,6 +299,7 @@ export async function handlePrefixCommand(message, client) {
     const configuredPrefix = guildConfig?.prefix || DEFAULT_PREFIX;
     const matchedPrefix = [configuredPrefix, STATBOT_PREFIX].find((p) => p && message.content.startsWith(p));
     if (!matchedPrefix) return false;
+    const deleteTriggerAfterRun = matchedPrefix === configuredPrefix;
 
     const withoutPrefix = message.content.slice(matchedPrefix.length).trim();
     if (!withoutPrefix) return false;
@@ -382,6 +393,10 @@ export async function handlePrefixCommand(message, client) {
             await handleInteractionError(fallbackInteraction, error, { type: 'prefix_command', commandName });
         } catch (innerError) {
             logger.error('Failed to send prefix command error response:', innerError);
+        }
+    } finally {
+        if (deleteTriggerAfterRun) {
+            await tryDeletePrefixMessage(message);
         }
     }
 
