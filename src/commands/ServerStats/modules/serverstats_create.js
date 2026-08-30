@@ -26,7 +26,7 @@ export async function handleCreate(interaction, client) {
     // Check permissions after deferring
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
         await InteractionHelper.safeEditReply(interaction, { 
-            embeds: [errorEmbed("You need **Manage Channels** permission to create counters.")]
+            embeds: [errorEmbed("Tu as besoin de la permission **Gérer les salons** pour créer des compteurs.")]
         }).catch(logger.error);
         return;
     }
@@ -34,7 +34,7 @@ export async function handleCreate(interaction, client) {
     try {
         if (!category || category.type !== ChannelType.GuildCategory) {
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Please select a valid category for the counter channel.")]
+                embeds: [errorEmbed("Choisis une catégorie valide pour le salon du compteur.")]
             }).catch(logger.error);
             return;
         }
@@ -49,7 +49,7 @@ export async function handleCreate(interaction, client) {
         if (duplicateType) {
             const duplicateChannel = guild.channels.cache.get(duplicateType.channelId);
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(`A **${getCounterTypeLabel(type)}** counter already exists for this server${duplicateChannel ? ` in ${duplicateChannel}` : ''}. Delete it first before creating another.`)]
+                embeds: [errorEmbed(`Un compteur **${getCounterTypeLabel(type)}** existe déjà pour ce serveur${duplicateChannel ? ` dans ${duplicateChannel}` : ''}. Supprime-le d'abord avant d'en créer un autre.`)]
             }).catch(logger.error);
             return;
         }
@@ -58,7 +58,7 @@ export async function handleCreate(interaction, client) {
             name: `${getCounterEmoji(type)}・${baseChannelName}`,
             type: targetChannelType,
             parent: category.id,
-            reason: `Counter channel created by ${interaction.user.tag}`
+            reason: `Salon de compteur créé par ${interaction.user.tag}`
         });
 
         if (targetChannelType === ChannelType.GuildVoice) {
@@ -73,7 +73,7 @@ export async function handleCreate(interaction, client) {
         const existingCounter = counters.find(c => c.channelId === targetChannel.id);
         if (existingCounter) {
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(`A counter already exists for channel **${targetChannel.name}**. Please delete it first or choose a different type.`)]
+                embeds: [errorEmbed(`Un compteur existe déjà pour le salon **${targetChannel.name}**. Supprime-le d'abord ou choisis un autre type.`)]
             }).catch(logger.error);
             return;
         }
@@ -91,9 +91,9 @@ export async function handleCreate(interaction, client) {
 
         const saved = await saveServerCounters(client, guild.id, counters);
         if (!saved) {
-            await targetChannel.delete('Counter creation failed during save').catch(() => null);
+            await targetChannel.delete('Échec de création du compteur pendant l\'enregistrement').catch(() => null);
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Failed to save counter data. Please try again.")]
+                embeds: [errorEmbed("Échec de l'enregistrement des données du compteur. Réessaie.")]
             }).catch(logger.error);
             return;
         }
@@ -101,19 +101,19 @@ export async function handleCreate(interaction, client) {
         const updated = await updateCounter(client, guild, newCounter);
         if (!updated) {
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Counter created but failed to update channel name. The counter will update on the next scheduled run.")]
+                embeds: [errorEmbed("Le compteur a été créé mais le nom du salon n'a pas pu être modifié. Il sera actualisé lors du prochain passage automatique.")]
             }).catch(logger.error);
             return;
         }
 
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [successEmbed(`✅ **Counter Created Successfully!**\n\n**Type:** ${getCounterTypeLabel(type)}\n**Channel Type:** ${targetChannel.type === ChannelType.GuildVoice ? 'voice' : 'text'}\n**Category:** ${category}\n**Channel:** ${targetChannel}\n**Channel Name:** ${targetChannel.name}\n**Counter ID:** \`${newCounter.id}\`\n\nThe counter will automatically update every 15 minutes.\n\nUse \`/counter list\` to view all counters.`)]
+            embeds: [successEmbed(`✅ **Compteur créé avec succès !**\n\n**Type :** ${getCounterTypeLabel(type)}\n**Type de salon :** ${targetChannel.type === ChannelType.GuildVoice ? 'vocal' : 'texte'}\n**Catégorie :** ${category}\n**Salon :** ${targetChannel}\n**Nom du salon :** ${targetChannel.name}\n**Identifiant du compteur :** \`${newCounter.id}\`\n\nLe compteur sera automatiquement actualisé toutes les 15 minutes.\n\nUtilise \`/serverstats list\` pour voir tous les compteurs.`)]
         }).catch(logger.error);
 
     } catch (error) {
         logger.error("Error creating counter:", error);
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed("An error occurred while creating the counter. Please try again.")]
+            embeds: [errorEmbed("Une erreur est survenue pendant la création du compteur. Réessaie.")]
         }).catch(logger.error);
     }
 }

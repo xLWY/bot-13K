@@ -17,7 +17,7 @@ export class ModerationService {
 
   static validateHierarchy(moderator, target, action) {
     if (!moderator || !target) {
-      return { valid: false, error: 'Invalid moderator or target' };
+      return { valid: false, error: 'Modérateur ou cible invalide' };
     }
 
     
@@ -29,7 +29,7 @@ export class ModerationService {
     if (moderator.roles.highest.position <= target.roles.highest.position) {
       return {
         valid: false,
-        error: `You cannot ${action} a user with an equal or higher role than you.`
+        error: `Tu ne peux pas ${action} un utilisateur avec un rôle égal ou supérieur au tien.`
       };
     }
 
@@ -45,19 +45,19 @@ export class ModerationService {
 
   static validateBotHierarchy(client, target, action) {
     if (!client || !target) {
-      return { valid: false, error: 'Invalid client or target' };
+      return { valid: false, error: 'Client ou cible invalide' };
     }
 
     const botMember = target.guild.members.me;
     if (!botMember) {
-      return { valid: false, error: 'Bot is not in the guild' };
+      return { valid: false, error: 'Le bot n\'est pas sur le serveur' };
     }
 
     
     if (botMember.roles.highest.position <= target.roles.highest.position) {
       return {
         valid: false,
-        error: `I cannot ${action} a user with an equal or higher role than me.`
+        error: `Je ne peux pas ${action} un utilisateur avec un rôle égal ou supérieur au mien.`
       };
     }
 
@@ -73,7 +73,7 @@ export class ModerationService {
     guild,
     user,
     moderator,
-    reason = 'No reason provided',
+    reason = 'Aucun motif fourni',
     deleteDays = 0
   }) {
     try {
@@ -81,7 +81,7 @@ export class ModerationService {
         throw new TitanBotError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
-          'Guild, user, and moderator are required'
+          'Le serveur, l\'utilisateur et le modérateur sont requis'
         );
       }
 
@@ -117,7 +117,7 @@ export class ModerationService {
             throw new TitanBotError(
                 'You do not have sufficient permissions to ban users who are not in the server.',
                 ErrorTypes.PERMISSION,
-                'You need "Manage Server" or "Administrator" permissions to ban users not currently in the guild.'
+                'Tu as besoin des permissions "Gérer le serveur" ou "Administrateur" pour bannir des utilisateurs qui ne sont pas actuellement sur le serveur.'
             );
         }
       }
@@ -167,14 +167,14 @@ export class ModerationService {
     guild,
     member,
     moderator,
-    reason = 'No reason provided'
+    reason = 'Aucun motif fourni'
   }) {
     try {
       if (!guild || !member || !moderator) {
         throw new TitanBotError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
-          'Guild, member, and moderator are required'
+          'Le serveur, le membre et le modérateur sont requis'
         );
       }
 
@@ -194,7 +194,7 @@ export class ModerationService {
         throw new TitanBotError(
           'Cannot kick member',
           ErrorTypes.PERMISSION,
-          'I do not have permission to kick this member'
+          'Je n\'ai pas la permission d\'expulser ce membre'
         );
       }
 
@@ -241,14 +241,14 @@ export class ModerationService {
     member,
     moderator,
     durationMs,
-    reason = 'No reason provided'
+    reason = 'Aucun motif fourni'
   }) {
     try {
       if (!guild || !member || !moderator || !durationMs) {
         throw new TitanBotError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
-          'Guild, member, moderator, and duration are required'
+          'Le serveur, le membre, le modérateur et la durée sont requis'
         );
       }
 
@@ -268,7 +268,7 @@ export class ModerationService {
         throw new TitanBotError(
           'Cannot timeout member',
           ErrorTypes.PERMISSION,
-          'I cannot timeout this member'
+          'Je ne peux pas mettre ce membre en timeout'
         );
       }
 
@@ -318,14 +318,14 @@ export class ModerationService {
     guild,
     member,
     moderator,
-    reason = 'Timeout removed by moderator'
+    reason = 'Timeout retiré par un modérateur'
   }) {
     try {
       if (!guild || !member || !moderator) {
         throw new TitanBotError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
-          'Guild, member, and moderator are required'
+          'Le serveur, le membre et le modérateur sont requis'
         );
       }
 
@@ -334,7 +334,7 @@ export class ModerationService {
         throw new TitanBotError(
           'Cannot modify member',
           ErrorTypes.PERMISSION,
-          'I cannot modify this member'
+          'Je ne peux pas modifier ce membre'
         );
       }
 
@@ -343,7 +343,7 @@ export class ModerationService {
         throw new TitanBotError(
           'User not timed out',
           ErrorTypes.VALIDATION,
-          `${member.user.tag} is not currently timed out`
+          `${member.user.tag} n'est actuellement pas en timeout`
         );
       }
 
@@ -387,14 +387,14 @@ export class ModerationService {
     guild,
     user,
     moderator,
-    reason = 'No reason provided'
+    reason = 'Aucun motif fourni'
   }) {
     try {
       if (!guild || !user || !moderator) {
         throw new TitanBotError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
-          'Guild, user, and moderator are required'
+          'Le serveur, l\'utilisateur et le modérateur sont requis'
         );
       }
 
@@ -406,7 +406,7 @@ export class ModerationService {
         throw new TitanBotError(
           'User not banned',
           ErrorTypes.VALIDATION,
-          `${user.tag} is not currently banned from this server`
+          `${user.tag} n'est actuellement pas banni de ce serveur`
         );
       }
 

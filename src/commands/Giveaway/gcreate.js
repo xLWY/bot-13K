@@ -16,7 +16,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("gcreate")
-        .setDescription("Lancer un nouveau giveaway dans un canal spécifié.")
+        .setDescription("Lancer un nouveau concours dans un salon spécifié.")
         .addStringOption((option) =>
             option
                 .setName("duration")
@@ -42,7 +42,7 @@ export default {
         .addChannelOption((option) =>
             option
                 .setName("channel")
-                .setDescription("Le canal où envoyer le giveaway (par défaut le canal actuel).")
+                .setDescription("Le salon où envoyer le concours (par défaut le salon actuel).")
                 .addChannelTypes(ChannelType.GuildText)
                 .setRequired(false),
         )
@@ -55,7 +55,7 @@ export default {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
-                    'This command can only be used in a server.',
+                    'Cette commande ne peut être utilisée que sur un serveur.',
                     { userId: interaction.user.id }
                 );
             }
@@ -65,7 +65,7 @@ export default {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "You need the 'Manage Server' permission to start a giveaway.",
+                    "Vous devez avoir la permission `Gérer le serveur` pour lancer un concours.",
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -88,7 +88,7 @@ export default {
                 throw new TitanBotError(
                     'Target channel is not text-based',
                     ErrorTypes.VALIDATION,
-                    'The channel must be a text channel.',
+                    'Le salon doit être un salon textuel.',
                     { channelId: targetChannel.id, channelType: targetChannel.type }
                 );
             }
@@ -140,7 +140,7 @@ export default {
                     guildId: interaction.guildId,
                     eventType: EVENT_TYPES.GIVEAWAY_CREATE,
                     data: {
-                        description: `Giveaway created: ${prizeName}`,
+                        description: `Concours créé : ${prizeName}`,
                         channelId: targetChannel.id,
                         userId: interaction.user.id,
                         fields: [

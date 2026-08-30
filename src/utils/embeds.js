@@ -122,14 +122,14 @@ export function errorEmbed(message, error = null, options = {}) {
   }
 
   return createEmbed({
-    title: '❌ Error',
+    title: '❌ Erreur',
     description,
     color: 'error',
     timestamp: true
   });
 }
 
-export function successEmbed(message, title = '✅ Success') {
+export function successEmbed(message, title = '✅ Succès') {
   return createEmbed({
     title,
     description: message,
@@ -138,7 +138,7 @@ export function successEmbed(message, title = '✅ Success') {
   });
 }
 
-export function infoEmbed(message, title = 'ℹ️ Information') {
+export function infoEmbed(message, title = 'ℹ️ Informations') {
   return createEmbed({
     title,
     description: message,
@@ -147,7 +147,7 @@ export function infoEmbed(message, title = 'ℹ️ Information') {
   });
 }
 
-export function warningEmbed(message, title = '⚠️ Warning') {
+export function warningEmbed(message, title = '⚠️ Avertissement') {
   return createEmbed({
     title,
     description: message,

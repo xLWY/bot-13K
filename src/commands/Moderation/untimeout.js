@@ -8,11 +8,11 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("untimeout")
-        .setDescription("Remove timeout from a user")
+        .setDescription("Retirer le timeout d'un utilisateur")
         .addUserOption((option) =>
             option
                 .setName("target")
-                .setDescription("User to untimeout")
+                .setDescription("Utilisateur à sortir du timeout")
                 .setRequired(true),
         )
 .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
@@ -43,7 +43,7 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
-                            `🔓 **Removed timeout** from ${targetUser.tag}`,
+                            `🔓 **Timeout retiré** pour ${targetUser.tag}`,
                         ),
                     ],
                 });

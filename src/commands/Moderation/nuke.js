@@ -7,7 +7,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('nuke')
-        .setDescription('Deletes and recreates this channel identically, wiping all messages.')
+        .setDescription('Supprime et recrée ce salon à l\'identique, effaçant tous les messages.')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
     category: 'moderation',
 
@@ -24,7 +24,7 @@ export default {
 
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
             return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('You need the `Manage Channels` permission to nuke a channel.')]
+                embeds: [errorEmbed('Tu as besoin de la permission `Gérer les salons` pour détruire un salon.')]
             });
         }
 
@@ -32,7 +32,7 @@ export default {
 
         if (!channel || !channel.guild || typeof channel.clone !== 'function') {
             return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('This command can only be used in a server channel.')]
+                embeds: [errorEmbed('Cette commande ne peut être utilisée que dans un salon de serveur.')]
             });
         }
 
@@ -40,14 +40,14 @@ export default {
             const position = channel.rawPosition ?? channel.position;
 
             const newChannel = await channel.clone({
-                reason: `Channel nuked by ${interaction.user.tag}`
+                reason: `Salon détruit par ${interaction.user.tag}`
             });
 
             await newChannel.setPosition(position).catch((err) => {
                 logger.warn('Could not restore exact channel position after nuke:', err);
             });
 
-            await channel.delete(`Channel nuked by ${interaction.user.tag}`);
+            await channel.delete(`Salon détruit par ${interaction.user.tag}`);
 
             await logEvent({
                 client,
@@ -65,13 +65,13 @@ export default {
                 }
             });
 
-            const nukeMessage = await newChannel.send(`💥 Channel nuked successfully, ${interaction.user}!`);
+            const nukeMessage = await newChannel.send(`💥 Salon détruit avec succès, ${interaction.user} !`);
             setTimeout(() => nukeMessage.delete().catch(() => {}), 3000);
         } catch (error) {
             logger.error('Nuke command error:', error);
             try {
                 await channel.send({
-                    embeds: [errorEmbed('An unexpected error occurred while nuking this channel. Check my permissions (I need \'Manage Channels\').')]
+                    embeds: [errorEmbed('Une erreur inattendue est survenue lors de la destruction de ce salon. Vérifie mes permissions (il me faut \'Gérer les salons\').')]
                 });
             } catch {
                 // Original channel may already be gone at this point; nothing more we can do.

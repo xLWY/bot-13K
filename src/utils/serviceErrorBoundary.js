@@ -61,7 +61,7 @@ export function ensureTypedServiceError(error, options = {}) {
   });
   const errorMetadata = getErrorMetadata(errorCode);
   const message = options.message || `${service}.${operation} failed`;
-  const userMessage = options.userMessage || 'Something went wrong while processing your request.';
+  const userMessage = options.userMessage || 'Une erreur est survenue lors du traitement de ta demande.';
 
   return createError(message, type, userMessage, {
     ...context,

@@ -8,7 +8,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('verify')
-        .setDescription('Verify yourself and gain access to the server'),
+        .setDescription('Te vérifier et obtenir l\'accès au serveur'),
 
     async execute(interaction, config, client) {
         const wrappedExecute = withErrorHandling(async () => {
@@ -22,15 +22,15 @@ export default {
             if (!result.success) {
                 if (result.alreadyVerified) {
                     return await InteractionHelper.safeReply(interaction, {
-                        embeds: [infoEmbed("Already Verified", "You are already verified.")],
+                        embeds: [infoEmbed("Déjà vérifié", "Tu es déjà vérifié.")],
                         flags: MessageFlags.Ephemeral
                     });
                 }
 
                 return await InteractionHelper.safeReply(interaction, {
                     embeds: [errorEmbed(
-                        "Verification Failed",
-                        "An error occurred during verification. Please try again or contact an administrator."
+                        "Vérification échouée",
+                        "Une erreur est survenue lors de la vérification. Réessaie ou contacte un administrateur."
                     )],
                     flags: MessageFlags.Ephemeral
                 });
@@ -38,8 +38,8 @@ export default {
 
             await InteractionHelper.safeReply(interaction, {
                 embeds: [successEmbed(
-                    "Verification Complete",
-                    `You have been verified and given the **${result.roleName}** role! Welcome to the server! 🎉`
+                    "Vérification terminée",
+                    `Tu as été vérifié et tu as reçu le rôle **${result.roleName}** ! Bienvenue sur le serveur ! 🎉`
                 )],
                 flags: MessageFlags.Ephemeral
             });

@@ -1,8 +1,8 @@
 import { logger } from './logger.js';
 
 const DEFAULT_TEMPLATES = {
-    welcome: 'Welcome {user} to {server}!',
-    goodbye: '{user.tag} has left the server.'
+    welcome: 'Bienvenue {user} sur {server} !',
+    goodbye: '{user.tag} a quitté le serveur.'
 };
 
 function replaceAll(message, token, value) {
@@ -35,17 +35,17 @@ export function formatWelcomeMessage(message, data) {
     }
 
     const tokens = {
-        '{user}': user?.toString?.() || 'User',
-        '{user.mention}': user?.toString?.() || 'User',
-        '{user.tag}': user?.tag || 'Unknown#0000',
-        '{user.username}': user?.username || 'Unknown',
-        '{username}': user?.username || 'Unknown',
+        '{user}': user?.toString?.() || 'Utilisateur',
+        '{user.mention}': user?.toString?.() || 'Utilisateur',
+        '{user.tag}': user?.tag || 'Inconnu#0000',
+        '{user.username}': user?.username || 'Inconnu',
+        '{username}': user?.username || 'Inconnu',
         '{user.discriminator}': user?.discriminator || '0000',
-        '{user.id}': user?.id || 'unknown',
-        '{server}': guild?.name || 'Server',
-        '{server.name}': guild?.name || 'Server',
-        '{guild.name}': guild?.name || 'Server',
-        '{guild.id}': guild?.id || 'unknown',
+        '{user.id}': user?.id || 'inconnu',
+        '{server}': guild?.name || 'Serveur',
+        '{server.name}': guild?.name || 'Serveur',
+        '{guild.name}': guild?.name || 'Serveur',
+        '{guild.id}': guild?.id || 'inconnu',
         '{guild.memberCount}': guild?.memberCount?.toString?.() || '0',
         '{memberCount}': guild?.memberCount?.toString?.() || '0',
         '{membercount}': guild?.memberCount?.toString?.() || '0'

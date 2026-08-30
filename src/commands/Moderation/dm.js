@@ -22,23 +22,23 @@ async function sendTransient(interaction, content) {
 export default {
     data: new SlashCommandBuilder()
         .setName("dm")
-        .setDescription("Send a direct message to a user (Staff only)")
+        .setDescription("Envoyer un message privé à un utilisateur (réservé au staff)")
         .addUserOption(option =>
             option
                 .setName("user")
-                .setDescription("The user to send a DM to")
+                .setDescription("L'utilisateur à qui envoyer le MP")
                 .setRequired(true)
         )
         .addStringOption(option =>
             option
                 .setName("message")
-                .setDescription("The message to send")
+                .setDescription("Le message à envoyer")
                 .setRequired(true)
         )
         .addBooleanOption(option =>
             option
                 .setName("anonymous")
-                .setDescription("Send the message anonymously (default: false)")
+                .setDescription("Envoyer le message anonymement (défaut : non)")
                 .setRequired(false)
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)

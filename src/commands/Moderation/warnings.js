@@ -9,12 +9,12 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("warnings")
-        .setDescription("View all warnings for a user")
+        .setDescription("Voir tous les avertissements d'un utilisateur")
         .addUserOption((o) =>
             o
                 .setName("target")
                 .setRequired(true)
-                .setDescription("User to check warnings for"),
+                .setDescription("Utilisateur dont il faut consulter les avertissements"),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     category: "moderation",
@@ -42,8 +42,8 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         createEmbed({ 
-                            title: `Warnings: ${target.tag}`, 
-                            description: "✅ This user has no recorded warnings." 
+                            title: `Avertissements : ${target.tag}`, 
+                            description: "✅ Cet utilisateur n'a aucun avertissement enregistré." 
                         }).setColor(getColor('success')),
                     ],
                 });
@@ -51,16 +51,16 @@ export default {
             }
 
             const embed = createEmbed({ 
-                title: `Warnings: ${target.tag}`, 
-                description: `Total Warnings: **${totalWarns}**` 
+                title: `Avertissements : ${target.tag}`, 
+                description: `Total d'avertissements : **${totalWarns}**` 
             }).setColor(getColor('warning'));
 
             const warningFields = validWarnings
                 .map((w, i) => {
                     const discordTimestamp = Math.floor(w.timestamp / 1000);
                     return {
-                        name: `[#${i + 1}] Reason: ${w.reason.substring(0, 100)}`,
-                        value: `**Moderator:** <@${w.moderatorId}>\n**Date:** <t:${discordTimestamp}:F> (<t:${discordTimestamp}:R>)`,
+                        name: `[#${i + 1}] Raison : ${w.reason.substring(0, 100)}`,
+                        value: `**Modérateur :** <@${w.moderatorId}>\n**Date :** <t:${discordTimestamp}:F> (<t:${discordTimestamp}:R>)`,
                         inline: false,
                     };
                 })
@@ -75,7 +75,7 @@ export default {
                     action: "Warnings Viewed",
                     target: `${target.tag} (${target.id})`,
                     executor: `${interaction.user.tag} (${interaction.user.id})`,
-                    reason: `Viewed ${totalWarns} warnings`,
+                    reason: `Consultation de ${totalWarns} avertissements`,
                     metadata: {
                         userId: target.id,
                         moderatorId: interaction.user.id,

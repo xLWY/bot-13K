@@ -10,12 +10,12 @@ export default {
     data: new SlashCommandBuilder()
         .setName("gdelete")
         .setDescription(
-            "Deletes a giveaway message and removes it from the database.",
+            "Supprime un message de concours et le retire de la base de données.",
         )
         .addStringOption((option) =>
             option
                 .setName("messageid")
-                .setDescription("The message ID of the giveaway to delete.")
+                .setDescription("L'identifiant du message du concours à supprimer.")
                 .setRequired(true),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
@@ -27,7 +27,7 @@ export default {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
-                    'This command can only be used in a server.',
+                    'Cette commande ne peut être utilisée que sur un serveur.',
                     { userId: interaction.user.id }
                 );
             }
@@ -37,7 +37,7 @@ export default {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "You need the 'Manage Server' permission to delete a giveaway.",
+                    "Vous devez avoir la permission `Gérer le serveur` pour supprimer un concours.",
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -51,7 +51,7 @@ export default {
                 throw new TitanBotError(
                     'Invalid message ID format',
                     ErrorTypes.VALIDATION,
-                    'Please provide a valid message ID.',
+                    'Veuillez fournir un identifiant de message valide.',
                     { providedId: messageId }
                 );
             }
@@ -63,7 +63,7 @@ export default {
                 throw new TitanBotError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "No giveaway was found with that message ID.",
+                    "Aucun concours n'a été trouvé avec cet identifiant de message.",
                     { messageId, guildId: interaction.guildId }
                 );
             }
@@ -122,7 +122,7 @@ export default {
                 throw new TitanBotError(
                     `Failed to delete giveaway from database: ${messageId}`,
                     ErrorTypes.UNKNOWN,
-                    'The giveaway could not be removed from the database. Please try again.',
+                    "Le concours n'a pas pu être retiré de la base de données. Veuillez réessayer.",
                     { messageId, guildId: interaction.guildId }
                 );
             }
@@ -134,24 +134,24 @@ export default {
                 throw new TitanBotError(
                     `Giveaway still exists after deletion: ${messageId}`,
                     ErrorTypes.UNKNOWN,
-                    'Deletion did not persist in the database. Please try again.',
+                    "La suppression n'a pas été enregistrée dans la base de données. Veuillez réessayer.",
                     { messageId, guildId: interaction.guildId }
                 );
             }
 
             const statusMsg = deletedMessage
-                ? `and the message was deleted from #${channelName}`
-                : `but the message was already deleted or the channel was inaccessible.`;
+                ? `et le message a été supprimé de #${channelName}`
+                : `mais le message était déjà supprimé ou le salon était inaccessible.`;
 
             const winnerIds = Array.isArray(giveaway.winnerIds) ? giveaway.winnerIds : [];
             const hasWinners = winnerIds.length > 0;
             const wasEnded = giveaway.ended === true || giveaway.isEnded === true || hasWinners;
 
             const winnerStatusMsg = hasWinners
-                ? `This giveaway already had ${winnerIds.length} winner(s) selected.`
+                ? `Ce concours avait déjà ${winnerIds.length} gagnant(s) sélectionné(s).`
                 : wasEnded
-                    ? 'This giveaway was ended with no valid winners.'
-                    : 'No winner was picked before deletion.';
+                    ? 'Ce concours était terminé sans gagnant valide.'
+                    : "Aucun gagnant n'avait été tiré avant la suppression.";
 
             logger.info(`Giveaway deleted: ${messageId} in ${channelName}`);
 
@@ -162,17 +162,17 @@ export default {
                     guildId: interaction.guildId,
                     eventType: EVENT_TYPES.GIVEAWAY_DELETE,
                     data: {
-                        description: `Giveaway deleted: ${giveaway.prize}`,
+                        description: `Concours supprimé : ${giveaway.prize}`,
                         channelId: giveaway.channelId,
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prize',
-                                value: giveaway.prize || 'Unknown',
+                                name: '🎁 Prix',
+                                value: giveaway.prize || 'Inconnu',
                                 inline: true
                             },
                             {
-                                name: '📊 Entries',
+                                name: '📊 Participations',
                                 value: (giveaway.participants?.length || 0).toString(),
                                 inline: true
                             }
@@ -186,8 +186,8 @@ export default {
             return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "Giveaway Deleted",
-                        `Successfully deleted the giveaway for **${giveaway.prize}** ${statusMsg}. ${winnerStatusMsg}`,
+                        "Concours supprimé",
+                        `Concours supprimé pour **${giveaway.prize}** ${statusMsg}. ${winnerStatusMsg}`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,

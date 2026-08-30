@@ -64,13 +64,13 @@ export function botHasPermission(channel, permissions) {
 export async function checkUserPermissions(
   interaction,
   requiredPermissions,
-  errorMessage = 'You do not have permission to use this command.'
+  errorMessage = 'Tu n\'as pas la permission d\'utiliser cette commande.'
 ) {
   const member = interaction.member;
   
   if (!member.permissions.has(requiredPermissions)) {
     await interaction.reply({
-      embeds: [errorEmbed('Permission Denied', errorMessage)],
+      embeds: [errorEmbed('Permission refusée', errorMessage)],
       flags: MessageFlags.Ephemeral
     });
     

@@ -3,17 +3,17 @@ const MAX_DISPLAYED_ROLE_PERMISSIONS = 5;
 export function buildRoleAuditFields(role, { includeMemberCount = false } = {}) {
   const fields = [
     {
-      name: '🏷️ Role Name',
+      name: '🏷️ Nom du rôle',
       value: role.name,
       inline: true
     },
     {
-      name: '🎨 Color',
+      name: '🎨 Couleur',
       value: role.hexColor || '#000000',
       inline: true
     },
     {
-      name: '🆔 Role ID',
+      name: '🆔 ID du rôle',
       value: role.id,
       inline: true
     }
@@ -25,7 +25,7 @@ export function buildRoleAuditFields(role, { includeMemberCount = false } = {}) 
     fields.push({
       name: '🔐 Permissions',
       value: permissions.length > MAX_DISPLAYED_ROLE_PERMISSIONS
-        ? `${displayPerms}... (+${permissions.length - MAX_DISPLAYED_ROLE_PERMISSIONS} more)`
+        ? `${displayPerms}... (+${permissions.length - MAX_DISPLAYED_ROLE_PERMISSIONS} de plus)`
         : displayPerms,
       inline: false
     });
@@ -33,13 +33,13 @@ export function buildRoleAuditFields(role, { includeMemberCount = false } = {}) 
 
   fields.push(
     {
-      name: '✅ Hoisted',
-      value: role.hoist ? 'Yes' : 'No',
+      name: '✅ Affiché séparément',
+      value: role.hoist ? 'Oui' : 'Non',
       inline: true
     },
     {
-      name: '🤖 Managed',
-      value: role.managed ? 'Yes (Bot role)' : 'No',
+      name: '🤖 Géré par le bot',
+      value: role.managed ? 'Oui (rôle du bot)' : 'Non',
       inline: true
     },
     {
@@ -51,7 +51,7 @@ export function buildRoleAuditFields(role, { includeMemberCount = false } = {}) 
 
   if (includeMemberCount) {
     fields.push({
-      name: '👥 Members with Role',
+      name: '👥 Membres avec ce rôle',
       value: role.members.size.toString(),
       inline: true
     });

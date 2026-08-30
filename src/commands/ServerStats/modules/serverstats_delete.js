@@ -25,7 +25,7 @@ export async function handleDelete(interaction, client) {
     // Check permissions after deferring
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
         await InteractionHelper.safeEditReply(interaction, { 
-            embeds: [errorEmbed("You need **Manage Channels** permission to delete counters.")]
+            embeds: [errorEmbed("Tu as besoin de la permission **Gérer les salons** pour supprimer des compteurs.")]
         }).catch(logger.error);
         return;
     }
@@ -35,7 +35,7 @@ export async function handleDelete(interaction, client) {
 
         if (counters.length === 0) {
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("No counters found to delete.")]
+                embeds: [errorEmbed("Aucun compteur à supprimer.")]
             }).catch(logger.error);
             return;
         }
@@ -43,7 +43,7 @@ export async function handleDelete(interaction, client) {
         const counterToDelete = counters.find(c => c.id === counterId);
         if (!counterToDelete) {
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(`Counter with ID \`${counterId}\` not found. Use \`/counter list\` to see all counters.`)]
+                embeds: [errorEmbed(`Aucun compteur avec l'identifiant \`${counterId}\` n'a été trouvé. Utilise \`/serverstats list\` pour voir tous les compteurs.`)]
             }).catch(logger.error);
             return;
         }
@@ -51,19 +51,19 @@ export async function handleDelete(interaction, client) {
         const channel = guild.channels.cache.get(counterToDelete.channelId);
 
         const embed = createEmbed({
-            title: "⚠️ Delete Counter & Channel",
-            description: `Are you sure you want to delete this counter and its channel?\n\n**ID:** \`${counterToDelete.id}\`\n**Type:** ${getCounterTypeDisplay(counterToDelete.type)}\n**Channel:** ${channel || 'Deleted Channel'}\n\n⚠️ **The channel will be permanently deleted!**`,
+            title: "⚠️ Supprimer le compteur et le salon",
+            description: `Es-tu sûr de vouloir supprimer ce compteur et son salon ?\n\n**ID :** \`${counterToDelete.id}\`\n**Type :** ${getCounterTypeDisplay(counterToDelete.type)}\n**Salon :** ${channel || 'Salon supprimé'}\n\n⚠️ **Le salon sera définitivement supprimé !**`,
             color: getColor('error')
         });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId(`counter-delete:confirm:${counterToDelete.id}:${interaction.user.id}`)
-                .setLabel("Confirm Delete")
+                .setLabel("Confirmer la suppression")
                 .setStyle(ButtonStyle.Danger),
             new ButtonBuilder()
                 .setCustomId(`counter-delete:cancel:${counterToDelete.id}:${interaction.user.id}`)
-                .setLabel("Cancel")
+                .setLabel("Annuler")
                 .setStyle(ButtonStyle.Secondary)
         );
 
@@ -72,7 +72,7 @@ export async function handleDelete(interaction, client) {
     } catch (error) {
         logger.error("Error in handleDelete:", error);
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed("An error occurred while fetching counters. Please try again.")]
+            embeds: [errorEmbed("Une erreur est survenue pendant la récupération des compteurs. Réessaie.")]
         }).catch(logger.error);
     }
 }
@@ -91,7 +91,7 @@ export async function performDeletionByCounterId(client, guild, counterId) {
         if (!counter) {
             return {
                 success: false,
-                message: `Counter with ID \`${counterId}\` was not found.`
+                message: `Aucun compteur avec l'identifiant \`${counterId}\` n'a été trouvé.`
             };
         }
 
@@ -101,7 +101,7 @@ export async function performDeletionByCounterId(client, guild, counterId) {
         if (!saved) {
             return {
                 success: false,
-                message: "Failed to delete counter. Please try again."
+                message: "Échec de la suppression du compteur. Réessaie."
             };
         }
 
@@ -110,21 +110,21 @@ export async function performDeletionByCounterId(client, guild, counterId) {
 
         if (channel) {
             try {
-                await channel.delete(`Counter deleted - removing channel: ${counter.id}`);
+                await channel.delete(`Compteur supprimé - suppression du salon : ${counter.id}`);
                 channelDeleted = true;
             } catch (error) {
                 logger.error("Error deleting channel:", error);
             }
         }
 
-        let message = `✅ **Counter Deleted Successfully!**\n\n**ID:** \`${counter.id}\`\n**Type:** ${getCounterTypeDisplay(counter.type)}`;
+        let message = `✅ **Compteur supprimé avec succès !**\n\n**ID :** \`${counter.id}\`\n**Type :** ${getCounterTypeDisplay(counter.type)}`;
         
         if (channelDeleted) {
-            message += `\n**Channel:** ${channel.name} (deleted)`;
+            message += `\n**Salon :** ${channel.name} (supprimé)`;
         } else if (channel) {
-            message += `\n**Channel:** ${channel.name} (failed to delete)`;
+            message += `\n**Salon :** ${channel.name} (échec de la suppression)`;
         } else {
-            message += `\n**Channel:** Already deleted`;
+            message += `\n**Salon :** déjà supprimé`;
         }
 
         return {
@@ -136,7 +136,7 @@ export async function performDeletionByCounterId(client, guild, counterId) {
         logger.error("Error deleting counter:", error);
         return {
             success: false,
-            message: "An error occurred while deleting the counter. Please try again."
+            message: "Une erreur est survenue pendant la suppression du compteur. Réessaie."
         };
     }
 }

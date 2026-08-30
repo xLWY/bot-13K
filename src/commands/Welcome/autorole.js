@@ -16,28 +16,28 @@ function createAutoroleInfoEmbed(description) {
 export default {
     data: new SlashCommandBuilder()
         .setName('autorole')
-        .setDescription('Manage roles that are automatically assigned to new members')
+        .setDescription('Gérer les rôles attribués automatiquement aux nouveaux membres')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(subcommand =>
             subcommand
                 .setName('add')
-                .setDescription('Add a role to be automatically assigned to new members')
+                .setDescription('Ajouter un rôle attribué automatiquement aux nouveaux membres')
                 .addRoleOption(option =>
                     option.setName('role')
-                        .setDescription('The role to add')
+                        .setDescription('Le rôle à ajouter')
                         .setRequired(true)))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('remove')
-                .setDescription('Remove a role from auto-assignment')
+                .setDescription('Retirer un rôle de l\'auto-attribution')
                 .addRoleOption(option =>
                     option.setName('role')
-                        .setDescription('The role to remove')
+                        .setDescription('Le rôle à retirer')
                         .setRequired(true)))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('list')
-                .setDescription('List all auto-assigned roles')),
+                .setDescription('Lister tous les rôles auto-attribués')),
 
     async execute(interaction) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
@@ -52,7 +52,7 @@ export default {
 
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
             return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Missing Permissions', 'You need the **Manage Server** permission to use `/autorole`.')],
+                embeds: [errorEmbed('Permissions manquantes', 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/autorole`.')],
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -70,8 +70,8 @@ export default {
             if (verificationEnabled || autoVerifyEnabled) {
                 return InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
-                        'Setup Conflict',
-                        'You cannot add AutoRole while the verification system or AutoVerify is enabled. Disable those first.'
+                        'Conflit de configuration',
+                        'Impossible d\'activer AutoRole pendant que le système de vérification ou AutoVerify est activé. Désactive-les d\'abord.'
                     )],
                     flags: MessageFlags.Ephemeral
                 });
@@ -80,7 +80,7 @@ export default {
             if (role.position >= guild.members.me.roles.highest.position) {
                 logger.warn(`[Autorole] User ${interaction.user.tag} tried to add role ${role.name} (${role.id}) higher than bot's highest role in ${guild.name}`);
                 return InteractionHelper.safeReply(interaction, {
-                    embeds: [errorEmbed('Role Too High', "I can't assign roles that are higher than my highest role.")],
+                    embeds: [errorEmbed('Rôle trop haut', 'Je ne peux pas attribuer des rôles plus hauts que mon rôle le plus haut.')],
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -94,7 +94,7 @@ export default {
                 if (currentRoleId === role.id) {
                     logger.info(`[Autorole] User ${interaction.user.tag} tried to add duplicate role ${role.name} (${role.id}) in ${guild.name}`);
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Already Added', `The role ${role} is already set to be auto-assigned.`)],
+                        embeds: [errorEmbed('Déjà ajouté', `Le rôle ${role} est déjà configuré comme auto-attribué.`)],
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -107,8 +107,8 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [createAutoroleInfoEmbed(
                         currentRoleId
-                            ? `✅ Auto-role updated to ${role}. Only one auto-role is allowed.`
-                            : `✅ Auto-role set to ${role}.`
+                            ? `✅ Auto-role mis à jour vers ${role}. Un seul auto-role est autorisé.`
+                            : `✅ Auto-role configuré : ${role}.`
                     )],
                     flags: MessageFlags.Ephemeral
                 });
@@ -116,8 +116,8 @@ export default {
                 logger.error(`[Autorole] Failed to add role for guild ${guild.id}:`, error);
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
-                        'Add Failed',
-                        'An error occurred while adding the role. Please try again.',
+                        'Ajout impossible',
+                        'Une erreur est survenue pendant l\'ajout du rôle. Réessaie.',
                         { showDetails: true }
                     )],
                     flags: MessageFlags.Ephemeral
@@ -135,7 +135,7 @@ export default {
                 if (!existingRoles.includes(role.id)) {
                     logger.info(`[Autorole] User ${interaction.user.tag} tried to remove non-existent role ${role.name} (${role.id}) in ${guild.name}`);
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Not Found', `The role ${role} is not set to be auto-assigned.`)],
+                        embeds: [errorEmbed('Introuvable', `Le rôle ${role} n'est pas configuré comme auto-attribué.`)],
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -148,15 +148,15 @@ export default {
 
                 logger.info(`[Autorole] Removed role ${role.name} (${role.id}) from auto-assign in ${guild.name} by ${interaction.user.tag}`);
                 await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [createAutoroleInfoEmbed(`✅ Removed ${role} from auto-assigned roles.`)],
+                    embeds: [createAutoroleInfoEmbed(`✅ ${role} retiré des rôles auto-attribués.`)],
                     flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
                 logger.error(`[Autorole] Failed to remove role for guild ${guild.id}:`, error);
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
-                        'Remove Failed',
-                        'An error occurred while removing the role. Please try again.',
+                        'Retrait impossible',
+                        'Une erreur est survenue pendant le retrait du rôle. Réessaie.',
                         { showDetails: true }
                     )],
                     flags: MessageFlags.Ephemeral
@@ -170,8 +170,8 @@ export default {
                 const verificationEnabled = Boolean(guildConfig.verification?.enabled);
                 const autoVerifyEnabled = Boolean(guildConfig.verification?.autoVerify?.enabled);
                 const conflictSummary = [
-                    verificationEnabled ? 'Verification system is enabled' : null,
-                    autoVerifyEnabled ? 'AutoVerify is enabled' : null
+                    verificationEnabled ? 'Le système de vérification est activé' : null,
+                    autoVerifyEnabled ? 'AutoVerify est activé' : null
                 ].filter(Boolean).join('\n');
 
                 const config = await getWelcomeConfig(client, guild.id);
@@ -187,7 +187,7 @@ export default {
 
                 if (singleRoleIds.length === 0) {
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [createAutoroleInfoEmbed(`ℹ️ No role is set to be auto-assigned.${conflictSummary ? `\n\n⚠️ Setup blockers:\n${conflictSummary}` : ''}`)],
+                        embeds: [createAutoroleInfoEmbed(`ℹ️ Aucun rôle n'est configuré comme auto-attribué.${conflictSummary ? `\n\n⚠️ Bloquants de configuration :\n${conflictSummary}` : ''}`)],
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -215,16 +215,16 @@ export default {
 
                 if (validRoles.length === 0) {
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [createAutoroleInfoEmbed(`ℹ️ No valid auto-role found. Any invalid role has been removed.${conflictSummary ? `\n\n⚠️ Setup blockers:\n${conflictSummary}` : ''}`)],
+                        embeds: [createAutoroleInfoEmbed(`ℹ️ Aucun auto-role valide. Les rôles invalides ont été retirés.${conflictSummary ? `\n\n⚠️ Bloquants de configuration :\n${conflictSummary}` : ''}`)],
                         flags: MessageFlags.Ephemeral
                     });
                 }
 
                 const embed = new EmbedBuilder()
                     .setColor(getColor('info'))
-                    .setTitle('Auto-Assigned Role')
-                    .setDescription(`${validRoles[0]}${conflictSummary ? `\n\n⚠️ Setup blockers:\n${conflictSummary}` : ''}`)
-                    .setFooter({ text: 'Only one auto-role can be configured.' });
+                    .setTitle('Rôle auto-attribué')
+                    .setDescription(`${validRoles[0]}${conflictSummary ? `\n\n⚠️ Bloquants de configuration :\n${conflictSummary}` : ''}`)
+                    .setFooter({ text: 'Un seul auto-role peut être configuré.' });
 
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [embed],
@@ -235,8 +235,8 @@ export default {
                 logger.error(`[Autorole] Failed to list roles for guild ${guild.id}:`, error);
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
-                        'List Failed',
-                        'An error occurred while listing auto-assigned roles. Please try again.',
+                        'Liste impossible',
+                        'Une erreur est survenue pendant l\'affichage des rôles auto-attribués. Réessaie.',
                         { showDetails: true }
                     )],
                     flags: MessageFlags.Ephemeral

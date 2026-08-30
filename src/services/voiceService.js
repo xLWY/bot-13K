@@ -31,73 +31,73 @@ const ACTIVITIES = {
     'youtube': {
         id: '880218394199220334',
         name: 'YouTube Together',
-        description: 'Watch YouTube videos together',
+        description: 'Regarder des vidéos YouTube ensemble',
         icon: '🎥'
     },
     'poker': {
         id: '755827207812677713',
         name: 'Poker Night',
-        description: 'Play poker with friends',
+        description: 'Jouer au poker avec des amis',
         icon: '🃏'
     },
     'chess': {
         id: '832012774040141894',
         name: 'Chess in the Park',
-        description: 'Play chess competitively',
+        description: 'Jouer aux échecs en compétition',
         icon: '♟️'
     },
     'checkers': {
         id: '832013003968348200',
         name: 'Checkers in the Park',
-        description: 'Play checkers',
+        description: 'Jouer aux dames',
         icon: '🔲'
     },
     'letter-league': {
         id: '879863686565621790',
         name: 'Letter League',
-        description: 'Word-based competition',
+        description: 'Compétition de mots',
         icon: '📝'
     },
     'spellcast': {
         id: '852509694341283871',
         name: 'SpellCast',
-        description: 'Magical word game',
+        description: 'Jeu de mots magique',
         icon: '✨'
     },
     'sketch': {
         id: '902271654783242291',
         name: 'Sketch Heads',
-        description: 'Pictionary-style drawing game',
+        description: 'Jeu de dessin façon Pictionary',
         icon: '🎨'
     },
     'blazing8s': {
         id: '832025144389533716',
         name: 'Blazing 8s',
-        description: 'Fast-paced card game',
+        description: 'Jeu de cartes rapide',
         icon: '🔥'
     },
     'puttparty': {
         id: '945737671223947305',
         name: 'Putt Party',
-        description: 'Mini-golf competition',
+        description: 'Compétition de mini-golf',
         icon: '⛳'
     },
     'landio': {
         id: '903769130790969345',
         name: 'Land-io',
-        description: 'Territory conquest game',
+        description: 'Jeu de conquête de territoire',
         icon: '🗺️'
     },
     'bobble': {
         id: '947957217959759964',
         name: 'Bobble League',
-        description: 'Word-chain game',
+        description: 'Jeu de chaîne de mots',
         icon: '🎯'
     },
     'knowwhat': {
         id: '976052223358406656',
         name: 'Know What I Mean',
-        description: 'Guessing game',
+        description: 'Jeu de devinettes',
         icon: '🤔'
     }
 };
@@ -144,7 +144,7 @@ class VoiceService {
             throw createError(
                 'Invalid activity type',
                 ErrorTypes.VALIDATION,
-                'Activity type must be a non-empty string.',
+                'Le type d\'activité doit être une chaîne non vide.',
                 { provided: typeof activityType }
             );
         }
@@ -155,7 +155,7 @@ class VoiceService {
             throw createError(
                 'Unknown activity',
                 ErrorTypes.VALIDATION,
-                `The activity **${activityType}** does not exist. Available activities: ${validActivities}`,
+                `L'activité **${activityType}** n'existe pas. Activités disponibles : ${validActivities}`,
                 { activityType, validActivities: Object.keys(ACTIVITIES) }
             );
         }
@@ -178,7 +178,7 @@ class VoiceService {
             throw createError(
                 'Not in voice channel',
                 ErrorTypes.VALIDATION,
-                'You must be in a voice channel to start an activity.',
+                'Tu dois être dans un salon vocal pour lancer une activité.',
                 { userId: member.id }
             );
         }
@@ -189,7 +189,7 @@ class VoiceService {
             throw createError(
                 'Invalid channel type',
                 ErrorTypes.VALIDATION,
-                'You must be in a voice or stage channel.',
+                'Tu dois être dans un salon vocal ou de scène.',
                 { channelId: channel.id, channelType: channel.type }
             );
         }
@@ -218,7 +218,7 @@ class VoiceService {
             throw createError(
                 'Bot not found',
                 ErrorTypes.VALIDATION,
-                'I cannot be found in this guild.',
+                'Je ne suis pas présent sur ce serveur.',
                 { guildId: voiceChannel.guildId }
             );
         }
@@ -229,7 +229,7 @@ class VoiceService {
             throw createError(
                 'Cannot check permissions',
                 ErrorTypes.VALIDATION,
-                'I cannot determine permissions for this channel.',
+                'Je ne peux pas déterminer les permissions de ce salon.',
                 { channelId: voiceChannel.id }
             );
         }
@@ -247,7 +247,7 @@ class VoiceService {
             throw createError(
                 'Missing permission',
                 ErrorTypes.VALIDATION,
-                'I need the **Create Invite** permission in this voice channel to start an activity.',
+                'J\'ai besoin de la permission **Créer une invitation** dans ce salon vocal pour lancer une activité.',
                 {
                     channelId: voiceChannel.id,
                     missingPermission: 'CreateInstantInvite'
@@ -311,7 +311,7 @@ class VoiceService {
             throw createError(
                 'Rate limited',
                 ErrorTypes.RATE_LIMIT,
-                `Please wait **${Math.ceil(remaining / 1000)}** seconds before creating another activity invite.`,
+                `Veuillez patienter **${Math.ceil(remaining / 1000)}** secondes avant de créer une autre invitation d'activité.`,
                 { remaining, cooldown: INVITE_CREATION_COOLDOWN }
             );
         }
@@ -377,7 +377,7 @@ class VoiceService {
         throw createError(
             'Failed to create activity',
             ErrorTypes.DISCORD_API_ERROR,
-            `Could not create the **${activityName}** activity. Please try again in a moment.`,
+            `Impossible de créer l'activité **${activityName}**. Réessaie dans un instant.`,
             {
                 channelId,
                 activityId,
@@ -413,7 +413,7 @@ class VoiceService {
             throw createError(
                 'Permission denied',
                 ErrorTypes.VALIDATION,
-                'You do not have permission to connect to this voice channel.',
+                'Tu n\'as pas la permission de te connecter à ce salon vocal.',
                 { channelId: voiceStatus.channelId }
             );
         }

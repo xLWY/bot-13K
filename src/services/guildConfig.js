@@ -9,7 +9,7 @@ const GUILD_CONFIG_DEFAULTS = {
     adminRole: null,
     logChannelId: null,
     welcomeChannel: null,
-    welcomeMessage: 'Welcome {user} to {server}!',
+    welcomeMessage: 'Bienvenue {user} sur {server} !',
     autoRole: null,
     dmOnClose: true,
     logIgnore: { users: [], channels: [] },
@@ -34,7 +34,7 @@ export const getGuildConfig = wrapServiceBoundary(async function getGuildConfig(
     service: 'guildConfigService',
     operation: 'getGuildConfig',
     message: 'Failed to fetch guild configuration',
-    userMessage: 'Failed to load server configuration. Please try again.'
+    userMessage: 'Impossible de charger la configuration du serveur. Réessaie.'
 });
 
 
@@ -52,7 +52,7 @@ export const setGuildConfig = wrapServiceBoundary(async function setGuildConfig(
     service: 'guildConfigService',
     operation: 'setGuildConfig',
     message: 'Failed to save guild configuration',
-    userMessage: 'Failed to save server configuration. Please try again.'
+    userMessage: 'Impossible d\'enregistrer la configuration du serveur. Réessaie.'
 });
 
 
@@ -72,7 +72,7 @@ export const updateGuildConfig = wrapServiceBoundary(async function updateGuildC
     service: 'guildConfigService',
     operation: 'updateGuildConfig',
     message: 'Failed to update guild configuration',
-    userMessage: 'Failed to update server configuration. Please try again.'
+    userMessage: 'Impossible de mettre à jour la configuration du serveur. Réessaie.'
 });
 
 
@@ -90,7 +90,7 @@ export const getConfigValue = wrapServiceBoundary(async function getConfigValue(
     service: 'guildConfigService',
     operation: 'getConfigValue',
     message: 'Failed to read guild configuration value',
-    userMessage: 'Failed to read a server setting. Please try again.'
+    userMessage: 'Impossible de lire un paramètre du serveur. Réessaie.'
 });
 
 
@@ -107,7 +107,7 @@ export const setConfigValue = wrapServiceBoundary(async function setConfigValue(
     service: 'guildConfigService',
     operation: 'setConfigValue',
     message: 'Failed to update guild configuration value',
-    userMessage: 'Failed to update a server setting. Please try again.'
+    userMessage: 'Impossible de mettre à jour un paramètre du serveur. Réessaie.'
 });
 
 

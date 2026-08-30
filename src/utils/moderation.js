@@ -77,8 +77,8 @@ export async function logEvent({ client, guild, guildId, event }) {
         })
         .setThumbnail(guild.iconURL() || undefined)
         .addFields(
-          { name: '🎯 Target', value: event.target, inline: true },
-          { name: '🛡️ Moderator', value: event.executor, inline: true },
+          { name: '🎯 Cible', value: event.target, inline: true },
+          { name: '🛡️ Modérateur', value: event.executor, inline: true },
           { name: '💬 Message', value: contentText.length > 1024 ? `${contentText.substring(0, 1021)}...` : contentText }
         )
         .setTimestamp();
@@ -92,8 +92,8 @@ export async function logEvent({ client, guild, guildId, event }) {
       .setColor(event.color || style.color)
       .setTitle(`${style.icon} ${event.action}`)
       .addFields(
-        { name: "Target", value: event.target, inline: true },
-        { name: "Moderator", value: event.executor, inline: true }
+        { name: "Cible", value: event.target, inline: true },
+        { name: "Modérateur", value: event.executor, inline: true }
       )
       .setTimestamp();
 
@@ -103,14 +103,14 @@ export async function logEvent({ client, guild, guildId, event }) {
 
     if (!event.hideFooter) {
       embed.setFooter({ 
-        text: `Guild ID: ${guild.id} | Moderator ID: ${event.executor.match(/\((\d+)\)/)?.[1] || event.metadata?.moderatorId || 'Unknown'}`,
+        text: `ID du serveur : ${guild.id} | ID du modérateur : ${event.executor.match(/\((\d+)\)/)?.[1] || event.metadata?.moderatorId || 'Inconnu'}`,
         iconURL: guild.iconURL() || undefined
       });
     }
 
     if (event.reason) {
       embed.addFields({
-        name: "Reason",
+        name: "Motif",
         value: event.reason.length > 1024 ? event.reason.substring(0, 1021) + '...' : event.reason,
         inline: false
       });
@@ -118,7 +118,7 @@ export async function logEvent({ client, guild, guildId, event }) {
 
     if (event.duration) {
       embed.addFields({
-        name: "Duration",
+        name: "Durée",
         value: event.duration,
         inline: true
       });
@@ -138,7 +138,7 @@ export async function logEvent({ client, guild, guildId, event }) {
 
     if (event.caseId) {
       embed.addFields({
-        name: "Case ID",
+        name: "ID du dossier",
         value: `#${event.caseId}`,
         inline: true
       });

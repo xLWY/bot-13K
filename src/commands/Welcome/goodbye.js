@@ -9,28 +9,28 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('goodbye')
-        .setDescription('Configure the goodbye message system')
+        .setDescription('Configurer le système de message d\'au revoir')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(subcommand =>
             subcommand
                 .setName('setup')
-                .setDescription('Set up the goodbye message')
+                .setDescription('Configurer le message d\'au revoir')
                 .addChannelOption(option =>
                     option.setName('channel')
-                        .setDescription('The channel to send goodbye messages to')
+                        .setDescription('Le canal où envoyer les messages d\'au revoir')
                         .addChannelTypes(ChannelType.GuildText)
                         .setRequired(true))
                 .addStringOption(option =>
                     option.setName('message')
-                        .setDescription('Goodbye message. Variables: {user}, {username}, {server}, {memberCount}')
+                        .setDescription('Message d\'au revoir. Variables : {user}, {username}, {server}, {memberCount}')
                         .setRequired(true))
                 .addStringOption(option =>
                     option.setName('image')
-                        .setDescription('URL of the image to include in the goodbye message')
+                        .setDescription('URL de l\'image à inclure dans le message d\'au revoir')
                         .setRequired(false))
                 .addBooleanOption(option =>
                     option.setName('ping')
-                        .setDescription('Whether to ping the user in the goodbye message')
+                        .setDescription('Si l\'utilisateur doit être mentionné dans le message d\'au revoir')
                         .setRequired(false))),
 
     async execute(interaction) {
@@ -48,7 +48,7 @@ export default {
 
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
             return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Missing Permissions', 'You need the **Manage Server** permission to use `/goodbye`.')],
+                embeds: [errorEmbed('Permissions manquantes', 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/goodbye`.')],
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -66,8 +66,8 @@ export default {
                 logger.info(`[Goodbye] Setup blocked because config already exists in channel ${existingConfig.goodbyeChannelId} for guild ${guild.id}`);
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
-                        'Goodbye Setup Already Exists',
-                        `Goodbye is already configured for <#${existingConfig.goodbyeChannelId}>. Use **/goodbye config** to customize channel, message, ping, or image.`
+                        'Configuration d\'au revoir déjà existante',
+                        `L\'au revoir est déjà configuré pour <#${existingConfig.goodbyeChannelId}>. Utilise **/goodbye config** pour personnaliser le canal, le message, le ping ou l\'image.`
                     )],
                     flags: MessageFlags.Ephemeral
                 });
@@ -77,7 +77,7 @@ export default {
             if (!message || message.trim().length === 0) {
                 logger.warn(`[Goodbye] Empty message provided by ${interaction.user.tag} in ${guild.name}`);
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Invalid Input', 'Goodbye message cannot be empty')],
+                    embeds: [errorEmbed('Entrée invalide', 'Le message d\'au revoir ne peut pas être vide')],
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -89,7 +89,7 @@ export default {
                 } catch (e) {
                     logger.warn(`[Goodbye] Invalid image URL provided by ${interaction.user.tag}: ${image}`);
                     return await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Invalid Image URL', 'Please provide a valid image URL (must start with http:// or https://')],
+                        embeds: [errorEmbed("URL d'image invalide", "Veuillez fournir une URL d'image valide (doit commencer par http:// ou https://)")],
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -102,10 +102,10 @@ export default {
                     leaveMessage: message,
                     goodbyePing: ping,
                     leaveEmbed: {
-                        title: "Goodbye {user.tag}",
+                        title: "Au revoir {user.tag}",
                         description: message,
                         color: getColor('error'),
-                        footer: `Goodbye from ${guild.name}!`,
+                        footer: `Au revoir de la part de ${guild.name}!`,
                         ...(image && { image: { url: image } })
                     }
                 });
@@ -119,14 +119,14 @@ export default {
 
                 const embed = new EmbedBuilder()
                     .setColor(getColor('success'))
-                    .setTitle('✅ Goodbye System Configured')
-                    .setDescription(`Goodbye messages will now be sent to ${channel}`)
+                    .setTitle('✅ Système d\'au revoir configuré')
+                    .setDescription(`Les messages d\'au revoir seront désormais envoyés dans ${channel}`)
                     .addFields(
-                        { name: 'Message Preview', value: previewMessage },
-                        { name: 'Ping User', value: ping ? '✅ Yes' : '❌ No' },
-                        { name: 'Status', value: '✅ Enabled' }
+                        { name: 'Aperçu du message', value: previewMessage },
+                        { name: 'Mentionner l\'utilisateur', value: ping ? '✅ Oui' : '❌ Non' },
+                        { name: 'Statut', value: '✅ Activé' }
                     )
-                    .setFooter({ text: 'Tip: Use /goodbye config to customize goodbye settings' });
+                    .setFooter({ text: 'Astuce : utilise /goodbye config pour personnaliser les paramètres d\'au revoir' });
 
                 if (image) {
                     embed.setImage(image);
@@ -137,8 +137,8 @@ export default {
                 logger.error(`[Goodbye] Failed to setup goodbye system for guild ${guild.id}:`, error);
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
-                        'Setup Failed',
-                        'An error occurred while configuring the goodbye system. Please try again.',
+                        'Échec de la configuration',
+                        'Une erreur est survenue lors de la configuration du système d\'au revoir. Veuillez réessayer.',
                         { showDetails: true }
                     )],
                     flags: MessageFlags.Ephemeral

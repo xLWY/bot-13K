@@ -14,11 +14,11 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("greroll")
-        .setDescription("Rerolls the winner(s) for an ended giveaway.")
+        .setDescription("Relance le tirage des gagnants d'un concours terminé.")
         .addStringOption((option) =>
             option
                 .setName("messageid")
-                .setDescription("The message ID of the ended giveaway.")
+                .setDescription("L'identifiant du message du concours terminé.")
                 .setRequired(true),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
@@ -30,7 +30,7 @@ export default {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
-                    'This command can only be used in a server.',
+                    'Cette commande ne peut être utilisée que sur un serveur.',
                     { userId: interaction.user.id }
                 );
             }
@@ -40,7 +40,7 @@ export default {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "You need the 'Manage Server' permission to reroll a giveaway.",
+                    "Vous devez avoir la permission `Gérer le serveur` pour relancer le tirage d'un concours.",
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -54,7 +54,7 @@ export default {
                 throw new TitanBotError(
                     'Invalid message ID format',
                     ErrorTypes.VALIDATION,
-                    'Please provide a valid message ID.',
+                    'Veuillez fournir un identifiant de message valide.',
                     { providedId: messageId }
                 );
             }
@@ -71,7 +71,7 @@ export default {
                 throw new TitanBotError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "No giveaway was found with that message ID in the database.",
+                    "Aucun concours n'a été trouvé avec cet identifiant de message dans la base de données.",
                     { messageId, guildId: interaction.guildId }
                 );
             }
@@ -81,7 +81,7 @@ export default {
                 throw new TitanBotError(
                     `Giveaway still active: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "This giveaway is still active. Please use `/gend` to end it first.",
+                    "Ce concours est encore actif. Utilisez `/gend` pour le terminer d'abord.",
                     { messageId, status: 'active' }
                 );
             }
@@ -92,7 +92,7 @@ export default {
                 throw new TitanBotError(
                     `Insufficient participants for reroll: ${participants.length} < ${giveaway.winnerCount}`,
                     ErrorTypes.VALIDATION,
-                    "Not enough entries to pick the required number of winners.",
+                    "Pas assez de participations pour tirer le nombre de gagnants requis.",
                     { participantsCount: participants.length, winnersNeeded: giveaway.winnerCount }
                 );
             }
@@ -132,8 +132,8 @@ export default {
                 return InteractionHelper.safeReply(interaction, {
                     embeds: [
                         successEmbed(
-                            "Reroll Complete",
-                            "The new winners have been selected and saved to the database. Could not find channel to announce.",
+                            "Relance terminée",
+                            "Les nouveaux gagnants ont été sélectionnés et enregistrés dans la base de données. Impossible de trouver le salon pour l'annoncer.",
                         ),
                     ],
                     flags: MessageFlags.Ephemeral,
@@ -183,22 +183,22 @@ export default {
                         guildId: interaction.guildId,
                         eventType: EVENT_TYPES.GIVEAWAY_REROLL,
                         data: {
-                            description: `Giveaway rerolled: ${giveaway.prize}`,
+                            description: `Tirage relancé : ${giveaway.prize}`,
                             channelId: giveaway.channelId,
                             userId: interaction.user.id,
                             fields: [
                                 {
-                                    name: '🎁 Prize',
-                                    value: giveaway.prize || 'Mystery Prize!',
+                                    name: '🎁 Prix',
+                                    value: giveaway.prize || 'Concours mystère !',
                                     inline: true
                                 },
                                 {
-                                    name: '🏆 New Winners',
+                                    name: '🏆 Nouveaux gagnants',
                                     value: winnerMentions,
                                     inline: false
                                 },
                                 {
-                                    name: '👥 Total Entries',
+                                    name: '👥 Participations totales',
                                     value: participants.length.toString(),
                                     inline: true
                                 }
@@ -212,8 +212,8 @@ export default {
                 return InteractionHelper.safeReply(interaction, {
                     embeds: [
                         successEmbed(
-                            "Reroll Complete",
-                            `The new winners have been announced in ${channel}. (Original message not found).`,
+                            "Relance terminée",
+                            `Les nouveaux gagnants ont été annoncés dans ${channel}. (Message d'origine introuvable).`,
                         ),
                     ],
                     flags: MessageFlags.Ephemeral,
@@ -263,22 +263,22 @@ export default {
                     guildId: interaction.guildId,
                     eventType: EVENT_TYPES.GIVEAWAY_REROLL,
                     data: {
-                        description: `Giveaway rerolled: ${giveaway.prize}`,
+                        description: `Tirage relancé : ${giveaway.prize}`,
                         channelId: giveaway.channelId,
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prize',
-                                value: giveaway.prize || 'Mystery Prize!',
+                                name: '🎁 Prix',
+                                value: giveaway.prize || 'Concours mystère !',
                                 inline: true
                             },
                             {
-                                name: '🏆 New Winners',
+                                name: '🏆 Nouveaux gagnants',
                                 value: winnerMentions,
                                 inline: false
                             },
                             {
-                                name: '👥 Total Entries',
+                                name: '👥 Participations totales',
                                 value: participants.length.toString(),
                                 inline: true
                             }
@@ -292,8 +292,8 @@ export default {
             return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "Reroll Successful ✅",
-                        `Successfully rerolled the giveaway for **${giveaway.prize}** in ${channel}. Selected ${newWinners.length} new winner(s).`,
+                        "Relance réussie ✅",
+                        `Tirage relancé avec succès pour **${giveaway.prize}** dans ${channel}. ${newWinners.length} nouveau(x) gagnant(s) sélectionné(s).`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,

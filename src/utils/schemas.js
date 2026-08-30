@@ -110,7 +110,7 @@ export function validateGuildConfigOrThrow(rawConfig, context = {}) {
   throw createError(
     'Invalid guild configuration payload',
     ErrorTypes.VALIDATION,
-    'Configuration payload is invalid. Please review provided values and try again.',
+    'La configuration fournie est invalide. Vérifie les valeurs fournies et réessaie.',
     {
       ...context,
       errorCode: 'VALIDATION_FAILED',

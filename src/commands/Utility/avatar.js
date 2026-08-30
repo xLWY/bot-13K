@@ -22,8 +22,8 @@ export default {
       const avatarUrl = user.displayAvatarURL({ size: 2048, dynamic: true });
 
       const embed = createEmbed({ 
-        title: `${user.username}'s Avatar`, 
-        description: `[Download Link](${avatarUrl})` 
+        title: `Avatar de ${user.username}`, 
+        description: `[Lien de téléchargement](${avatarUrl})` 
       })
         .setImage(avatarUrl);
 

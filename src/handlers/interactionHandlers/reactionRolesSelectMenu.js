@@ -15,7 +15,7 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
             throw createError(
                 'Reaction role interaction used outside a guild context',
                 ErrorTypes.VALIDATION,
-                'This reaction role menu can only be used inside a server.',
+                'Ce menu de rôles de réaction ne peut être utilisé que dans un serveur.',
                 { userId: interaction.user.id }
             );
         }
@@ -29,7 +29,7 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
             return interaction.editReply({
                 embeds: [
                     new EmbedBuilder()
-                        .setDescription('❌ This reaction role message is no longer active.')
+                        .setDescription('❌ Ce message de rôles de réaction n\'est plus actif.')
                         .setColor(getColor('error'))
                 ]
             });
@@ -44,7 +44,7 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
             throw createError(
                 'Unable to fetch bot member for permission validation',
                 ErrorTypes.PERMISSION,
-                'I could not verify my server permissions. Please try again.',
+                'Je n\'ai pas pu vérifier mes permissions sur le serveur. Réessaie.',
                 { guildId: interaction.guildId }
             );
         }
@@ -53,7 +53,7 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
             throw createError(
                 'Bot missing ManageRoles permission',
                 ErrorTypes.PERMISSION,
-                'I do not have permission to manage roles in this server.',
+                'Je n\'ai pas la permission de gérer les rôles sur ce serveur.',
                 { guildId: interaction.guildId }
             );
         }
@@ -135,22 +135,22 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
             }
         }
 
-        let description = '🎭 **Roles updated successfully!**\n\n';
+        let description = '🎭 **Rôles mis à jour avec succès !**\n\n';
 
         if (addedRoles.length > 0) {
-            description += `✅ **Added:** ${addedRoles.map(name => `**${name}**`).join(', ')}\n`;
+            description += `✅ **Ajoutés :** ${addedRoles.map(name => `**${name}**`).join(', ')}\n`;
         }
 
         if (removedRoles.length > 0) {
-            description += `❌ **Removed:** ${removedRoles.map(name => `**${name}**`).join(', ')}\n`;
+            description += `❌ **Retirés :** ${removedRoles.map(name => `**${name}**`).join(', ')}\n`;
         }
 
         if (addedRoles.length === 0 && removedRoles.length === 0) {
-            description += 'No changes were made to your roles.';
+            description += 'Aucun changement n\'a été apporté à tes rôles.';
         }
 
         if (skippedRoles.length > 0) {
-            description += `\n⚠️ **Skipped:** ${skippedRoles.length} role${skippedRoles.length !== 1 ? 's' : ''} (permission issues)`;
+            description += `\n⚠️ **Ignorés :** ${skippedRoles.length} rôle${skippedRoles.length !== 1 ? 's' : ''} (problèmes de permission)`;
         }
 
         const responseEmbed = new EmbedBuilder()
@@ -167,22 +167,22 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
                     guildId: interaction.guildId,
                     eventType: EVENT_TYPES.REACTION_ROLE_UPDATE,
                     data: {
-                        description: `Reaction roles updated for ${member.user.tag}`,
+                        description: `Rôles de réaction mis à jour pour ${member.user.tag}`,
                         userId: member.user.id,
                         channelId: interaction.channelId,
                         fields: [
                             {
-                                name: '👤 Member',
+                                name: '👤 Membre',
                                 value: `${member.user.tag} (${member.user.id})`,
                                 inline: false
                             },
                             ...(addedRoles.length > 0 ? [{
-                                name: '✅ Roles Added',
+                                name: '✅ Rôles ajoutés',
                                 value: addedRoles.join(', '),
                                 inline: false
                             }] : []),
                             ...(removedRoles.length > 0 ? [{
-                                name: '❌ Roles Removed',
+                                name: '❌ Rôles retirés',
                                 value: removedRoles.join(', '),
                                 inline: false
                             }] : [])

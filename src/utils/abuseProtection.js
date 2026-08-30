@@ -108,7 +108,7 @@ function recordBlockedAttempt(key, commandName, interaction, command, remainingM
 
 export function formatCooldownDuration(ms) {
   if (!Number.isFinite(ms) || ms <= 0) {
-    return 'a moment';
+    return 'un instant';
   }
 
   const totalSeconds = Math.ceil(ms / 1000);

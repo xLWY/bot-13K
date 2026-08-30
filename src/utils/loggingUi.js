@@ -51,15 +51,15 @@ export function createLoggingDashboardComponents(enabledEvents, loggingEnabled =
   const actionRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('log_dash_toggle:audit_enabled')
-      .setLabel(loggingEnabled ? '🧾 Audit: ON' : '🧾 Audit: OFF')
+      .setLabel(loggingEnabled ? '🧾 Audit : ON' : '🧾 Audit : OFF')
       .setStyle(loggingEnabled ? ButtonStyle.Success : ButtonStyle.Danger),
     new ButtonBuilder()
       .setCustomId('log_dash_toggle:all')
-      .setLabel('Toggle All')
+      .setLabel('Basculer tout')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('log_dash_refresh')
-      .setLabel('🔄 Refresh')
+      .setLabel('🔄 Actualiser')
       .setStyle(ButtonStyle.Primary),
   );
   return [...categoryRows, actionRow];
@@ -119,11 +119,11 @@ export function createLoggingButtons() {
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId('logging_toggle:all')
-        .setLabel('Toggle All')
+        .setLabel('Basculer tout')
         .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
         .setCustomId('logging_refresh_status')
-        .setLabel('🔄 Refresh')
+        .setLabel('🔄 Actualiser')
         .setStyle(ButtonStyle.Primary)
     )
   ];
@@ -197,15 +197,15 @@ export function createLoggingStatusComponents(enabledEvents, loggingEnabled = fa
   const actionRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('logging_toggle:audit_enabled')
-      .setLabel(loggingEnabled ? '🧾 Audit: ON' : '🧾 Audit: OFF')
+      .setLabel(loggingEnabled ? '🧾 Audit : ON' : '🧾 Audit : OFF')
       .setStyle(loggingEnabled ? ButtonStyle.Success : ButtonStyle.Danger),
     new ButtonBuilder()
       .setCustomId('logging_toggle:all')
-      .setLabel('Toggle Categories')
+      .setLabel('Basculer les catégories')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('logging_refresh_status')
-      .setLabel('🔄 Refresh')
+      .setLabel('🔄 Actualiser')
       .setStyle(ButtonStyle.Primary)
   );
 

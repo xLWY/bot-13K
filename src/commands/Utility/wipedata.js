@@ -13,18 +13,18 @@ export default {
     async execute(interaction, guildConfig, client) {
         try {
             const warningMessage = 
-                `⚠️ **THIS ACTION IS IRREVERSIBLE!** ⚠️\n\n` +
-                `This will permanently delete **ALL** your data from this server including:\n` +
-                `• 💰 Economy balance (wallet & bank)\n` +
-                `• 📊 Levels and XP\n` +
-                `• 🎒 Inventory items\n` +
-                `• 🛍️ Shop purchases\n` +
-                `• 🎂 Birthday information\n` +
-                `• 🔢 Counter data\n` +
-                `• 📋 All other personal data\n\n` +
-                `**This cannot be undone. Are you absolutely sure?**`;
+                `⚠️ **CETTE ACTION EST IRRÉVERSIBLE !** ⚠️\n\n` +
+                `Cela supprimera définitivement **TOUTES** tes données de ce serveur, notamment :\n` +
+                `• 💰 Le solde d'économie (portefeuille & banque)\n` +
+                `• 📊 Les niveaux et l'XP\n` +
+                `• 🎒 Les objets de l'inventaire\n` +
+                `• 🛍️ Les achats dans la boutique\n` +
+                `• 🎂 Les informations d'anniversaire\n` +
+                `• 🔢 Les données de compteur\n` +
+                `• 📋 Toutes les autres données personnelles\n\n` +
+                `**Cette action ne peut pas être annulée. Es-tu vraiment sûr ?**`;
 
-            const embed = warningEmbed(warningMessage, '🗑️ Wipe All Data');
+            const embed = warningEmbed(warningMessage, '🗑️ Effacer Toutes les Données');
 
             const confirmButtons = getConfirmationButtons('wipedata');
 

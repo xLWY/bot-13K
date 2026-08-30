@@ -8,16 +8,16 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("unban")
-        .setDescription("Unban a user from the server")
+        .setDescription("Débannir un utilisateur du serveur")
         .addUserOption(option =>
             option
                 .setName("target")
-                .setDescription("The user to unban (can be ID or mention)")
+                .setDescription("L'utilisateur à débannir (peut être un ID ou une mention)")
                 .setRequired(true)
         )
         .addStringOption(option =>
             option.setName("reason")
-                .setDescription("Reason for the unban")
+                .setDescription("Raison du débannissement")
                 .setRequired(false)
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
@@ -36,7 +36,7 @@ export default {
 
         try {
                 const targetUser = interaction.options.getUser("target");
-                const reason = interaction.options.getString("reason") || "No reason provided";
+                const reason = interaction.options.getString("reason") || "Aucune raison fournie";
 
                 
                 const result = await ModerationService.unbanUser({
@@ -49,8 +49,8 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
-                            "✅ User Unbanned",
-                            `Successfully unbanned **${targetUser.tag}** from the server.\n\n**Reason:** ${reason}\n**Case ID:** #${result.caseId}`
+                            "✅ Utilisateur débanni",
+                            `**${targetUser.tag}** a bien été débanni du serveur.\n\n**Raison :** ${reason}\n**ID de cas :** #${result.caseId}`
                         )
                     ]
                 });

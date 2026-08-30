@@ -28,7 +28,7 @@ export class WarningService {
       if (!Array.isArray(warnings)) {
         logger.warn(`Warnings for ${userId} in ${guildId} corrupted, resetting`);
         await setInDb(key, []);
-        return { success: false, error: 'Corrupted data' };
+        return { success: false, error: 'Données corrompues' };
       }
 
       
@@ -107,7 +107,7 @@ export class WarningService {
       
       const index = warnings.findIndex(w => w.id === warningId);
       if (index === -1) {
-        return { success: false, error: 'Warning not found' };
+        return { success: false, error: 'Avertissement introuvable' };
       }
 
       warnings[index].status = 'deleted';

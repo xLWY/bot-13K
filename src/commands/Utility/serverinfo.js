@@ -26,24 +26,24 @@ export default {
 
       const createdTimestamp = Math.floor(guild.createdAt.getTime() / 1000);
 
-      const embed = createEmbed({ title: `🏰 Server Info: ${guild.name}`, description: `Server ID: ${guild.id}` })
+      const embed = createEmbed({ title: `🏰 Infos du Serveur : ${guild.name}`, description: `ID du serveur : ${guild.id}` })
         .setThumbnail(guild.iconURL({ size: 256 }))
         .addFields(
-          { name: "Owner", value: owner.user.tag, inline: true },
-          { name: "Members", value: `${guild.memberCount}`, inline: true },
+          { name: "Propriétaire", value: owner.user.tag, inline: true },
+          { name: "Membres", value: `${guild.memberCount}`, inline: true },
           {
-            name: "Channels",
+            name: "Canaux",
             value: `${guild.channels.cache.size}`,
             inline: true,
           },
-          { name: "Roles", value: `${guild.roles.cache.size}`, inline: true },
+          { name: "Rôles", value: `${guild.roles.cache.size}`, inline: true },
           {
             name: "Boosts",
-            value: `Level ${guild.premiumTier} (${guild.premiumSubscriptionCount})`,
+            value: `Niveau ${guild.premiumTier} (${guild.premiumSubscriptionCount})`,
             inline: true,
           },
           {
-            name: "Creation Date",
+            name: "Date de Création",
             value: `<t:${createdTimestamp}:R>`,
             inline: true,
           },

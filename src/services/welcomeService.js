@@ -74,7 +74,7 @@ class WelcomeService {
             throw createError(
                 'Invalid message',
                 ErrorTypes.VALIDATION,
-                'Message must be a non-empty string.',
+                'Le message doit être une chaîne non vide.',
                 { provided: typeof message }
             );
         }
@@ -84,7 +84,7 @@ class WelcomeService {
             throw createError(
                 'Empty message',
                 ErrorTypes.VALIDATION,
-                'Welcome message cannot be empty.',
+                'Le message de bienvenue ne peut pas être vide.',
                 { length: trimmed.length }
             );
         }
@@ -93,7 +93,7 @@ class WelcomeService {
             throw createError(
                 'Message too long',
                 ErrorTypes.VALIDATION,
-                `Welcome message cannot exceed **${this.MAX_MESSAGE_LENGTH}** characters. Current: **${trimmed.length}**`,
+                `Le message de bienvenue ne peut pas dépasser **${this.MAX_MESSAGE_LENGTH}** caractères. Actuel : **${trimmed.length}**`,
                 { length: trimmed.length, max: this.MAX_MESSAGE_LENGTH }
             );
         }
@@ -138,7 +138,7 @@ class WelcomeService {
             throw createError(
                 'Invalid image URL',
                 ErrorTypes.VALIDATION,
-                'Image URL must be a public http(s) image link and cannot point to local/private hosts.',
+                'L\'URL de l\'image doit être un lien http(s) public et ne doit pas pointer vers un hôte local ou privé.',
                 { url }
             );
         }
@@ -201,7 +201,7 @@ class WelcomeService {
             throw createError(
                 'Invalid channel',
                 ErrorTypes.VALIDATION,
-                'The specified channel does not exist or is not a text channel.',
+                'Le salon indiqué n\'existe pas ou n\'est pas un salon textuel.',
                 { channelId: config.channelId, guildId }
             );
         }
@@ -265,7 +265,7 @@ class WelcomeService {
             throw createError(
                 'Invalid channel',
                 ErrorTypes.VALIDATION,
-                'The specified channel does not exist or is not a text channel.',
+                'Le salon indiqué n\'existe pas ou n\'est pas un salon textuel.',
                 { channelId: config.channelId, guildId }
             );
         }
@@ -370,7 +370,7 @@ class WelcomeService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Guild does not exist.',
+                'Le serveur n\'existe pas.',
                 { guildId }
             );
         }
@@ -380,7 +380,7 @@ class WelcomeService {
             throw createError(
                 'Role not found',
                 ErrorTypes.VALIDATION,
-                'The specified role does not exist.',
+                'Le rôle indiqué n\'existe pas.',
                 { roleId, guildId }
             );
         }
@@ -397,7 +397,7 @@ class WelcomeService {
             throw createError(
                 'Role too high',
                 ErrorTypes.VALIDATION,
-                "I can't assign roles that are higher than my highest role.",
+                "Je ne peux pas attribuer de rôles plus hauts que mon rôle le plus élevé.",
                 { roleId, rolePosition: role.position }
             );
         }
@@ -414,7 +414,7 @@ class WelcomeService {
             throw createError(
                 'Duplicate role',
                 ErrorTypes.VALIDATION,
-                'This role is already set to be auto-assigned.',
+                'Ce rôle est déjà configuré en attribution automatique.',
                 { roleId }
             );
         }
@@ -429,7 +429,7 @@ class WelcomeService {
             throw createError(
                 'Too many roles',
                 ErrorTypes.VALIDATION,
-                `You can only auto-assign up to **${this.MAX_ROLES_PER_GUILD}** roles.`,
+                `Tu peux configurer jusqu\'à **${this.MAX_ROLES_PER_GUILD}** rôles en attribution automatique.`,
                 { current: existingRoles.length, max: this.MAX_ROLES_PER_GUILD }
             );
         }
@@ -476,7 +476,7 @@ class WelcomeService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Guild does not exist.',
+                'Le serveur n\'existe pas.',
                 { guildId }
             );
         }
@@ -492,7 +492,7 @@ class WelcomeService {
             throw createError(
                 'Role not found',
                 ErrorTypes.VALIDATION,
-                'This role is not set to be auto-assigned.',
+                'Ce rôle n\'est pas configuré en attribution automatique.',
                 { roleId }
             );
         }
@@ -536,7 +536,7 @@ class WelcomeService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Guild does not exist.',
+                'Le serveur n\'existe pas.',
                 { guildId }
             );
         }
@@ -601,7 +601,7 @@ class WelcomeService {
             throw createError(
                 'Preview failed',
                 ErrorTypes.DATABASE,
-                'Could not generate message preview. Please check your message format.',
+                'Impossible de générer l\'aperçu du message. Vérifie le format de ton message.',
                 { error: error.message }
             );
         }
@@ -636,7 +636,7 @@ class WelcomeService {
             throw createError(
                 'Rate limited',
                 ErrorTypes.RATE_LIMIT,
-                `Bulk updates are limited to once every **5 minutes**. Wait **${Math.ceil(remaining / 1000)}** seconds.`,
+                `Les mises à jour groupées sont limitées à une toutes les **5 minutes**. Attends **${Math.ceil(remaining / 1000)}** secondes.`,
                 { remaining, guildId }
             );
         }
@@ -647,7 +647,7 @@ class WelcomeService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Guild does not exist.',
+                'Le serveur n\'existe pas.',
                 { guildId }
             );
         }

@@ -9,11 +9,11 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("clear")
-    .setDescription("Delete a specific amount of messages")
+    .setDescription("Supprimer un nombre précis de messages")
     .addIntegerOption((option) =>
       option
         .setName("amount")
-        .setDescription("Number of messages (1-100)")
+        .setDescription("Nombre de messages (1-100)")
         .setRequired(true),
     )
 .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
@@ -38,8 +38,8 @@ export default {
       return await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           errorEmbed(
-            "Permission Denied",
-            "You need the `Manage Messages` permission to purge messages.",
+            "Permission refusée",
+            "Tu as besoin de la permission `Gérer les messages` pour supprimer des messages.",
           ),
         ],
       });
@@ -51,8 +51,8 @@ export default {
       return await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           errorEmbed(
-            "Invalid Amount",
-            "Please specify a number between 1 and 100.",
+            "Nombre invalide",
+            "Spécifie un nombre entre 1 et 100.",
           ),
         ],
       });
@@ -65,8 +65,8 @@ export default {
         return await InteractionHelper.safeEditReply(interaction, {
           embeds: [
             warningEmbed(
-              "You're purging messages too fast. Please wait a minute before trying again.",
-              "⏳ Rate Limited"
+              "Tu supprimes des messages trop vite. Attends une minute avant de réessayer.",
+              "⏳ Limite de fréquence"
             ),
           ],
           flags: MessageFlags.Ephemeral,
@@ -82,18 +82,18 @@ export default {
       const deletedCount = deleted.size;
 
       const purgeEmbed = createEmbed(
-        "🗑️ Messages Purged (Action Log)",
-        `${deletedCount} messages were deleted by ${interaction.user}.`,
+        "🗑️ Messages supprimés (Journal d'actions)",
+        `${deletedCount} messages ont été supprimés par ${interaction.user}.`,
       )
 .setColor(getColor('moderation'))
         .addFields(
-          { name: "Channel", value: channel.toString(), inline: true },
+          { name: "Salon", value: channel.toString(), inline: true },
           {
-            name: "Moderator",
+            name: "Modérateur",
             value: `${interaction.user.tag} (${interaction.user.id})`,
             inline: true,
           },
-          { name: "Count", value: `${deletedCount} messages`, inline: false },
+          { name: "Nombre", value: `${deletedCount} messages`, inline: false },
         );
 
       await logEvent({
@@ -103,7 +103,7 @@ export default {
           action: "Messages Purged",
           target: `${channel} (${deletedCount} messages)`,
           executor: `${interaction.user.tag} (${interaction.user.id})`,
-          reason: `Deleted ${deletedCount} messages`,
+          reason: `${deletedCount} messages supprimés`,
           metadata: {
             channelId: channel.id,
             messageCount: deletedCount,
@@ -116,7 +116,7 @@ export default {
       if (!isPrefix) {
         await InteractionHelper.safeEditReply(interaction, {
           embeds: [
-            successEmbed(`🗑️ Deleted ${deletedCount} messages in ${channel}.`),
+            successEmbed(`🗑️ ${deletedCount} messages supprimés dans ${channel}.`),
           ],
         flags: MessageFlags.Ephemeral,
         });
@@ -132,7 +132,7 @@ export default {
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           errorEmbed(
-            "An unexpected error occurred during message deletion. Note: Messages older than 14 days cannot be bulk deleted.",
+            "Une erreur inattendue est survenue lors de la suppression des messages. Remarque : les messages de plus de 14 jours ne peuvent pas être supprimés en masse.",
           ),
         ],
         flags: MessageFlags.Ephemeral,

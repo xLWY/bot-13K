@@ -24,7 +24,7 @@ export async function handleList(interaction, client) {
     // Check permissions after deferring
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
         await InteractionHelper.safeEditReply(interaction, { 
-            embeds: [errorEmbed("You need **Manage Channels** permission to view counters.")]
+            embeds: [errorEmbed("Tu as besoin de la permission **Gérer les salons** pour voir les compteurs.")]
         }).catch(logger.error);
         return;
     }
@@ -55,25 +55,25 @@ export async function handleList(interaction, client) {
 
         if (validCounters.length === 0) {
             const embed = createEmbed({
-                title: "📋 Server Counters",
-                description: "No counters have been set up for this server yet.\n\nUse `/counter create` to set up your first counter!",
+                title: "📋 Compteurs du serveur",
+                description: "Aucun compteur n'a été configuré pour ce serveur pour le moment.\n\nUtilise `/serverstats create` pour configurer ton premier compteur !",
                 color: getColor('warning')
             });
 
             embed.addFields({
-                name: "🔧 **Available Counter Types**",
-                value: "👥 **Members + Bots** - Total server members\n👤 **Members Only** - Human members only\n🤖 **Bots Only** - Bot members only\n🌐 **Online Members** - Members currently online\n🔊 **In Voice** - Members currently in a voice channel",
+                name: "🔧 **Types de compteurs disponibles**",
+                value: "👥 **Membres + Bots** - Total des membres du serveur\n👤 **Membres uniquement** - Membres humains uniquement\n🤖 **Bots uniquement** - Membres robots uniquement\n🌐 **Membres en ligne** - Membres actuellement en ligne\n🔊 **En vocal** - Membres actuellement dans un salon vocal",
                 inline: false
             });
 
             embed.addFields({
-                name: "📝 **Usage Examples**",
-                value: "`/counter create type:members channel_type:voice category:Stats`\n`/counter create type:bots channel_type:text category:Server Info`\n`/counter list`",
+                name: "📝 **Exemples d'utilisation**",
+                value: "`/serverstats create type:members channel_type:voice category:Stats`\n`/serverstats create type:bots channel_type:text category:Server Info`\n`/serverstats list`",
                 inline: false
             });
 
             embed.setFooter({ 
-                text: "Counter System • Automatic updates every 15 minutes" 
+                text: "Système de compteurs • Actualisation automatique toutes les 15 minutes" 
             });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] }).catch(logger.error);
@@ -81,8 +81,8 @@ export async function handleList(interaction, client) {
         }
 
         const embed = createEmbed({
-            title: `📋 Server Counters (${validCounters.length})`,
-            description: "Here are all the active counters for this server.\n\nCounters automatically update every 15 minutes.",
+            title: `📋 Compteurs du serveur (${validCounters.length})`,
+            description: "Voici tous les compteurs actifs de ce serveur.\n\nLes compteurs sont actualisés automatiquement toutes les 15 minutes.",
             color: getColor('info')
         });
 
@@ -97,32 +97,32 @@ export async function handleList(interaction, client) {
             }
 
             const currentCount = getCurrentCount(stats, counter.type);
-            const status = channel.name.includes(':') ? '✅ Active' : '⚠️ Not Updated';
+            const status = channel.name.includes(':') ? '✅ Actif' : '⚠️ Non actualisé';
             
             embed.addFields({
-                name: `${getCounterTypeEmoji(counter.type)} Counter #${i + 1} - ${channel.name}`,
-                value: `**ID:** \`${counter.id}\`\n**Type:** ${getCounterTypeDisplay(counter.type)}\n**Channel:** ${channel}\n**Current Count:** ${currentCount}\n**Status:** ${status}\n**Created:** ${new Date(counter.createdAt).toLocaleDateString()}`,
+                name: `${getCounterTypeEmoji(counter.type)} Compteur n°${i + 1} - ${channel.name}`,
+                value: `**ID :** \`${counter.id}\`\n**Type :** ${getCounterTypeDisplay(counter.type)}\n**Salon :** ${channel}\n**Valeur actuelle :** ${currentCount}\n**Statut :** ${status}\n**Créé le :** ${new Date(counter.createdAt).toLocaleDateString()}`,
                 inline: false
             });
         }
 
         embed.addFields({
-            name: "📊 **Statistics**",
-            value: `**Total Counters:** ${validCounters.length}\n**Active Counters:** ${validCounters.filter(c => {
+            name: "📊 **Statistiques**",
+            value: `**Total de compteurs :** ${validCounters.length}\n**Compteurs actifs :** ${validCounters.filter(c => {
                 const channel = guild.channels.cache.get(c.channelId);
                 return channel && channel.name.includes(':');
-            }).length}\n**Next Update:** <t:${Math.floor(Date.now() / 1000) + 900}:R>`,
+            }).length}\n**Prochaine actualisation :** <t:${Math.floor(Date.now() / 1000) + 900}:R>`,
             inline: false
         });
 
         embed.addFields({
-            name: "🔧 **Management Commands**",
-            value: "`/counter create` - Create new counter\n`/counter update` - Update existing counter\n`/counter delete` - Delete counter",
+            name: "🔧 **Commandes de gestion**",
+            value: "`/serverstats create` - Créer un nouveau compteur\n`/serverstats update` - Mettre à jour un compteur existant\n`/serverstats delete` - Supprimer un compteur",
             inline: false
         });
 
         embed.setFooter({ 
-            text: "Counter System • Automatic updates every 15 minutes" 
+            text: "Système de compteurs • Actualisation automatique toutes les 15 minutes" 
         });
         embed.setTimestamp();
 
@@ -131,7 +131,7 @@ export async function handleList(interaction, client) {
     } catch (error) {
         logger.error("Error displaying counters:", error);
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed("An error occurred while fetching counters. Please try again.")]
+            embeds: [errorEmbed("Une erreur est survenue pendant la récupération des compteurs. Réessaie.")]
         }).catch(logger.error);
     }
 }

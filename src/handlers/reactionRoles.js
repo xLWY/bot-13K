@@ -47,22 +47,22 @@ async function handleReactionAdd(client, reaction, user) {
                 guildId: guild.id,
                 eventType: EVENT_TYPES.REACTION_ROLE_ADD,
                 data: {
-                    description: `Reaction role assigned to ${user.tag}`,
+                    description: `Rôle de réaction attribué à ${user.tag}`,
                     userId: user.id,
                     channelId: message.channel.id,
                     fields: [
                         {
-                            name: '👤 Member',
+                            name: '👤 Membre',
                             value: `${user.tag} (${user.id})`,
                             inline: true
                         },
                         {
-                            name: '🏷️ Role',
+                            name: '🏷️ Rôle',
                             value: role.toString(),
                             inline: true
                         },
                         {
-                            name: '😊 Reaction',
+                            name: '😊 Réaction',
                             value: reaction.emoji.toString(),
                             inline: true
                         }
@@ -121,22 +121,22 @@ async function handleReactionRemove(client, reaction, user) {
                 guildId: guild.id,
                 eventType: EVENT_TYPES.REACTION_ROLE_REMOVE,
                 data: {
-                    description: `Reaction role removed from ${user.tag}`,
+                    description: `Rôle de réaction retiré à ${user.tag}`,
                     userId: user.id,
                     channelId: message.channel.id,
                     fields: [
                         {
-                            name: '👤 Member',
+                            name: '👤 Membre',
                             value: `${user.tag} (${user.id})`,
                             inline: true
                         },
                         {
-                            name: '🏷️ Role',
+                            name: '🏷️ Rôle',
                             value: role.toString(),
                             inline: true
                         },
                         {
-                            name: '😊 Reaction',
+                            name: '😊 Réaction',
                             value: reaction.emoji.toString(),
                             inline: true
                         }
@@ -169,7 +169,7 @@ export async function handleReactionRoles(interaction) {
             if (subcommand === 'create') {
                 if (!member.permissions.has(PermissionFlagsBits.ManageRoles)) {
                     await interaction.reply({
-                        embeds: [errorEmbed('You need the `Manage Roles` permission to use this command.')],
+                        embeds: [errorEmbed('Tu as besoin de la permission `Gérer les rôles` pour utiliser cette commande.')],
                         flags: MessageFlags.Ephemeral
                     });
                     return true;
@@ -181,7 +181,7 @@ export async function handleReactionRoles(interaction) {
 
                 if (!guild || !member) {
                     await interaction.reply({
-                        embeds: [errorEmbed('This command can only be used in a server.')],
+                        embeds: [errorEmbed('Cette commande ne peut être utilisée que dans un serveur.')],
                         flags: MessageFlags.Ephemeral
                     });
                     return true;
@@ -189,7 +189,7 @@ export async function handleReactionRoles(interaction) {
 
                 if (!messageId || !/^\d{17,20}$/.test(messageId)) {
                     await interaction.reply({
-                        embeds: [errorEmbed('Invalid message ID. Please provide a valid Discord message ID.')],
+                        embeds: [errorEmbed('Identifiant de message invalide. Fournis un identifiant de message Discord valide.')],
                         flags: MessageFlags.Ephemeral
                     });
                     return true;
@@ -197,7 +197,7 @@ export async function handleReactionRoles(interaction) {
 
                 if (!emoji || emoji.length > 100) {
                     await interaction.reply({
-                        embeds: [errorEmbed('Invalid emoji. Please provide a valid emoji value.')],
+                        embeds: [errorEmbed('Émoji invalide. Fournis un émoji valide.')],
                         flags: MessageFlags.Ephemeral
                     });
                     return true;
@@ -205,7 +205,7 @@ export async function handleReactionRoles(interaction) {
 
                 if (!role) {
                     await interaction.reply({
-                        embeds: [errorEmbed('Invalid role selection.')],
+                        embeds: [errorEmbed('Sélection de rôle invalide.')],
                         flags: MessageFlags.Ephemeral
                     });
                     return true;
@@ -236,7 +236,7 @@ export async function handleReactionRoles(interaction) {
                 await interaction.reply({
                     embeds: [
                         new EmbedBuilder()
-                            .setDescription(`✅ Added reaction role for ${emoji} to <@&${role.id}>`)
+                            .setDescription(`✅ Rôle de réaction ajouté pour ${emoji} à <@&${role.id}>`)
                             .setColor('#00ff00')
                     ],
                     flags: MessageFlags.Ephemeral
@@ -251,12 +251,12 @@ export async function handleReactionRoles(interaction) {
         logger.error('Error in handleReactionRoles:', error);
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({
-                embeds: [errorEmbed('An error occurred while processing your request.')],
+                embeds: [errorEmbed('Une erreur est survenue lors du traitement de ta demande.')],
                 flags: MessageFlags.Ephemeral
             });
         } else {
             await interaction.reply({
-                embeds: [errorEmbed('An error occurred while processing your request.')],
+                embeds: [errorEmbed('Une erreur est survenue lors du traitement de ta demande.')],
                 flags: MessageFlags.Ephemeral
             });
         }

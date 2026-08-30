@@ -9,7 +9,7 @@ export default {
     data: new SlashCommandBuilder()
     .setName("lock")
     .setDescription(
-      "Locks the current channel (prevents @everyone from sending messages).",
+      "Verrouille le salon actuel (empêche @everyone d'envoyer des messages).",
     )
 .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
   category: "moderation",
@@ -29,8 +29,8 @@ export default {
       return await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           errorEmbed(
-            "Permission Denied",
-            "You need the `Manage Channels` permission to lock channels.",
+            "Permission refusée",
+            "Tu as besoin de la permission `Gérer les salons` pour verrouiller des salons.",
           ),
         ],
       });
@@ -44,8 +44,8 @@ export default {
         return await InteractionHelper.safeEditReply(interaction, {
           embeds: [
             errorEmbed(
-              "Channel Already Locked",
-              `${channel} is already locked.`,
+              "Salon déjà verrouillé",
+              `${channel} est déjà verrouillé.`,
             ),
           ],
         });
@@ -54,18 +54,18 @@ export default {
       await channel.permissionOverwrites.edit(
         everyoneRole,
         { SendMessages: false },
-{ type: 0, reason: `Channel locked by ${interaction.user.tag}` },
+{ type: 0, reason: `Salon verrouillé par ${interaction.user.tag}` },
       );
 
       const lockEmbed = createEmbed(
-        "🔒 Channel Locked (Action Log)",
-        `${channel} has been locked down by ${interaction.user}.`,
+        "🔒 Salon verrouillé (Journal d'actions)",
+        `${channel} a été verrouillé par ${interaction.user}.`,
       )
 .setColor(getColor('moderation'))
         .addFields(
-          { name: "Channel", value: channel.toString(), inline: true },
+          { name: "Salon", value: channel.toString(), inline: true },
           {
-            name: "Moderator",
+            name: "Modérateur",
             value: `${interaction.user.tag} (${interaction.user.id})`,
             inline: true,
           },
@@ -89,8 +89,8 @@ export default {
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           successEmbed(
-            `🔒 **Channel Locked**`,
-            `${channel} is now locked down. No one can speak here now.`,
+            `🔒 **Salon verrouillé**`,
+            `${channel} est maintenant verrouillé. Plus personne ne peut y parler.`,
           ),
         ],
       });
@@ -99,7 +99,7 @@ export default {
       await InteractionHelper.safeEditReply(interaction, {
         embeds: [
           errorEmbed(
-            "An unexpected error occurred while trying to lock the channel. Check my permissions (I need 'Manage Channels').",
+            "Une erreur inattendue est survenue en essayant de verrouiller le salon. Vérifie mes permissions (j'ai besoin de « Gérer les salons »).",
           ),
         ],
       });

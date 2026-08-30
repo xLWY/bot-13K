@@ -45,7 +45,7 @@ export function parseDuration(durationString) {
         throw new TitanBotError(
             'Invalid duration format provided',
             ErrorTypes.VALIDATION,
-            'Please provide a valid duration (e.g., 1h, 30m, 5d, 10s).',
+            'Veuillez fournir une durée valide (ex. : 1h, 30m, 5d, 10s).',
             { durationString }
         );
     }
@@ -57,7 +57,7 @@ export function parseDuration(durationString) {
         throw new TitanBotError(
             `Invalid duration format: ${durationString}`,
             ErrorTypes.VALIDATION,
-            'Invalid duration format. Use: 1h, 30m, 5d, 10s (min: 10s, max: 30d)',
+            'Format de durée invalide. Utilisez : 1h, 30m, 5d, 10s (min : 10s, max : 30d)',
             { input: durationString }
         );
     }
@@ -69,7 +69,7 @@ export function parseDuration(durationString) {
         throw new TitanBotError(
             `Duration amount out of range: ${amount}`,
             ErrorTypes.VALIDATION,
-            'Duration amount must be between 1 and 999.',
+            'La durée doit être comprise entre 1 et 999.',
             { amount, unit }
         );
     }
@@ -92,7 +92,7 @@ export function parseDuration(durationString) {
             throw new TitanBotError(
                 `Unknown duration unit: ${unit}`,
                 ErrorTypes.VALIDATION,
-                'Please use s (seconds), m (minutes), h (hours), or d (days).',
+                'Utilisez s (secondes), m (minutes), h (heures) ou d (jours).',
                 { unit }
             );
     }
@@ -102,7 +102,7 @@ export function parseDuration(durationString) {
         throw new TitanBotError(
             `Duration exceeds maximum: ${ms}ms > ${maxDuration}ms`,
             ErrorTypes.VALIDATION,
-            'Maximum duration is 30 days.',
+            'La durée maximale est de 30 jours.',
             { requestedMs: ms, maxMs: maxDuration }
         );
     }
@@ -112,7 +112,7 @@ export function parseDuration(durationString) {
         throw new TitanBotError(
             `Duration below minimum: ${ms}ms < ${minDuration}ms`,
             ErrorTypes.VALIDATION,
-            'Minimum duration is 10 seconds.',
+            'La durée minimale est de 10 secondes.',
             { requestedMs: ms, minMs: minDuration }
         );
     }
@@ -130,7 +130,7 @@ export function validatePrize(prize) {
         throw new TitanBotError(
             'Prize must be a non-empty string',
             ErrorTypes.VALIDATION,
-            'Please provide a valid prize description.',
+            'Veuillez fournir une description de lot valide.',
             { prize }
         );
     }
@@ -140,7 +140,7 @@ export function validatePrize(prize) {
         throw new TitanBotError(
             `Prize length out of range: ${trimmed.length}`,
             ErrorTypes.VALIDATION,
-            'Prize must be between 1 and 256 characters.',
+            'Le lot doit faire entre 1 et 256 caractères.',
             { length: trimmed.length }
         );
     }
@@ -158,7 +158,7 @@ export function validateWinnerCount(winnerCount) {
         throw new TitanBotError(
             `Invalid winner count: ${winnerCount}`,
             ErrorTypes.VALIDATION,
-            'Winner count must be between 1 and 10.',
+            'Le nombre de gagnants doit être compris entre 1 et 10.',
             { winnerCount }
         );
     }
@@ -208,7 +208,7 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
         throw new TitanBotError(
             'Failed to create giveaway embed',
             ErrorTypes.UNKNOWN,
-            'An internal error occurred while formatting the giveaway.',
+            'Une erreur interne est survenue lors du formatage du concours.',
             { error: error.message }
         );
     }
@@ -247,7 +247,7 @@ export function createGiveawayButtons(ended = false) {
         throw new TitanBotError(
             'Failed to create giveaway buttons',
             ErrorTypes.UNKNOWN,
-            'An internal error occurred while creating interactive buttons.',
+            'Une erreur interne est survenue lors de la création des boutons interactifs.',
             { error: error.message }
         );
     }
@@ -272,7 +272,7 @@ export function selectWinners(participants, winnerCount) {
         throw new TitanBotError(
             'Invalid winner count for selection',
             ErrorTypes.VALIDATION,
-            'Winner count must be at least 1.',
+            'Le nombre de gagnants doit être d\'au moins 1.',
             { winnerCount }
         );
     }
@@ -292,7 +292,7 @@ export function selectWinners(participants, winnerCount) {
         throw new TitanBotError(
             'Failed to select winners',
             ErrorTypes.UNKNOWN,
-            'An error occurred while selecting winners.',
+            'Une erreur est survenue lors de la sélection des gagnants.',
             { error: error.message, participantCount: participants.length }
         );
     }
@@ -347,7 +347,7 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
             throw new TitanBotError(
                 'Giveaway object is null or undefined',
                 ErrorTypes.VALIDATION,
-                'Cannot end a non-existent giveaway.',
+                'Impossible de terminer un concours inexistant.',
                 { giveaway }
             );
         }
@@ -356,7 +356,7 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
             throw new TitanBotError(
                 `Giveaway ${giveaway.messageId} is already ended`,
                 ErrorTypes.VALIDATION,
-                'This giveaway has already ended.',
+                'Ce concours est déjà terminé.',
                 { giveawayId: giveaway.messageId, status: 'already_ended' }
             );
         }
@@ -392,7 +392,7 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
         throw new TitanBotError(
             'Failed to end giveaway',
             ErrorTypes.UNKNOWN,
-            'An error occurred while ending the giveaway.',
+            'Une erreur est survenue lors de la fin du concours.',
             { error: error.message, giveawayId: giveaway?.messageId }
         );
     }
@@ -447,7 +447,7 @@ export async function checkGiveaways(client) {
 
         const winnerMentions = winners.length > 0
           ? winners.map(id => `<@${id}>`).join(', ')
-          : 'No valid entries!';
+          : 'Aucune participation valide !';
 
         
         const endedEmbed = createGiveawayEmbed(giveaway, 'ended', winners);

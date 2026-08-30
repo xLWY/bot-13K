@@ -18,7 +18,7 @@ export async function handleVerificationButton(interaction, client) {
 
         if (!interaction.guild) {
             return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Guild Only", "This button can only be used in a server.")],
+                embeds: [errorEmbed("Serveur uniquement", "Ce bouton ne peut être utilisé que dans un serveur.")],
             });
         }
 
@@ -41,16 +41,16 @@ export async function handleVerificationButton(interaction, client) {
             if (result.alreadyVerified) {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [errorEmbed(
-                        "Already Verified",
-                        "You are already verified and have access to all server channels."
+                        "Déjà vérifié",
+                        "Tu es déjà vérifié et tu as accès à tous les salons du serveur."
                     )],
                 });
             }
 
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [errorEmbed(
-                    "Verification Failed",
-                    "An error occurred during verification. Please try again or contact an administrator."
+                    "Échec de la vérification",
+                    "Une erreur est survenue lors de la vérification. Réessaie ou contacte un administrateur."
                 )],
             });
         }
@@ -64,8 +64,8 @@ export async function handleVerificationButton(interaction, client) {
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [successEmbed(
-                "✅ Verification Successful!",
-                `You have been verified and given the **${result.roleName}** role!\n\nYou now have access to all server channels and features. Welcome! 🎉`
+                "✅ Vérification réussie !",
+                `Tu as été vérifié et tu as reçu le rôle **${result.roleName}** !\n\nTu as maintenant accès à tous les salons et fonctionnalités du serveur. Bienvenue ! 🎉`
             )],
         });
 

@@ -22,10 +22,10 @@ import appDashboard from './modules/app_dashboard.js';
 function getApplicationStatusPresentation(statusValue) {
     const normalized = typeof statusValue === 'string' ? statusValue.trim().toLowerCase() : 'unknown';
     const statusLabel =
-        normalized === 'pending' ? 'In Progress' :
-        normalized === 'approved' ? 'Accepted' :
-        normalized === 'denied' ? 'Denied' :
-        'Unknown';
+        normalized === 'pending' ? 'En Cours' :
+        normalized === 'approved' ? 'Acceptée' :
+        normalized === 'denied' ? 'Refusée' :
+        'Inconnu';
     const statusEmoji =
         normalized === 'pending' ? '🟡' :
         normalized === 'approved' ? '🟢' :
@@ -38,49 +38,49 @@ function getApplicationStatusPresentation(statusValue) {
 export default {
     data: new SlashCommandBuilder()
     .setName("app-admin")
-    .setDescription("Manage staff applications")
+    .setDescription("Gérer les candidatures au staff")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((subcommand) =>
         subcommand
             .setName("setup")
-            .setDescription("Set up a new application")
+            .setDescription("Configurer une nouvelle candidature")
     )
     .addSubcommand((subcommand) =>
         subcommand
             .setName("review")
-            .setDescription("Approve or deny an application")
+            .setDescription("Approuver ou refuser une candidature")
             .addStringOption((option) =>
                 option
                     .setName("id")
-                    .setDescription("The application ID")
+                    .setDescription("L'ID de la candidature")
                     .setRequired(true),
             ),
     )
     .addSubcommand((subcommand) =>
         subcommand
             .setName("list")
-            .setDescription("List all applications")
+            .setDescription("Lister toutes les candidatures")
             .addStringOption((option) =>
                 option
                     .setName("status")
-                    .setDescription("Filter by status")
+                    .setDescription("Filtrer par statut")
                     .addChoices(
-                        { name: "Pending", value: "pending" },
-                        { name: "Approved", value: "approved" },
-                        { name: "Denied", value: "denied" },
+                        { name: "En Attente", value: "pending" },
+                        { name: "Approuvée", value: "approved" },
+                        { name: "Refusée", value: "denied" },
                     ),
             )
             .addStringOption((option) =>
-                option.setName("role").setDescription("Filter by role ID"),
+                option.setName("role").setDescription("Filtrer par ID de rôle"),
             )
             .addUserOption((option) =>
-                option.setName("user").setDescription("Filter by user"),
+                option.setName("user").setDescription("Filtrer par utilisateur"),
             )
             .addNumberOption((option) =>
                 option
                     .setName("limit")
                     .setDescription(
-                        "Maximum number of applications to show (default: 10)",
+                        "Nombre maximum de candidatures à afficher (défaut : 10)",
                     )
                     .setMinValue(1)
                     .setMaxValue(25),
@@ -89,11 +89,11 @@ export default {
     .addSubcommand((subcommand) =>
         subcommand
             .setName("dashboard")
-            .setDescription("Open the applications configuration dashboard")
+            .setDescription("Ouvrir le panneau de configuration des candidatures")
             .addStringOption((option) =>
                 option
                     .setName("application")
-                    .setDescription("Select an application to configure")
+                    .setDescription("Sélectionner une candidature à configurer")
                     .setRequired(false)
                     .setAutocomplete(true),
             ),
@@ -104,7 +104,7 @@ export default {
     execute: withErrorHandling(async (interaction) => {
         if (!interaction.inGuild()) {
             return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed("This command can only be used in a server.")],
+                embeds: [errorEmbed("Cette commande ne peut être utilisée que dans un serveur.")],
                 flags: ["Ephemeral"],
             });
         }
@@ -143,7 +143,7 @@ async function handleSetup(interaction) {
     // Ensure interaction hasn't been deferred/replied yet (safety check)
     if (interaction.deferred || interaction.replied) {
         return InteractionHelper.safeReply(interaction, {
-            embeds: [errorEmbed("This interaction has already been processed. Please try the command again.")],
+            embeds: [errorEmbed("Cette interaction a déjà été traitée. Veuillez réessayer la commande.")],
             flags: ["Ephemeral"],
         });
     }
@@ -151,51 +151,51 @@ async function handleSetup(interaction) {
     // Build modal using LabelBuilder API with a native role select dropdown
     const modal = new ModalBuilder()
         .setCustomId('app_setup_modal')
-        .setTitle('Set Up New Application');
+        .setTitle('Configurer une Nouvelle Candidature');
 
     const roleSelect = new RoleSelectMenuBuilder()
         .setCustomId('role_id')
-        .setPlaceholder('Select the role users will apply for')
+        .setPlaceholder('Sélectionner le rôle que les utilisateurs postuleront')
         .setRequired(true);
 
     const roleLabel = new LabelBuilder()
-        .setLabel('Application Role')
-        .setDescription('The role that users will be applying for')
+        .setLabel('Rôle de la Candidature')
+        .setDescription('Le rôle pour lequel les utilisateurs postuleront')
         .setRoleSelectMenuComponent(roleSelect);
 
     const appNameInput = new TextInputBuilder()
         .setCustomId('app_name')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('e.g., Moderator, Helper, Developer')
+        .setPlaceholder('ex. Modérateur, Assistant, Développeur')
         .setMaxLength(50)
         .setMinLength(1)
         .setRequired(true);
 
     const appNameLabel = new LabelBuilder()
-        .setLabel('Application Name')
+        .setLabel('Nom de la Candidature')
         .setTextInputComponent(appNameInput);
 
     const q1Input = new TextInputBuilder()
         .setCustomId('app_question_1')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Why do you want this role?')
+        .setPlaceholder('Pourquoi veux-tu ce rôle ?')
         .setMaxLength(100)
         .setMinLength(1)
         .setRequired(true);
 
     const q1Label = new LabelBuilder()
-        .setLabel('Question 1 (required)')
+        .setLabel('Question 1 (obligatoire)')
         .setTextInputComponent(q1Input);
 
     const q2Input = new TextInputBuilder()
         .setCustomId('app_question_2')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('What experience do you have?')
+        .setPlaceholder('Quelle expérience as-tu ?')
         .setMaxLength(100)
         .setRequired(false);
 
     const q2Label = new LabelBuilder()
-        .setLabel('Question 2 (optional)')
+        .setLabel('Question 2 (optionnelle)')
         .setTextInputComponent(q2Input);
 
     const q3Input = new TextInputBuilder()
@@ -205,7 +205,7 @@ async function handleSetup(interaction) {
         .setRequired(false);
 
     const q3Label = new LabelBuilder()
-        .setLabel('Question 3 (optional)')
+        .setLabel('Question 3 (optionnelle)')
         .setTextInputComponent(q3Input);
 
     modal.addLabelComponents(roleLabel, appNameLabel, q1Label, q2Label, q3Label);
@@ -230,7 +230,7 @@ async function handleSetup(interaction) {
 
     if (!roleId) {
         await submitted.reply({
-            embeds: [errorEmbed('No Role Selected', 'You must select a role for the application.')],
+            embeds: [errorEmbed('Aucun Rôle Sélectionné', 'Tu dois sélectionner un rôle pour la candidature.')],
             flags: ['Ephemeral'],
         });
         return;
@@ -246,7 +246,7 @@ async function handleSetup(interaction) {
     const role = await interaction.guild.roles.fetch(roleId).catch(() => null);
     if (!role) {
         await submitted.reply({
-            embeds: [errorEmbed('Invalid Role', 'The selected role could not be found.')],
+            embeds: [errorEmbed('Rôle Invalide', 'Le rôle sélectionné est introuvable.')],
             flags: ['Ephemeral'],
         });
         return;
@@ -256,7 +256,7 @@ async function handleSetup(interaction) {
     const existingRoles = await getApplicationRoles(interaction.client, interaction.guild.id);
     if (existingRoles.some(r => r.roleId === roleId)) {
         await submitted.reply({
-            embeds: [errorEmbed('Already Configured', `The role ${role} is already configured as an application.`)],
+            embeds: [errorEmbed('Déjà Configuré', `Le rôle ${role} est déjà configuré comme candidature.`)],
             flags: ['Ephemeral'],
         });
         return;
@@ -282,8 +282,8 @@ async function handleSetup(interaction) {
 
     await submitted.reply({
         embeds: [successEmbed(
-            '✅ Application Created',
-            `**${appName}** application has been created for ${role}.\n\nYou can customize the log channel, manager roles, questions, and retention period in the dashboard.`,
+            '✅ Candidature Créée',
+            `La candidature **${appName}** a été créée pour ${role}.\n\nTu peux personnaliser le canal de logs, les rôles gestionnaires, les questions et la période de conservation dans le panneau de configuration.`,
         )],
         flags: ['Ephemeral'],
     });
@@ -305,7 +305,7 @@ async function handleReview(interaction) {
     );
     if (!application) {
         return InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed("Application not found.")],
+            embeds: [errorEmbed("Candidature introuvable.")],
             flags: ["Ephemeral"],
         });
     }
@@ -313,7 +313,7 @@ async function handleReview(interaction) {
     if (application.status !== "pending") {
         return InteractionHelper.safeEditReply(interaction, {
             embeds: [
-                errorEmbed("This application has already been processed."),
+                errorEmbed("Cette candidature a déjà été traitée."),
             ],
             flags: ["Ephemeral"],
         });
@@ -321,8 +321,8 @@ async function handleReview(interaction) {
 
     // Show application details with approve/deny buttons
     const appEmbed = createEmbed({
-        title: `📋 Review Application`,
-        description: `**User:** <@${application.userId}>\n**Application:** ${application.roleName}\n**Application ID:** \`${appId}\``,
+        title: `📋 Examiner la Candidature`,
+        description: `**Utilisateur :** <@${application.userId}>\n**Candidature :** ${application.roleName}\n**ID de la candidature :** \`${appId}\``,
         color: 'info',
     });
 
@@ -330,8 +330,8 @@ async function handleReview(interaction) {
     if (application.answers && application.answers.length > 0) {
         application.answers.forEach((item, index) => {
             appEmbed.addFields({
-                name: `Q${index + 1}: ${item.question}`,
-                value: item.answer || '*No answer provided*',
+                name: `Q${index + 1} : ${item.question}`,
+                value: item.answer || '*Aucune réponse fournie*',
                 inline: false
             });
         });
@@ -340,11 +340,11 @@ async function handleReview(interaction) {
     const buttonRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId(`app_review_approve_${appId}`)
-            .setLabel('Approve')
+            .setLabel('Approuver')
             .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
             .setCustomId(`app_review_deny_${appId}`)
-            .setLabel('Deny')
+            .setLabel('Refuser')
             .setStyle(ButtonStyle.Danger),
     );
 
@@ -371,15 +371,15 @@ async function handleReview(interaction) {
         // Show modal for reason
         const reasonModal = new ModalBuilder()
             .setCustomId(`app_review_reason_${appId}_${isApprove ? 'approve' : 'deny'}`)
-            .setTitle(`${isApprove ? 'Approve' : 'Deny'} Application - Reason`);
+            .setTitle(`${isApprove ? 'Approuver' : 'Refuser'} la Candidature - Motif`);
 
         reasonModal.addComponents(
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                     .setCustomId('review_reason')
-                    .setLabel('Reason (optional)')
+                    .setLabel('Motif (optionnel)')
                     .setStyle(TextInputStyle.Paragraph)
-                    .setPlaceholder('Provide a reason for this decision...')
+                    .setPlaceholder('Fournis une raison pour cette décision...')
                     .setMaxLength(500)
                     .setRequired(false),
             ),
@@ -397,7 +397,7 @@ async function handleReview(interaction) {
 
             if (!reasonSubmit) return;
 
-            const reason = reasonSubmit.fields.getTextInputValue('review_reason').trim() || "No reason provided.";
+            const reason = reasonSubmit.fields.getTextInputValue('review_reason').trim() || "Aucun motif fourni.";
             const action = isApprove ? 'approve' : 'deny';
             const status = isApprove ? 'approved' : 'denied';
 
@@ -418,10 +418,10 @@ async function handleReview(interaction) {
                 const statusColor = status === "approved" ? getColor('success') : getColor('error');
                 const reviewStatus = getApplicationStatusPresentation(status);
                 const dmEmbed = createEmbed(
-                    `${reviewStatus.statusEmoji} Application ${reviewStatus.statusLabel}`,
-                    `Your application for **${application.roleName}** has been **${status}**\n` +
-                        `**Note:** ${reason}\n\n` +
-                        `Use \`/apply status id:${appId}\` to view details.`
+                    `${reviewStatus.statusEmoji} Candidature ${reviewStatus.statusLabel}`,
+                    `Ta candidature pour **${application.roleName}** a été **${status}**\n` +
+                        `**Note :** ${reason}\n\n` +
+                        `Utilise \`/apply status id:${appId}\` pour afficher les détails.`
                 ).setColor(statusColor);
 
                 await user.send({ embeds: [dmEmbed] });
@@ -451,7 +451,7 @@ async function handleReview(interaction) {
                                 const newEmbed = EmbedBuilder.from(embed)
                                     .setColor(statusColor)
                                     .spliceFields(0, 1, {
-                                        name: "Status",
+                                        name: "Statut",
                                         value: `${reviewStatus.statusEmoji} ${reviewStatus.statusLabel}`,
                                     });
 
@@ -492,8 +492,8 @@ async function handleReview(interaction) {
             await reasonSubmit.reply({
                 embeds: [
                     successEmbed(
-                        `Application ${status}`,
-                        `The application has been **${status}**.`,
+                        `Candidature ${status}`,
+                        `La candidature a été **${status}**.`,
                     ),
                 ],
                 flags: ["Ephemeral"],
@@ -502,7 +502,7 @@ async function handleReview(interaction) {
         } catch (error) {
             logger.error('Error reviewing application:', error);
             await buttonInteraction.reply({
-                embeds: [errorEmbed('Error', 'An error occurred while reviewing the application.')],
+                embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de l\'examen de la candidature.')],
                 flags: ["Ephemeral"],
             });
         }
@@ -511,8 +511,8 @@ async function handleReview(interaction) {
     collector.on('end', async (collected, reason) => {
         if (reason === 'time') {
             const timeoutEmbed = createEmbed({
-                title: '⏱️ Review Timeout',
-                description: 'The review buttons have timed out.',
+                title: '⏱️ Examen Expiré',
+                description: 'Les boutons d\'examen ont expiré.',
                 color: 'warning',
             });
 
@@ -568,21 +568,21 @@ async function handleList(interaction) {
         
         if (applicationRoles.length > 0) {
             const embed = createEmbed({ 
-                title: "No Applications Found", 
-                description: "No submitted applications found matching the specified criteria.\n\nHowever, the following application roles are configured:" 
+                title: "Aucune Candidature Trouvée", 
+                description: "Aucune candidature soumise ne correspond aux critères spécifiés.\n\nCependant, les rôles de candidature suivants sont configurés :" 
             });
 
             applicationRoles.forEach((appRole, index) => {
                 const role = interaction.guild.roles.cache.get(appRole.roleId);
                 embed.addFields({
                     name: `${index + 1}. ${appRole.name}`,
-                    value: `**Role:** ${role ? `<@&${appRole.roleId}>` : 'Role not found'}\n**Available for applications:** Yes`,
+                    value: `**Rôle :** ${role ? `<@&${appRole.roleId}>` : 'Rôle introuvable'}\n**Disponible pour les candidatures :** Oui`,
                     inline: false
                 });
             });
 
             embed.setFooter({
-                text: "Users can apply with /apply submit or see available roles with /apply list"
+                text: "Les utilisateurs peuvent postuler avec /apply submit ou voir les rôles disponibles avec /apply list"
             });
 
             return InteractionHelper.safeEditReply(interaction, { embeds: [embed], flags: ["Ephemeral"] });
@@ -590,8 +590,8 @@ async function handleList(interaction) {
             return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
-                        "No applications found and no application roles configured.\n" +
-                        "Use `/app-admin roles add` to configure application roles first."
+                        "Aucune candidature trouvée et aucun rôle de candidature configuré.\n" +
+                        "Utilise `/app-admin roles add` pour configurer des rôles de candidature en premier."
                     ),
                 ],
                 flags: ["Ephemeral"],
@@ -603,23 +603,23 @@ async function handleList(interaction) {
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, limit);
 
-    const embed = createEmbed({ title: "Submitted Applications", description: `Showing ${applications.length} applications.`, });
+    const embed = createEmbed({ title: "Candidatures Soumises", description: `Affichage de ${applications.length} candidature(s).`, });
 
     applications.forEach((app) => {
         const statusView = getApplicationStatusPresentation(app?.status);
-        const roleName = app?.roleName || 'Unknown Role';
-        const username = app?.username || 'Unknown User';
+        const roleName = app?.roleName || 'Rôle Inconnu';
+        const username = app?.username || 'Utilisateur Inconnu';
         const createdAt = app?.createdAt ? new Date(app.createdAt) : null;
         const createdAtDisplay = createdAt && !Number.isNaN(createdAt.getTime())
             ? createdAt.toLocaleString()
-            : 'Unknown date';
+            : 'Date inconnue';
 
         embed.addFields({
             name: `${statusView.statusEmoji} ${roleName} - ${username}`,
             value:
-                `**ID:** \`${app.id}\`\n` +
-                `**Status:** ${statusView.statusEmoji} ${statusView.statusLabel}\n` +
-                `**Date:** ${createdAtDisplay}`,
+                `**ID :** \`${app.id}\`\n` +
+                `**Statut :** ${statusView.statusEmoji} ${statusView.statusLabel}\n` +
+                `**Date :** ${createdAtDisplay}`,
             inline: true,
         });
     });
@@ -637,14 +637,14 @@ export async function handleApplicationReviewModal(interaction) {
     if (!customId.startsWith('app_review_')) return;
     
     const [, appId, action] = customId.split('_');
-    const reason = interaction.fields.getTextInputValue('reason') || 'No reason provided.';
+    const reason = interaction.fields.getTextInputValue('reason') || 'Aucun motif fourni.';
     const isApprove = action === 'approve';
     
     try {
         const application = await getApplication(interaction.client, interaction.guild.id, appId);
         if (!application) {
             return InteractionHelper.safeReply(interaction, {
-                embeds: [errorEmbed('Application not found.')],
+                embeds: [errorEmbed('Candidature introuvable.')],
                 flags: ["Ephemeral"]
             });
         }
@@ -661,10 +661,10 @@ export async function handleApplicationReviewModal(interaction) {
             const user = await interaction.client.users.fetch(application.userId);
             const reviewStatus = getApplicationStatusPresentation(status);
             const dmEmbed = createEmbed(
-                `${reviewStatus.statusEmoji} Application ${reviewStatus.statusLabel}`,
-                `Your application for **${application.roleName}** has been **${status}**.\n` +
-                `**Note:** ${reason}\n\n` +
-                `Use \`/apply status id:${appId}\` to view details.`,
+                `${reviewStatus.statusEmoji} Candidature ${reviewStatus.statusLabel}`,
+                `Ta candidature pour **${application.roleName}** a été **${status}**.\n` +
+                `**Note :** ${reason}\n\n` +
+                `Utilise \`/apply status id:${appId}\` pour afficher les détails.`,
                 isApprove ? '#00FF00' : '#FF0000'
             );
             
@@ -682,12 +682,12 @@ export async function handleApplicationReviewModal(interaction) {
                         const embed = logMessage.embeds[0];
                         if (embed) {
                             const reviewStatus = getApplicationStatusPresentation(status);
-                            const newEmbed = EmbedBuilder.from(embed)
-                                .setColor(isApprove ? '#00FF00' : '#FF0000')
-                                .spliceFields(0, 1, {
-                                    name: 'Status',
-                                    value: `${reviewStatus.statusEmoji} ${reviewStatus.statusLabel}`
-                                });
+                                const newEmbed = EmbedBuilder.from(embed)
+                                    .setColor(isApprove ? '#00FF00' : '#FF0000')
+                                    .spliceFields(0, 1, {
+                                        name: 'Statut',
+                                        value: `${reviewStatus.statusEmoji} ${reviewStatus.statusLabel}`
+                                    });
                             
                             await logMessage.edit({
                                 embeds: [newEmbed],
@@ -713,8 +713,8 @@ export async function handleApplicationReviewModal(interaction) {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [
                 successEmbed(
-                    `${getApplicationStatusPresentation(status).statusEmoji} Application ${getApplicationStatusPresentation(status).statusLabel}`,
-                    `The application has been marked as ${getApplicationStatusPresentation(status).statusLabel}.`
+                    `${getApplicationStatusPresentation(status).statusEmoji} Candidature ${getApplicationStatusPresentation(status).statusLabel}`,
+                    `La candidature a été marquée comme ${getApplicationStatusPresentation(status).statusLabel}.`
                 )
             ],
             flags: ["Ephemeral"]
@@ -723,7 +723,7 @@ export async function handleApplicationReviewModal(interaction) {
     } catch (error) {
         logger.error('Error processing application review:', error);
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed('An error occurred while processing the application.')],
+            embeds: [errorEmbed('Une erreur est survenue lors du traitement de la candidature.')],
             flags: ["Ephemeral"]
         });
     }

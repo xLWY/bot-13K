@@ -10,31 +10,31 @@ const durationChoices = [
     { name: "5 minutes", value: 5 },
     { name: "10 minutes", value: 10 },
     { name: "30 minutes", value: 30 },
-    { name: "1 hour", value: 60 },
-    { name: "6 hours", value: 360 },
-    { name: "1 day", value: 1440 },
-    { name: "1 week", value: 10080 },
+    { name: "1 heure", value: 60 },
+    { name: "6 heures", value: 360 },
+    { name: "1 jour", value: 1440 },
+    { name: "1 semaine", value: 10080 },
 ];
 export default {
     data: new SlashCommandBuilder()
         .setName("timeout")
-        .setDescription("Timeout a user for a specific duration.")
+        .setDescription("Mettre un utilisateur en timeout pour une durée précise.")
         .addUserOption((option) =>
             option
                 .setName("target")
-                .setDescription("User to timeout")
+                .setDescription("Utilisateur à mettre en timeout")
                 .setRequired(true),
         )
         .addIntegerOption(
             (option) =>
                 option
                     .setName("duration")
-                    .setDescription("Duration of the timeout")
+                    .setDescription("Durée du timeout")
                     .setRequired(true)
 .addChoices(...durationChoices),
         )
         .addStringOption((option) =>
-            option.setName("reason").setDescription("Reason for the timeout"),
+            option.setName("reason").setDescription("Raison du timeout"),
         )
 .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
     category: "moderation",
@@ -55,34 +55,34 @@ export default {
                 throw new TitanBotError(
                     "User lacks permission",
                     ErrorTypes.PERMISSION,
-                    "You need the `Moderate Members` permission to set a timeout."
+                    "Tu as besoin de la permission `Modérer les membres` pour définir un timeout."
                 );
             }
 
             const targetUser = interaction.options.getUser("target");
             const member = interaction.options.getMember("target");
             const durationMinutes = interaction.options.getInteger("duration");
-            const reason = interaction.options.getString("reason") || "No reason provided";
+            const reason = interaction.options.getString("reason") || "Aucune raison fournie";
 
             if (targetUser.id === interaction.user.id) {
                 throw new TitanBotError(
                     "Cannot timeout self",
                     ErrorTypes.VALIDATION,
-                    "You cannot timeout yourself."
+                    "Tu ne peux pas te mettre en timeout toi-même."
                 );
             }
             if (targetUser.id === client.user.id) {
                 throw new TitanBotError(
                     "Cannot timeout bot",
                     ErrorTypes.VALIDATION,
-                    "You cannot timeout the bot."
+                    "Tu ne peux pas mettre le bot en timeout."
                 );
             }
             if (!member) {
                 throw new TitanBotError(
                     "Target not found",
                     ErrorTypes.USER_INPUT,
-                    "The target user is not currently in this server."
+                    "L'utilisateur ciblé n'est actuellement pas dans ce serveur."
                 );
             }
 
@@ -90,7 +90,7 @@ export default {
                 throw new TitanBotError(
                     "Cannot timeout member",
                     ErrorTypes.PERMISSION,
-                    "I cannot timeout this user. They might have a higher role than me or you."
+                    "Je ne peux pas mettre cet utilisateur en timeout. Il a peut-être un rôle plus élevé que moi ou que toi."
                 );
             }
 
@@ -108,7 +108,7 @@ export default {
                     action: "Member Timed Out",
                     target: `${targetUser.tag} (${targetUser.id})`,
                     executor: `${interaction.user.tag} (${interaction.user.id})`,
-                    reason: `${reason}\nDuration: ${durationDisplay}`,
+                    reason: `${reason}\nDurée : ${durationDisplay}`,
                     duration: durationDisplay,
                     metadata: {
                         userId: targetUser.id,
@@ -122,8 +122,8 @@ export default {
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
-                        `⏳ **Timed out** ${targetUser.tag} for ${durationDisplay}.`,
-                        `**Reason:** ${reason}\n**Case ID:** #${caseId}`,
+                        `⏳ **Timeout** ${targetUser.tag} pour une durée de ${durationDisplay}.`,
+                        `**Raison :** ${reason}\n**ID de cas :** #${caseId}`,
                     ),
                 ],
             });
@@ -132,7 +132,7 @@ export default {
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
-                        error.userMessage || "An unexpected error occurred during the timeout action. Please check my role permissions.",
+                        error.userMessage || "Une erreur inattendue est survenue pendant le timeout. Vérifie mes permissions de rôle.",
                     ),
                 ],
             });

@@ -29,7 +29,7 @@ class ShopService {
             
             const item = getItemById(itemId);
             if (!item) {
-                return { success: false, message: 'Item not found in the shop.' };
+                return { success: false, message: 'Article introuvable dans la boutique.' };
             }
 
             const userData = await getEconomyData(client, guildId, userId);
@@ -40,7 +40,7 @@ class ShopService {
                 const currency = this.getCurrencyInfo();
                 return { 
                     success: false, 
-                    message: `You don't have enough ${currency.namePlural} to purchase this item.` 
+                    message: `Tu n'as pas assez de ${currency.namePlural} pour acheter cet article.` 
                 };
             }
 
@@ -62,7 +62,7 @@ class ShopService {
 
             return {
                 success: true,
-                message: `Successfully purchased ${quantity}x ${item.name} for ${totalCost} ${this.getCurrencyName()}`,
+                message: `Achat réussi : ${quantity}x ${item.name} pour ${totalCost} ${this.getCurrencyName()}`,
                 data: {
                     item,
                     quantity,
@@ -74,7 +74,7 @@ class ShopService {
             this.logger.error(`Error purchasing item: ${error.message}`, { error, userId, itemId, quantity });
             return { 
                 success: false, 
-                message: 'An error occurred while processing your purchase. Please try again later.' 
+                message: 'Une erreur est survenue lors de ton achat. Réessaie plus tard.' 
             };
         }
     }
@@ -150,9 +150,9 @@ class ShopService {
         const { category, page = 1 } = options;
         
         const embed = new EmbedBuilder()
-            .setTitle('🛒 TitanBot Shop')
+            .setTitle('🛒 Boutique TitanBot')
             .setColor('#5865F2')
-            .setDescription('Browse and purchase items from the shop. Use the buttons to navigate.')
+            .setDescription('Parcours et achète les articles de la boutique. Utilise les boutons pour naviguer.')
             .setFooter({ text: `Page ${page}` });
 
         
@@ -167,9 +167,9 @@ class ShopService {
         const categories = [
             { 
                 id: 'all', 
-                name: 'All Items', 
+                name: 'Tous les articles', 
                 emoji: '🛍️',
-                description: 'Browse all available items',
+                description: 'Parcourir tous les articles disponibles',
                 icon: '🛍️'
             },
             ...shopConfig.categories

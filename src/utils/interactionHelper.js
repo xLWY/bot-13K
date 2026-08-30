@@ -286,7 +286,7 @@ export function withErrorHandling(target, propertyName, descriptor) {
         await InteractionHelper.safeExecute(
             interaction,
             () => originalMethod.call(this, interaction, config, client),
-            { title: 'Command Error', description: 'Failed to execute command. Please try again later.' }
+            { title: 'Erreur de commande', description: 'Impossible d\'exécuter la commande. Réessaie plus tard.' }
         );
     };
 

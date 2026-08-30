@@ -792,8 +792,8 @@ async function generateTranscript(channel) {
     const rows = messages
       .map((msg) => {
         const ts = new Date(msg.createdTimestamp).toISOString().replace('T', ' ').slice(0, 19);
-        const author = escape(msg.author?.tag ?? msg.author?.username ?? 'Unknown');
-        const content = escape(msg.content || (msg.embeds.length ? '[embed]' : '[attachment]'));
+const author = escape(msg.author?.tag ?? msg.author?.username ?? 'Inconnu');
+        const content = escape(msg.content || (msg.embeds.length ? '[intégration]' : '[pièce jointe]'));
         return `<tr><td class="ts">${ts}</td><td class="author">${author}</td><td class="msg">${content}</td></tr>`;
       })
       .join('\n');

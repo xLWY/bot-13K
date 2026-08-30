@@ -6,27 +6,27 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('cases')
-        .setDescription('View moderation cases and audit logs')
+        .setDescription("Voir les cas de modération et les journaux d'audit")
         .setDefaultMemberPermissions(PermissionFlagsBits.ViewAuditLog)
         .setDMPermission(false)
         .addStringOption(option =>
             option.setName('filter')
-                .setDescription('Filter cases by type or user')
+                .setDescription("Filtrer les cas par type ou par utilisateur")
                 .addChoices(
-                    { name: 'All Cases', value: 'all' },
-                    { name: 'Bans', value: 'Member Banned' },
-                    { name: 'Kicks', value: 'Member Kicked' },
+                    { name: 'Tous les cas', value: 'all' },
+                    { name: 'Bannissements', value: 'Member Banned' },
+                    { name: 'Expulsions', value: 'Member Kicked' },
                     { name: 'Timeouts', value: 'Member Timed Out' },
-                    { name: 'Warnings', value: 'User Warned' }
+                    { name: 'Avertissements', value: 'User Warned' }
                 )
         )
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('Filter cases by specific user')
+                .setDescription("Filtrer les cas d'un utilisateur précis")
         )
         .addIntegerOption(option =>
             option.setName('limit')
-                .setDescription('Number of cases to show (default: 10)')
+                .setDescription('Nombre de cas à afficher (défaut : 10)')
                 .setMinValue(1)
                 .setMaxValue(50)
         ),
@@ -57,8 +57,8 @@ export default {
 
             if (cases.length === 0) {
                 throw new Error(targetUser 
-                    ? `No moderation cases found for ${targetUser.tag}`
-                    : `No ${filterType === 'all' ? '' : filterType} cases found in this server.`
+                    ? `Aucun cas de modération trouvé pour ${targetUser.tag}`
+                    : `Aucune sanction trouvée dans ce serveur${filterType === 'all' ? '' : ` de type « ${filterType} »`}.`
                 );
             }
 
@@ -72,8 +72,8 @@ export default {
                 const pageCases = cases.slice(startIndex, endIndex);
 
                 const embed = createEmbed({
-                    title: '📋 Moderation Cases',
-                    description: `Showing moderation cases for **${interaction.guild.name}**\n\n**Page ${page} of ${totalPages}**`
+                    title: '📋 Cas de modération',
+                    description: `Affichage des cas de modération pour **${interaction.guild.name}**\n\n**Page ${page} sur ${totalPages}**`
                 });
 
                 pageCases.forEach(case_ => {
@@ -81,14 +81,14 @@ export default {
                     const time = new Date(case_.createdAt).toLocaleTimeString();
                     
                     embed.addFields({
-                        name: `Case #${case_.caseId} - ${case_.action}`,
-                        value: `**Target:** ${case_.target}\n**Moderator:** ${case_.executor}\n**Date:** ${date} at ${time}\n**Reason:** ${case_.reason || 'No reason provided'}`,
+                        name: `Cas #${case_.caseId} - ${case_.action}`,
+                        value: `**Cible :** ${case_.target}\n**Modérateur :** ${case_.executor}\n**Date :** ${date} à ${time}\n**Raison :** ${case_.reason || 'Aucune raison fournie'}`,
                         inline: false
                     });
                 });
 
                 embed.setFooter({
-                    text: `Total cases: ${cases.length} | Filter: ${filterType}${targetUser ? ` | User: ${targetUser.tag}` : ''}`
+                    text: `Total : ${cases.length} | Filtre : ${filterType}${targetUser ? ` | Utilisateur : ${targetUser.tag}` : ''}`
                 });
 
                 return embed;
@@ -99,7 +99,7 @@ export default {
                 
                 const prevButton = new ButtonBuilder()
                     .setCustomId('prev_page')
-                    .setLabel('⬅️ Previous')
+                    .setLabel('⬅️ Précédent')
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(page === 1);
 
@@ -111,7 +111,7 @@ export default {
 
                 const nextButton = new ButtonBuilder()
                     .setCustomId('next_page')
-                    .setLabel('Next ➡️')
+                    .setLabel('Suivant ➡️')
                     .setStyle(ButtonStyle.Secondary)
                     .setDisabled(page === totalPages);
 
@@ -134,7 +134,7 @@ time: 120000
 
                 if (buttonInteraction.user.id !== interaction.user.id) {
                     await buttonInteraction.followUp({
-                        content: 'You cannot use these buttons. Run `/cases` to get your own case view.',
+                        content: "Tu ne peux pas utiliser ces boutons. Utilise `/cases` pour consulter ta propre liste de cas.",
                         flags: MessageFlags.Ephemeral
                     });
                     return;
@@ -171,8 +171,8 @@ time: 120000
             return InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
-                        'System Error',
-                        'An error occurred while retrieving moderation cases. Please try again later.'
+                        'Erreur système',
+                        'Une erreur est survenue lors de la récupération des cas de modération. Réessaie plus tard.'
                     )
                 ],
                 flags: MessageFlags.Ephemeral

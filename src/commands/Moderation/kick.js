@@ -28,20 +28,20 @@ export default {
         throw new TitanBotError(
           "User lacks permission",
           ErrorTypes.PERMISSION,
-          "You do not have permission to kick members."
+          "Tu n'as pas la permission d'expulser des membres."
         );
       }
 
       const targetUser = interaction.options.getUser("target");
       const member = interaction.options.getMember("target");
-      const reason = interaction.options.getString("reason") || "No reason provided";
+      const reason = interaction.options.getString("reason") || "Aucune raison fournie";
 
       
       if (targetUser.id === interaction.user.id) {
         throw new TitanBotError(
           "Cannot kick self",
           ErrorTypes.VALIDATION,
-          "You cannot kick yourself."
+          "Tu ne peux pas t'expulser toi-même."
         );
       }
 
@@ -50,7 +50,7 @@ export default {
         throw new TitanBotError(
           "Cannot kick bot",
           ErrorTypes.VALIDATION,
-          "You cannot kick the bot."
+          "Tu ne peux pas expulser le bot."
         );
       }
 
@@ -59,7 +59,7 @@ export default {
         throw new TitanBotError(
           "Target not found",
           ErrorTypes.USER_INPUT,
-          "The target user is not currently in this server.",
+          "L'utilisateur ciblé n'est actuellement pas dans ce serveur.",
           { subtype: 'user_not_found' }
         );
       }
@@ -69,7 +69,7 @@ export default {
         throw new TitanBotError(
           "Cannot kick user",
           ErrorTypes.PERMISSION,
-          "You cannot kick a user with an equal or higher role than you."
+          "Tu ne peux pas expulser un utilisateur ayant un rôle égal ou supérieur au tien."
         );
       }
 
@@ -78,7 +78,7 @@ export default {
         throw new TitanBotError(
           "Bot cannot kick",
           ErrorTypes.PERMISSION,
-          "I cannot kick this user. Please check my role position relative to the target user."
+          "Je ne peux pas expulser cet utilisateur. Vérifie ma position de rôle par rapport à l'utilisateur ciblé."
         );
       }
 
@@ -105,16 +105,16 @@ export default {
       await InteractionHelper.universalReply(interaction, {
         embeds: [
           successEmbed(
-            `👢 **Kicked** ${targetUser.tag}`,
-            `**Reason:** ${reason}\n**Case ID:** #${caseId}`,
+            `👢 **Expulsé** ${targetUser.tag}`,
+            `**Raison :** ${reason}\n**ID de cas :** #${caseId}`,
           ),
         ],
       });
     } catch (error) {
       logger.error('Kick command error:', error);
       const errorEmbed_default = errorEmbed(
-        "An unexpected error occurred while trying to kick the user.",
-        error.message || "Could not kick the user"
+        "Une erreur inattendue est survenue en essayant d'expulser l'utilisateur.",
+        error.message || "Impossible d'expulser l'utilisateur"
       );
       await InteractionHelper.universalReply(interaction, { embeds: [errorEmbed_default] });
     }

@@ -7,11 +7,11 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('logs')
-        .setDescription('Set the server\'s logs channel or view the current logging status')
+        .setDescription('Définir le canal des logs du serveur ou afficher le statut actuel')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addChannelOption(option =>
             option.setName('channel')
-                .setDescription('The text channel that will receive all server logs')
+                .setDescription('Le canal textuel qui recevra tous les logs du serveur')
                 .setRequired(false)
                 .addChannelTypes(ChannelType.GuildText)),
 
@@ -30,7 +30,7 @@ export default {
 
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
             return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('You need the **Manage Server** permission to configure logs.')],
+                embeds: [errorEmbed('Tu as besoin de la permission **Gérer le serveur** pour configurer les logs.')],
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -41,14 +41,14 @@ export default {
             if (channel) {
                 if (channel.guildId !== interaction.guildId) {
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed(`<#${channel.id}> is not in this server.`)]
+                        embeds: [errorEmbed(`<#${channel.id}> n'est pas dans ce serveur.`)]
                     });
                 }
 
                 const success = await setLoggingChannel(client, interaction.guild.id, channel.id);
                 if (!success) {
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Failed to configure the logs channel. Please try again.')],
+                        embeds: [errorEmbed('Échec de la configuration du canal des logs. Veuillez réessayer.')],
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -57,15 +57,15 @@ export default {
 
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [successEmbed(
-                        `${channel} is now the **logs channel**. Logging is enabled for all ${Object.keys(EVENT_TYPES).length} event types (moderation, messages, roles, members, tickets, giveaways, reaction roles, leveling...).`,
-                        '📝 Logs Configured'
+                        `${channel} est désormais le **canal des logs**. La journalisation est activée pour les ${Object.keys(EVENT_TYPES).length} types d'événements (modération, messages, rôles, membres, tickets, giveaways, reaction roles, leveling...).`,
+                        '📝 Logs Configurés'
                     )],
                     flags: MessageFlags.Ephemeral
                 });
 
                 try {
                     await channel.send({
-                        embeds: [successEmbed('This channel is now the server\'s **logs channel**. All logging events will appear here.', '📝 Logs Channel Active')]
+                        embeds: [successEmbed('Ce canal est désormais le **canal des logs** du serveur. Tous les événements de journalisation apparaîtront ici.', '📝 Canal des Logs Actif')]
                     });
                 } catch {
                     logger.warn(`[Logs] Could not send confirmation in logs channel ${channel.id} (missing Send/Embed permissions?)`);
@@ -77,7 +77,7 @@ export default {
 
             if (!status.enabled || !status.channelId) {
                 return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [infoEmbed('No logs channel is configured yet. Use `/logs <channel>` to enable logging for this server.', '📝 Logs Status')],
+                    embeds: [infoEmbed('Aucun canal de logs n\'est configuré pour le moment. Utilise `/logs <canal>` pour activer la journalisation sur ce serveur.', '📝 Statut des Logs')],
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -92,15 +92,15 @@ export default {
 
             return InteractionHelper.safeEditReply(interaction, {
                 embeds: [infoEmbed(
-                    `Logs are **enabled** in ${channelMention}.\n**${enabledCount}/${totalCount}** event types are active.`,
-                    '📝 Logs Status'
+                    `Les logs sont **activés** dans ${channelMention}.\n**${enabledCount}/${totalCount}** types d'événements sont actifs.`,
+                    '📝 Statut des Logs'
                 )],
                 flags: MessageFlags.Ephemeral
             });
         } catch (error) {
             logger.error(`[Logs] Failed to configure logging for guild ${interaction.guild.id}:`, error);
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('An error occurred while configuring the logs channel. Please try again.', error, { showDetails: true })],
+                embeds: [errorEmbed('Une erreur est survenue lors de la configuration du canal des logs. Veuillez réessayer.', error, { showDetails: true })],
                 flags: MessageFlags.Ephemeral
             });
         }

@@ -5,12 +5,12 @@ export function getConfirmationButtons(customIdPrefix = 'confirm') {
     return new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId(`${customIdPrefix}_yes`)
-            .setLabel('Confirm')
+            .setLabel('Confirmer')
             .setStyle(ButtonStyle.Success)
             .setEmoji('✅'),
         new ButtonBuilder()
             .setCustomId(`${customIdPrefix}_no`)
-            .setLabel('Cancel')
+            .setLabel('Annuler')
             .setStyle(ButtonStyle.Danger)
             .setEmoji('❌')
     );
@@ -30,7 +30,7 @@ export function getPaginationRow(customIdPrefix = 'page', currentPage = 1, total
             .setDisabled(currentPage === 1),
         new ButtonBuilder()
             .setCustomId(`${customIdPrefix}_page`)
-            .setLabel(`Page ${currentPage} of ${totalPages}`)
+            .setLabel(`Page ${currentPage} sur ${totalPages}`)
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(true),
         new ButtonBuilder()

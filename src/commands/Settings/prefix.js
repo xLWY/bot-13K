@@ -9,11 +9,11 @@ const MAX_PREFIX_LENGTH = 5;
 export default {
     data: new SlashCommandBuilder()
         .setName('prefix')
-        .setDescription('View or change this server\'s command prefix')
+        .setDescription('Voir ou modifier le préfixe de commande de ce serveur')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addStringOption(option =>
             option.setName('prefix')
-                .setDescription('The new prefix to use (e.g. !, ., ?)')
+                .setDescription('Le nouveau préfixe à utiliser (ex : !, ., ?)')
                 .setRequired(false)
                 .setMaxLength(MAX_PREFIX_LENGTH)),
 
@@ -32,7 +32,7 @@ export default {
 
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
             return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('You need the **Manage Server** permission to use `/prefix`.')],
+                embeds: [errorEmbed('Tu as besoin de la permission **Gérer le serveur** pour utiliser `/prefix`.')],
                 flags: MessageFlags.Ephemeral
             });
         }
@@ -46,7 +46,7 @@ export default {
                 const currentPrefix = guildConfig.prefix || '!';
 
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed(`The current prefix for this server is \`${currentPrefix}\``, 'ℹ️ Current Prefix')],
+                    embeds: [successEmbed(`Le préfixe actuel de ce serveur est \`${currentPrefix}\``, 'ℹ️ Préfixe actuel')],
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -55,21 +55,21 @@ export default {
 
             if (trimmedPrefix.length === 0) {
                 return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('The prefix cannot be empty or only whitespace.')],
+                    embeds: [errorEmbed('Le préfixe ne peut pas être vide ou ne contenir que des espaces.')],
                     flags: MessageFlags.Ephemeral
                 });
             }
 
             if (trimmedPrefix.length > MAX_PREFIX_LENGTH) {
                 return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(`The prefix cannot be longer than ${MAX_PREFIX_LENGTH} characters.`)],
+                    embeds: [errorEmbed(`Le préfixe ne peut pas dépasser ${MAX_PREFIX_LENGTH} caractères.`)],
                     flags: MessageFlags.Ephemeral
                 });
             }
 
             if (/\s/.test(trimmedPrefix)) {
                 return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('The prefix cannot contain spaces.')],
+                    embeds: [errorEmbed('Le préfixe ne peut pas contenir d\'espaces.')],
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -79,13 +79,13 @@ export default {
             logger.info(`[Prefix] Set prefix to "${trimmedPrefix}" in ${guild.name} (${guild.id}) by ${interaction.user.tag}`);
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [successEmbed(`The server prefix has been updated to \`${trimmedPrefix}\``)],
+                embeds: [successEmbed(`Le préfixe du serveur a été mis à jour en \`${trimmedPrefix}\``)],
                 flags: MessageFlags.Ephemeral
             });
         } catch (error) {
             logger.error(`[Prefix] Failed to update prefix for guild ${guild.id}:`, error);
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('An error occurred while updating the prefix. Please try again.', error, { showDetails: true })],
+                embeds: [errorEmbed('Une erreur est survenue lors de la mise à jour du préfixe. Veuillez réessayer.', error, { showDetails: true })],
                 flags: MessageFlags.Ephemeral
             });
         }

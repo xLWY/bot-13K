@@ -37,7 +37,7 @@ export default {
 
         try {
                 if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-                    throw new Error("You need the `Moderate Members` permission to issue warnings.");
+                    throw new Error("Tu as besoin de la permission `Modérer les membres` pour émettre des avertissements.");
                 }
 
                 const target = interaction.options.getUser("target");
@@ -47,7 +47,7 @@ export default {
                 const guildId = interaction.guildId;
 
                 if (!member) {
-                    throw new Error("The target user is not currently in this server.");
+                    throw new Error("L'utilisateur ciblé n'est actuellement pas dans ce serveur.");
                 }
 
                 
@@ -60,7 +60,7 @@ export default {
                 });
 
                 if (!result.success) {
-                    throw new Error("Failed to store warning in database");
+                    throw new Error("Échec de l'enregistrement de l'avertissement en base de données");
                 }
 
                 const totalWarns = result.totalCount;
@@ -86,8 +86,8 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
-                            `⚠️ **Warned** ${target.tag}`,
-                            `**Reason:** ${reason}\n**Total Warns:** ${totalWarns}`,
+                            `⚠️ **Averti** ${target.tag}`,
+                            `**Raison :** ${reason}\n**Total d'avertissements :** ${totalWarns}`,
                         ),
                     ],
                 });

@@ -19,7 +19,7 @@ export const counterDeleteActionHandler = {
 
       if (!interaction.inGuild()) {
         await interaction.editReply({
-          embeds: [errorEmbed('Guild Only', 'This action can only be used in a server.')],
+          embeds: [errorEmbed('Serveur uniquement', 'Cette action ne peut être utilisée que dans un serveur.')],
           components: []
         }).catch(logger.error);
         return;
@@ -27,7 +27,7 @@ export const counterDeleteActionHandler = {
 
       if (!action || !counterId) {
         await interaction.editReply({
-          embeds: [errorEmbed('Invalid Action', 'Counter delete action data is missing.')],
+          embeds: [errorEmbed('Action invalide', 'Les données de suppression du compteur sont manquantes.')],
           components: []
         }).catch(logger.error);
         return;
@@ -35,7 +35,7 @@ export const counterDeleteActionHandler = {
 
       if (ownerId && interaction.user.id !== ownerId) {
         await interaction.editReply({
-          embeds: [errorEmbed('Not Allowed', 'Only the user who initiated this deletion can use these buttons.')],
+          embeds: [errorEmbed('Non autorisé', 'Seul l\'utilisateur qui a lancé cette suppression peut utiliser ces boutons.')],
           components: []
         }).catch(logger.error);
         return;
@@ -44,8 +44,8 @@ export const counterDeleteActionHandler = {
       if (action === 'cancel') {
         await interaction.editReply({
           embeds: [createEmbed({
-            title: '❌ Cancelled',
-            description: 'Counter deletion cancelled.',
+            title: '❌ Annulé',
+            description: 'Suppression du compteur annulée.',
             color: 'error'
           })],
           components: []
@@ -55,7 +55,7 @@ export const counterDeleteActionHandler = {
 
       if (action !== 'confirm') {
         await interaction.editReply({
-          embeds: [errorEmbed('Invalid Action', 'Unknown counter delete action.')],
+          embeds: [errorEmbed('Action invalide', 'Action de suppression de compteur inconnue.')],
           components: []
         }).catch(logger.error);
         return;
@@ -79,12 +79,12 @@ export const counterDeleteActionHandler = {
       logger.error('Error handling counter-delete button:', error);
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          embeds: [errorEmbed('Error', 'An error occurred while processing this action.')],
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors du traitement de cette action.')],
           flags: MessageFlags.Ephemeral
         }).catch(() => null);
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', 'An error occurred while processing this action.')],
+          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors du traitement de cette action.')],
           components: []
         }).catch(() => null);
       }

@@ -14,7 +14,7 @@ export function validateBirthday(month, day) {
   if (typeof month !== 'number' || typeof day !== 'number') {
     return {
       isValid: false,
-      error: 'Month and day must be numbers'
+      error: 'Le mois et le jour doivent être des nombres'
     };
   }
 
@@ -22,7 +22,7 @@ export function validateBirthday(month, day) {
   if (month < 1 || month > 12) {
     return {
       isValid: false,
-      error: 'Month must be between 1 and 12'
+      error: 'Le mois doit être compris entre 1 et 12'
     };
   }
 
@@ -30,7 +30,7 @@ export function validateBirthday(month, day) {
   if (day < 1 || day > 31) {
     return {
       isValid: false,
-      error: 'Day must be between 1 and 31'
+      error: 'Le jour doit être compris entre 1 et 31'
     };
   }
 
@@ -41,7 +41,7 @@ export function validateBirthday(month, day) {
   if (isNaN(date.getTime()) || date.getMonth() !== month - 1 || date.getDate() !== day) {
     return {
       isValid: false,
-      error: 'Invalid date. Please check the month and day combination (e.g., February 29th only exists in leap years)'
+      error: 'Date invalide. Vérifie la combinaison mois/jour (par exemple, le 29 février n\'existe que les années bissextiles)'
     };
   }
 
@@ -85,7 +85,7 @@ export async function setBirthday(client, guildId, userId, month, day) {
       throw new TitanBotError(
         'Failed to save birthday to database',
         ErrorTypes.DATABASE,
-        'Failed to set your birthday. Please try again later.',
+        'Impossible de définir ton anniversaire. Réessaie plus tard.',
         { userId, guildId, month, day }
       );
     }
@@ -204,7 +204,7 @@ export async function deleteBirthday(client, guildId, userId) {
       return {
         success: false,
         notFound: true,
-        message: 'No birthday found to remove'
+        message: 'Aucun anniversaire à supprimer'
       };
     }
 
@@ -214,7 +214,7 @@ export async function deleteBirthday(client, guildId, userId) {
       throw new TitanBotError(
         'Failed to delete birthday from database',
         ErrorTypes.DATABASE,
-        'Failed to remove your birthday. Please try again.',
+        'Impossible de supprimer ton anniversaire. Réessaie.',
         { userId, guildId }
       );
     }
@@ -226,7 +226,7 @@ export async function deleteBirthday(client, guildId, userId) {
 
     return {
       success: true,
-      message: 'Birthday removed successfully'
+      message: 'Anniversaire supprimé avec succès'
     };
   } catch (error) {
     logger.error('Error in deleteBirthday service', {
@@ -401,10 +401,10 @@ export async function checkBirthdays(client) {
         
         await channel.send({
           embeds: [{
-            title: '🎉 Happy Birthday! 🎂',
-            description: `A very happy birthday to ${mentionList}! Wishing you an amazing day! 🎈`,
+            title: '🎉 Bon anniversaire ! 🎂',
+            description: `Très bon anniversaire à ${mentionList} ! Nous te souhaitons une journée incroyable ! 🎈`,
             color: 0xff69b4,
-            footer: { text: 'Birthday Bot' },
+            footer: { text: 'Bot d\'anniversaire' },
             timestamp: new Date()
           }]
         });

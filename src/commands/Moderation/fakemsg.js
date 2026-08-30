@@ -45,8 +45,8 @@ export default {
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
-                        "Permission Denied",
-                        "You need the **Manage Webhooks** permission to use this command."
+                        "Permission refusée",
+                        "Tu as besoin de la permission **Gérer les webhooks** pour utiliser cette commande."
                     ),
                 ],
             });
@@ -60,8 +60,8 @@ export default {
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
-                        "Message Too Long",
-                        "Messages must be under 2000 characters."
+                        "Message trop long",
+                        "Les messages doivent faire moins de 2000 caractères."
                     ),
                 ],
             });
@@ -71,8 +71,8 @@ export default {
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
-                        "Invalid Channel",
-                        "Please choose a text channel."
+                        "Salon invalide",
+                        "Choisis un salon textuel."
                     ),
                 ],
             });
@@ -96,7 +96,7 @@ export default {
             const webhook = await channel.createWebhook({
                 name,
                 avatar: avatarBuffer || undefined,
-                reason: `Fake message posted by ${interaction.user.tag}`
+                reason: `Message factice posté par ${interaction.user.tag}`
             });
 
             try {
@@ -106,7 +106,7 @@ export default {
                     avatarURL
                 });
             } finally {
-                await webhook.delete('Fake message sent').catch(() => {});
+                await webhook.delete('Message factice envoyé').catch(() => {});
             }
 
             try {
@@ -120,8 +120,8 @@ export default {
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
-                        "System Error",
-                        "Failed to post the fake message. Check the bot's Manage Webhooks permission in that channel."
+                        "Erreur système",
+                        "Échec de la publication du message factice. Vérifie la permission **Gérer les webhooks** du bot dans ce salon."
                     ),
                 ],
             });

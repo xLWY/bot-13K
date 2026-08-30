@@ -87,7 +87,7 @@ function buildOptionsFromTokens(message, optionDefs, tokens) {
 
         if (rawToken === undefined || rawToken === '') {
             if (def.required) {
-                return { error: `Missing required argument: \`${def.name}\`` };
+                return { error: `Argument requis manquant : \`${def.name}\`` };
             }
             continue;
         }
@@ -99,48 +99,48 @@ function buildOptionsFromTokens(message, optionDefs, tokens) {
                 break;
             case OPTION_TYPE.INTEGER: {
                 const n = parseInt(rawToken, 10);
-                if (Number.isNaN(n)) return { error: `\`${def.name}\` must be a whole number.` };
+                if (Number.isNaN(n)) return { error: `\`${def.name}\` doit être un nombre entier.` };
                 value = n;
                 break;
             }
             case OPTION_TYPE.NUMBER: {
                 const n = parseFloat(rawToken);
-                if (Number.isNaN(n)) return { error: `\`${def.name}\` must be a number.` };
+                if (Number.isNaN(n)) return { error: `\`${def.name}\` doit être un nombre.` };
                 value = n;
                 break;
             }
             case OPTION_TYPE.BOOLEAN: {
                 const b = parseBoolean(rawToken);
-                if (b === null) return { error: `\`${def.name}\` must be true/false.` };
+                if (b === null) return { error: `\`${def.name}\` doit être « true » ou « false ».` };
                 value = b;
                 break;
             }
             case OPTION_TYPE.USER: {
                 const user = resolveUser(message, rawToken);
-                if (!user) return { error: `Could not find a user for \`${def.name}\`. Mention them or use their ID.` };
+                if (!user) return { error: `Impossible de trouver un utilisateur pour \`${def.name}\`. Mentionne-le ou utilise son ID.` };
                 value = user;
                 break;
             }
             case OPTION_TYPE.CHANNEL: {
                 const channel = resolveChannel(message, rawToken);
-                if (!channel) return { error: `Could not find a channel for \`${def.name}\`. Mention it or use its ID.` };
+                if (!channel) return { error: `Impossible de trouver un salon pour \`${def.name}\`. Mentionne-le ou utilise son ID.` };
                 value = channel;
                 break;
             }
             case OPTION_TYPE.ROLE: {
                 const role = resolveRole(message, rawToken);
-                if (!role) return { error: `Could not find a role for \`${def.name}\`. Mention it or use its ID.` };
+                if (!role) return { error: `Impossible de trouver un rôle pour \`${def.name}\`. Mentionne-le ou utilise son ID.` };
                 value = role;
                 break;
             }
             case OPTION_TYPE.MENTIONABLE: {
                 const resolved = resolveUser(message, rawToken) || resolveRole(message, rawToken);
-                if (!resolved) return { error: `Could not resolve \`${def.name}\`.` };
+                if (!resolved) return { error: `Impossible de résoudre \`${def.name}\`.` };
                 value = resolved;
                 break;
             }
             case OPTION_TYPE.ATTACHMENT:
-                return { error: `\`${def.name}\` needs a file attachment — please use the \`/\` slash command version for this one.` };
+                return { error: `\`${def.name}\` nécessite une pièce jointe — utilise la version slash \`/\` de cette commande à la place.` };
             default:
                 value = rawToken;
         }
@@ -231,7 +231,7 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
         get deferred() { return deferred; },
         get replied() { return replied; },
         deferReply: async () => {
-            replyMessage = await message.channel.send({ content: '⏳ Working on it…' });
+            replyMessage = await message.channel.send({ content: '⏳ Je m\'en occupe…' });
             deferred = true;
             return replyMessage;
         },
@@ -262,7 +262,7 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
         },
         fetchReply: async () => replyMessage,
         showModal: async () => {
-            throw new Error('Modals are not supported for prefix commands — please use the `/` slash command version for this.');
+            throw new Error('Les modales ne sont pas prises en charge pour les commandes à préfixe — utilise la version slash `/` de cette commande à la place.');
         }
     };
 
@@ -319,12 +319,12 @@ export async function handlePrefixCommand(message, client) {
         );
         if (!abuseProtection.allowed) {
             const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
-            await message.reply(`⏳ This command is on cooldown. Please wait ${formattedCooldown} before trying again.`);
+            await message.reply(`⏳ Cette commande est en temps de recharge. Attends ${formattedCooldown} avant de réessayer.`);
             return true;
         }
 
         if (guildConfig?.disabledCommands?.[commandName]) {
-            await message.reply('❌ This command has been disabled for this server.');
+            await message.reply('❌ Cette commande a été désactivée sur ce serveur.');
             return true;
         }
 
@@ -337,14 +337,14 @@ export async function handlePrefixCommand(message, client) {
             const groupToken = tokens.shift();
             const group = optionDefs.find(o => o.name === groupToken?.toLowerCase());
             if (!group) {
-                await message.reply(`Usage: ${usageLine(matchedPrefix, commandName, null, [])} — available groups: ${optionDefs.map(o => o.name).join(', ')}`);
+                await message.reply(`Utilisation : ${usageLine(matchedPrefix, commandName, null, [])} — groupes disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommandGroup = group.name;
             const subToken = tokens.shift();
             const sub = group.options?.find(o => o.name === subToken?.toLowerCase());
             if (!sub) {
-                await message.reply(`Usage: \`${matchedPrefix}${commandName} ${group.name} <subcommand>\` — available: ${(group.options || []).map(o => o.name).join(', ')}`);
+                await message.reply(`Utilisation : \`${matchedPrefix}${commandName} ${group.name} <sous-commande>\` — disponibles : ${(group.options || []).map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommand = sub.name;
@@ -353,7 +353,7 @@ export async function handlePrefixCommand(message, client) {
             const subToken = tokens.shift();
             const sub = optionDefs.find(o => o.name === subToken?.toLowerCase());
             if (!sub) {
-                await message.reply(`Usage: \`${matchedPrefix}${commandName} <subcommand>\` — available: ${optionDefs.map(o => o.name).join(', ')}`);
+                await message.reply(`Utilisation : \`${matchedPrefix}${commandName} <sous-commande>\` — disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommand = sub.name;
@@ -364,14 +364,14 @@ export async function handlePrefixCommand(message, client) {
         if (requiredPerms !== undefined && requiredPerms !== null) {
             const perms = new PermissionsBitField(BigInt(requiredPerms));
             if (!message.member.permissions.has(perms)) {
-                await message.reply('❌ You do not have permission to use this command.');
+                await message.reply('❌ Tu n\'as pas la permission d\'utiliser cette commande.');
                 return true;
             }
         }
 
         const parsed = buildOptionsFromTokens(message, optionDefs, tokens);
         if (parsed.error) {
-            await message.reply(`❌ ${parsed.error}\nUsage: ${usageLine(matchedPrefix, commandName, subcommand, optionDefs)}`);
+            await message.reply(`❌ ${parsed.error}\nUtilisation : ${usageLine(matchedPrefix, commandName, subcommand, optionDefs)}`);
             return true;
         }
 

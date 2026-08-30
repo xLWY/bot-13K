@@ -15,12 +15,12 @@ export default {
     data: new SlashCommandBuilder()
         .setName("gend")
         .setDescription(
-            "Ends an active giveaway immediately and picks the winner(s).",
+            "Termine immédiatement un concours actif et tire le(s) gagnant(s).",
         )
         .addStringOption((option) =>
             option
                 .setName("messageid")
-                .setDescription("The message ID of the giveaway to end.")
+                .setDescription("L'identifiant du message du concours à terminer.")
                 .setRequired(true),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
@@ -32,7 +32,7 @@ export default {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
-                    'This command can only be used in a server.',
+                    'Cette commande ne peut être utilisée que sur un serveur.',
                     { userId: interaction.user.id }
                 );
             }
@@ -42,7 +42,7 @@ export default {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "You need the 'Manage Server' permission to end a giveaway.",
+                    "Vous devez avoir la permission `Gérer le serveur` pour terminer un concours.",
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -56,7 +56,7 @@ export default {
                 throw new TitanBotError(
                     'Invalid message ID format',
                     ErrorTypes.VALIDATION,
-                    'Please provide a valid message ID.',
+                    'Veuillez fournir un identifiant de message valide.',
                     { providedId: messageId }
                 );
             }
@@ -68,7 +68,7 @@ export default {
                 throw new TitanBotError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "No giveaway was found with that message ID in the database.",
+                    "Aucun concours n'a été trouvé avec cet identifiant de message dans la base de données.",
                     { messageId, guildId: interaction.guildId }
                 );
             }
@@ -96,7 +96,7 @@ export default {
                 throw new TitanBotError(
                     `Channel not found: ${updatedGiveaway.channelId}`,
                     ErrorTypes.VALIDATION,
-                    "Could not find the channel where the giveaway was hosted. The giveaway state has been updated.",
+                    "Impossible de trouver le salon où le concours était hébergé. L'état du concours a été mis à jour.",
                     { channelId: updatedGiveaway.channelId, messageId }
                 );
             }
@@ -112,7 +112,7 @@ export default {
                 throw new TitanBotError(
                     `Message not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "Could not find the giveaway message. The giveaway state has been updated.",
+                    "Impossible de trouver le message du concours. L'état du concours a été mis à jour.",
                     { messageId, channelId: updatedGiveaway.channelId }
                 );
             }
@@ -154,7 +154,7 @@ export default {
                         guildId: interaction.guildId,
                         eventType: EVENT_TYPES.GIVEAWAY_WINNER,
                         data: {
-                            description: `Giveaway ended with ${winners.length} winner(s)`,
+                            description: `Concours terminé avec ${winners.length} gagnant(s)`,
                             channelId: channel.id,
                             userId: interaction.user.id,
                             fields: [

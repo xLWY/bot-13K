@@ -51,7 +51,7 @@ class ApplicationService {
             throw createError(
                 'Missing required fields for application submission',
                 ErrorTypes.VALIDATION,
-                'Invalid application data. Please try again.',
+                'Données de candidature invalides. Réessaie.',
                 { data }
             );
         }
@@ -60,7 +60,7 @@ class ApplicationService {
             throw createError(
                 'Application must have answers',
                 ErrorTypes.VALIDATION,
-                'You must answer all application questions.',
+                'Tu dois répondre à toutes les questions de la candidature.',
                 { data }
             );
         }
@@ -74,7 +74,7 @@ class ApplicationService {
                 throw createError(
                     'Invalid answer format',
                     ErrorTypes.VALIDATION,
-                    'All questions must have answers.',
+                    'Toutes les questions doivent avoir une réponse.',
                     { answer }
                 );
             }
@@ -84,7 +84,7 @@ class ApplicationService {
                 throw createError(
                     'Answer too long',
                     ErrorTypes.VALIDATION,
-                    'Each answer must be less than 1000 characters.',
+                    'Chaque réponse doit faire moins de 1000 caractères.',
                     { length: sanitizedAnswer.length }
                 );
             }
@@ -93,7 +93,7 @@ class ApplicationService {
                 throw createError(
                     'Answer too short',
                     ErrorTypes.VALIDATION,
-                    'Please provide meaningful answers (at least 10 characters).',
+                    'Merci de fournir des réponses pertinentes (au moins 10 caractères).',
                     { length: sanitizedAnswer.length }
                 );
             }
@@ -116,7 +116,7 @@ class ApplicationService {
             throw createError(
                 'Application submission on cooldown',
                 ErrorTypes.RATE_LIMIT,
-                `Please wait ${Math.ceil(remainingTime / 60)} minute(s) before submitting another application.`,
+                `Veuillez patienter ${Math.ceil(remainingTime / 60)} minute(s) avant de soumettre une autre candidature.`,
                 { remainingTime, userId }
             );
         }
@@ -141,7 +141,7 @@ class ApplicationService {
             throw createError(
                 'User lacks permission to manage applications',
                 ErrorTypes.PERMISSION,
-                'You do not have permission to manage applications.',
+                'Tu n\'as pas la permission de gérer les candidatures.',
                 { userId: member.id, guildId }
             );
         }
@@ -169,7 +169,7 @@ class ApplicationService {
                 throw createError(
                     'Applications are disabled',
                     ErrorTypes.CONFIGURATION,
-                    'Applications are currently disabled in this server.',
+                    'Les candidatures sont actuellement désactivées sur ce serveur.',
                     { guildId: data.guildId }
                 );
             }
@@ -182,7 +182,7 @@ class ApplicationService {
                 throw createError(
                     'User already has pending application',
                     ErrorTypes.VALIDATION,
-                    'You already have a pending application. Please wait for it to be reviewed.',
+                    'Tu as déjà une candidature en attente. Attends qu\'elle soit examinée.',
                     { userId: data.userId, pendingAppId: pendingApp.id }
                 );
             }
@@ -236,7 +236,7 @@ class ApplicationService {
                 throw createError(
                     'Invalid review action',
                     ErrorTypes.VALIDATION,
-                    'Review action must be either approve or deny.',
+                    'L\'action doit être « approve » ou « deny ».',
                     { action }
                 );
             }
@@ -247,7 +247,7 @@ class ApplicationService {
                 throw createError(
                     'Application not found',
                     ErrorTypes.CONFIGURATION,
-                    'The application you are trying to review does not exist.',
+                    'La candidature que tu essaies d\'examiner n\'existe pas.',
                     { applicationId, guildId }
                 );
             }
@@ -257,13 +257,13 @@ class ApplicationService {
                 throw createError(
                     'Application already processed',
                     ErrorTypes.VALIDATION,
-                    'This application has already been reviewed.',
+                    'Cette candidature a déjà été examinée.',
                     { applicationId, status: application.status }
                 );
             }
 
             const status = action === 'approve' ? 'approved' : 'denied';
-            const sanitizedReason = reason ? reason.trim().substring(0, 500) : 'No reason provided.';
+            const sanitizedReason = reason ? reason.trim().substring(0, 500) : 'Aucun motif fourni.';
 
             
             const updatedApplication = await updateApplication(client, guildId, applicationId, {
@@ -321,7 +321,7 @@ class ApplicationService {
             throw createError(
                 'Failed to retrieve applications',
                 ErrorTypes.DATABASE,
-                'An error occurred while retrieving applications.',
+                'Une erreur est survenue lors de la récupération des candidatures.',
                 { guildId, filters }
             );
         }
@@ -341,7 +341,7 @@ class ApplicationService {
                 throw createError(
                     'Invalid log channel ID',
                     ErrorTypes.VALIDATION,
-                    'Invalid channel ID provided.',
+                    'ID de salon invalide fourni.',
                     { logChannelId: updates.logChannelId }
                 );
             }
@@ -351,7 +351,7 @@ class ApplicationService {
                 throw createError(
                     'Invalid manager roles format',
                     ErrorTypes.VALIDATION,
-                    'Manager roles must be an array.',
+                    'Les rôles de gestionnaires doivent être un tableau.',
                     { managerRoles: updates.managerRoles }
                 );
             }
@@ -362,7 +362,7 @@ class ApplicationService {
                     throw createError(
                         'Invalid questions format',
                         ErrorTypes.VALIDATION,
-                        'Questions must be a non-empty array.',
+                        'Les questions doivent être un tableau non vide.',
                         { questions: updates.questions }
                     );
                 }
@@ -411,7 +411,7 @@ class ApplicationService {
                     throw createError(
                         'Missing role ID',
                         ErrorTypes.VALIDATION,
-                        'You must specify a role to add.',
+                        'Tu dois spécifier un rôle à ajouter.',
                         { action }
                     );
                 }
@@ -421,14 +421,14 @@ class ApplicationService {
                     throw createError(
                         'Role already configured',
                         ErrorTypes.VALIDATION,
-                        'This role is already configured for applications.',
+                        'Ce rôle est déjà configuré pour les candidatures.',
                         { roleId }
                     );
                 }
 
                 currentRoles.push({
                     roleId,
-                    name: name ? name.trim().substring(0, 50) : 'Application Role'
+                    name: name ? name.trim().substring(0, 50) : 'Rôle de candidature'
                 });
 
                 await saveApplicationRoles(client, guildId, currentRoles);
@@ -443,7 +443,7 @@ class ApplicationService {
                     throw createError(
                         'Missing role ID',
                         ErrorTypes.VALIDATION,
-                        'You must specify a role to remove.',
+                        'Tu dois spécifier un rôle à supprimer.',
                         { action }
                     );
                 }
@@ -453,7 +453,7 @@ class ApplicationService {
                     throw createError(
                         'Role not configured',
                         ErrorTypes.VALIDATION,
-                        'This role is not configured for applications.',
+                        'Ce rôle n\'est pas configuré pour les candidatures.',
                         { roleId }
                     );
                 }
@@ -507,7 +507,7 @@ class ApplicationService {
             throw createError(
                 'Failed to retrieve your applications',
                 ErrorTypes.DATABASE,
-                'An error occurred while retrieving your applications.',
+                'Une erreur est survenue lors de la récupération de tes candidatures.',
                 { guildId, userId }
             );
         }
@@ -528,7 +528,7 @@ class ApplicationService {
                 throw createError(
                     'Application not found',
                     ErrorTypes.CONFIGURATION,
-                    'The application you are looking for does not exist.',
+                    'La candidature que tu recherches n\'existe pas.',
                     { applicationId, guildId }
                 );
             }
