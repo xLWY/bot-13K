@@ -23,6 +23,8 @@ const activeVoiceSessions = new Map();
 const voiceCounterDebounce = new Map();
 const VOICE_CREATE_COOLDOWN_MS = 2000;
 const VOICE_COUNTER_DEBOUNCE_MS = 30000;
+const EMPTY_CHECK_DELAY_MS = 5000;
+const emptyCheckTimers = new Map();
 const DEFAULT_VOICE_BITRATE = 64000;
 const MAX_VOICE_BITRATE = 384000;
 const MIN_VOICE_BITRATE = 8000;
@@ -130,6 +132,32 @@ if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
                     await transferChannelOwnership(client, channel, state.guild.id, nextMember.id);
                 }
             }
+
+            scheduleEmptyCheck(client, channel, state.guild.id);
+        }
+
+        function scheduleEmptyCheck(client, channel, guildId) {
+            if (emptyCheckTimers.has(channel.id)) return;
+
+            const timer = setTimeout(async () => {
+                emptyCheckTimers.delete(channel.id);
+                try {
+                    const freshChannel = await channel.guild.channels.fetch(channel.id).catch(() => null);
+                    if (!freshChannel || freshChannel.type !== ChannelType.GuildVoice) return;
+
+                    const tempInfo = await getTemporaryChannelInfo(client, guildId, freshChannel.id);
+                    if (!tempInfo) return;
+
+                    if (freshChannel.members.size === 0) {
+                        await deleteTemporaryChannel(client, freshChannel, guildId);
+                        logger.info(`Deleted empty temporary voice channel ${freshChannel.name} (delayed check) in guild ${guildId}`);
+                    }
+                } catch (error) {
+                    logger.warn(`Scheduled empty check failed for channel ${channel.id}:`, error.message);
+                }
+            }, EMPTY_CHECK_DELAY_MS);
+
+            emptyCheckTimers.set(channel.id, timer);
         }
 
         async function handleVoiceMove(client, oldState, newState, config) {
@@ -145,6 +173,7 @@ if (now - lastCreation < VOICE_CREATE_COOLDOWN_MS) {
                             await transferChannelOwnership(client, oldState.channel, oldState.guild.id, nextMember.id);
                         }
                     }
+                    scheduleEmptyCheck(client, oldState.channel, oldState.guild.id);
                 }
             }
 
