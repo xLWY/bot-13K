@@ -13,6 +13,20 @@ function createAutoroleInfoEmbed(description) {
         .setFooter({ text: new Date().toLocaleString() });
 }
 
+async function sendTransient(interaction, content) {
+    const sent = await InteractionHelper.safeEditReply(interaction, { content });
+    if (sent) {
+        setTimeout(async () => {
+            try {
+                const reply = await interaction.fetchReply().catch(() => null);
+                if (reply) await reply.delete().catch(() => {});
+            } catch (_) {
+                // already deleted
+            }
+        }, 5000).unref?.();
+    }
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName('autorole')
@@ -93,10 +107,7 @@ export default {
                 
                 if (currentRoleId === role.id) {
                     logger.info(`[Autorole] User ${interaction.user.tag} tried to add duplicate role ${role.name} (${role.id}) in ${guild.name}`);
-                    return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Déjà ajouté', `Le rôle ${role} est déjà configuré comme auto-attribué.`)],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return sendTransient(interaction, `<@${interaction.user.id}> ce rôle est déjà configuré comme auto-attribué`);
                 }
 
                 await updateWelcomeConfig(client, guild.id, {
