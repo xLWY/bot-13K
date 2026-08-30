@@ -68,18 +68,17 @@ export async function logEvent({ client, guild, guildId, event }) {
     const style = actionStyles[event.action] || { color: getColor('primary'), icon: '🔨' };
 
     if (event.action === 'DM Sent') {
+      const contentText = String(event.content || event.metadata?.content || '*pas de contenu*');
       const dmEmbed = new EmbedBuilder()
         .setColor(event.color || style.color)
         .setAuthor({
           name: `${style.icon} ${event.action}`,
           iconURL: guild.iconURL() || undefined
         })
-        .setDescription(
-          String(event.content || event.metadata?.content || '*pas de contenu*').substring(0, 4096)
-        )
         .addFields(
-          { name: 'Target', value: event.target, inline: true },
-          { name: 'Moderator', value: event.executor, inline: true }
+          { name: '🎯 Target', value: event.target, inline: true },
+          { name: '🛡️ Moderator', value: event.executor, inline: true },
+          { name: '💬 Message', value: contentText.length > 1024 ? `${contentText.substring(0, 1021)}...` : contentText }
         )
         .setTimestamp();
 
