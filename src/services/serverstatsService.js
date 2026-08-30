@@ -9,7 +9,7 @@ export const COUNTER_TYPE_CONFIG = {
   },
   members_only: {
     label: 'Members Only',
-    baseName: 'Humains',
+    baseName: 'Membres',
     emoji: '👤'
   },
   bots: {
