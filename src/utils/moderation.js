@@ -76,10 +76,14 @@ export async function logEvent({ client, guild, guildId, event }) {
       )
       .setTimestamp();
 
+    if (guild.iconURL()) {
+      embed.setThumbnail(guild.iconURL());
+    }
+
     if (!event.hideFooter) {
       embed.setFooter({ 
         text: `Guild ID: ${guild.id} | Moderator ID: ${event.executor.match(/\((\d+)\)/)?.[1] || event.metadata?.moderatorId || 'Unknown'}`,
-        iconURL: guild.iconURL()
+        iconURL: guild.iconURL() || undefined
       });
     }
 

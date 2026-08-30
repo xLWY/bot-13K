@@ -87,12 +87,8 @@ export default {
                     action: "DM Sent",
                     target: `<@${targetUser.id}>`,
                     executor: `<@${interaction.user.id}>`,
-                    reason: `Anonymous: ${anonymous ? 'Yes' : 'No'}`,
                     hideFooter: true,
                     metadata: {
-                        userId: targetUser.id,
-                        moderatorId: interaction.user.id,
-                        anonymous,
                         content: sanitized
                     }
                 }
