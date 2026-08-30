@@ -76,6 +76,10 @@ export default {
             
             const sanitized = sanitizeMarkdown(message);
 
+            const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+            const targetName = targetMember?.displayName || targetUser.username;
+            const moderatorName = interaction.member?.displayName || interaction.user.username || 'Staff';
+
             const dmChannel = await targetUser.createDM();
             
             await dmChannel.send(sanitized);
@@ -87,6 +91,8 @@ export default {
                     action: "DM Sent",
                     target: `<@${targetUser.id}>`,
                     executor: `<@${interaction.user.id}>`,
+                    targetName,
+                    moderatorName,
                     content: sanitized,
                     hideFooter: true,
                     metadata: {
