@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
-import { successEmbed, errorEmbed } from '../../utils/embeds.js';
+import { errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
@@ -109,14 +109,12 @@ export default {
                 await webhook.delete('Fake message sent').catch(() => {});
             }
 
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        `Message publié dans ${channel} avec l'apparence de **${name}**.`,
-                        "✅ Fake message envoyé"
-                    ),
-                ]
-            });
+            try {
+                const confirmation = await interaction.fetchReply().catch(() => null);
+                if (confirmation) await confirmation.delete().catch(() => {});
+            } catch (_) {
+                // reply already gone
+            }
         } catch (error) {
             logger.error("Error in fakemsg command:", error);
             return await InteractionHelper.safeEditReply(interaction, {

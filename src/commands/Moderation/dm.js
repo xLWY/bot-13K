@@ -97,14 +97,20 @@ export default {
                 }
             });
 
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        "DM Sent",
-                        `Successfully sent a message to ${targetUser.tag}`
-                    ),
-                ],
+            const replySent = await InteractionHelper.safeEditReply(interaction, {
+                content: `@${targetUser.displayName || targetUser.username} message bien envoyé`
             });
+
+            if (replySent) {
+                setTimeout(async () => {
+                    try {
+                        const confirmation = await interaction.fetchReply().catch(() => null);
+                        if (confirmation) await confirmation.delete().catch(() => {});
+                    } catch (_) {
+                        // already deleted
+                    }
+                }, 2000).unref?.();
+            }
         } catch (error) {
             logger.error('DM command error:', error);
             
