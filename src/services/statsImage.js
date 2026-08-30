@@ -234,7 +234,6 @@ export async function renderTopImage({
     const listH = 33;
     const listGap = 7;
     const sectionGap = 30;
-    const footerH = 38;
 
     const chartCount = Math.max(0, Math.min(messageEntries.length, 6));
     const listCount = Math.max(0, Math.min(voiceEntries.length, 8));
@@ -242,7 +241,7 @@ export async function renderTopImage({
     const H = pad + headerH
         + sectionH + chartCount * (rowH + rowGap)
         + sectionGap + sectionH + listCount * (listH + listGap)
-        + footerH + pad;
+        + pad;
 
     const canvas = createCanvas(W, H);
     const ctx = canvas.getContext('2d');
@@ -390,12 +389,6 @@ export async function renderTopImage({
         ctx.textAlign = 'right';
         ctx.fillText(formatVoiceDuration(entry.value), W - pad, rowCenter);
     }
-
-    ctx.font = `500 15px ${FONT.regular}`;
-    ctx.fillStyle = COLORS.faint;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`s?t · données cumulées depuis le ${dateLabel(startedAt)}`, W / 2, pad + headerH + sectionH + chartCount * (rowH + rowGap) + sectionGap + sectionH + listCount * (listH + listGap) + footerH / 2);
 
     return canvas.toBuffer('image/png');
 }
