@@ -1,10 +1,24 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { sanitizeMarkdown } from '../../utils/sanitization.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
+async function sendTransient(interaction, content) {
+    const sent = await InteractionHelper.safeEditReply(interaction, { content });
+    if (sent) {
+        setTimeout(async () => {
+            try {
+                const reply = await interaction.fetchReply().catch(() => null);
+                if (reply) await reply.delete().catch(() => {});
+            } catch (_) {
+                // already deleted
+            }
+        }, 3000).unref?.();
+    }
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName("dm")
@@ -47,30 +61,12 @@ export default {
         const anonymous = interaction.options.getBoolean("anonymous") || false;
 
         try {
-            
             if (message.length > 2000) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Message Too Long",
-                            "Messages must be under 2000 characters."
-                        ),
-                    ],
-                    flags: MessageFlags.Ephemeral,
-                });
+                return await sendTransient(interaction, `<@${interaction.user.id}> message trop long (2000 caractères max)`);
             }
 
-            
             if (targetUser.bot) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Cannot DM Bot",
-                            "You cannot send DMs to bot accounts."
-                        ),
-                    ],
-                    flags: MessageFlags.Ephemeral,
-                });
+                return await sendTransient(interaction, `<@${interaction.user.id}> impossible d'envoyer un DM à un bot`);
             }
 
             
@@ -101,36 +97,15 @@ export default {
                 }
             });
 
-            const replySent = await InteractionHelper.safeEditReply(interaction, {
-                content: `<@${targetUser.id}> message bien envoyé`
-            });
-
-            if (replySent) {
-                setTimeout(async () => {
-                    try {
-                        const confirmation = await interaction.fetchReply().catch(() => null);
-                        if (confirmation) await confirmation.delete().catch(() => {});
-                    } catch (_) {
-                        // already deleted
-                    }
-                }, 3000).unref?.();
-            }
+            await sendTransient(interaction, `<@${targetUser.id}> message bien envoyé`);
         } catch (error) {
             logger.error('DM command error:', error);
             
-if (error.code === 50007) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed("Error", `Could not send a DM to ${targetUser.tag}. They may have DMs disabled.`),
-                    ],
-                });
+            if (error.code === 50007) {
+                return await sendTransient(interaction, `<@${interaction.user.id}> envoi impossible, <@${targetUser.id}> a fermé ses DMs`);
             }
             
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed("Error", `Failed to send DM: ${error.message}`),
-                ],
-            });
+            return await sendTransient(interaction, `<@${interaction.user.id}> l'envoi du DM a échoué`);
         }
     }
 };
