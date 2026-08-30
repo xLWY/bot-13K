@@ -52,11 +52,13 @@ export function getCounterEmoji(type) {
 export async function getGuildCounterStats(guild) {
   let memberCollection = guild.members.cache;
 
-  try {
-    memberCollection = await guild.members.fetch();
-  } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
-      logger.debug(`Failed to fetch all guild members for ${guild.id}, using cache only`, error);
+  if (memberCollection.size === 0) {
+    try {
+      memberCollection = await guild.members.fetch();
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        logger.debug(`Failed to fetch all guild members for ${guild.id}, using cache only`, error);
+      }
     }
   }
 
@@ -79,20 +81,20 @@ export async function getGuildCounterStats(guild) {
   };
 }
 
-export async function getCounterCount(guild, type) {
-  const stats = await getGuildCounterStats(guild);
+export async function getCounterCount(guild, type, stats) {
+  const resolvedStats = stats || await getGuildCounterStats(guild);
 
   switch (type) {
     case 'members':
-      return stats.totalCount;
+      return resolvedStats.totalCount;
     case 'bots':
-      return stats.botCount;
+      return resolvedStats.botCount;
     case 'members_only':
-      return stats.humanCount;
+      return resolvedStats.humanCount;
     case 'online':
-      return stats.onlineCount;
+      return resolvedStats.onlineCount;
     case 'voice':
-      return stats.voiceCount;
+      return resolvedStats.voiceCount;
     default:
       return null;
   }
@@ -145,7 +147,7 @@ function sanitizeCounters(counters, guildId) {
 
 
 
-export async function updateCounter(client, guild, counter) {
+export async function updateCounter(client, guild, counter, stats) {
   try {
     if (!counter || !counter.type || !counter.channelId) {
       logger.warn('Skipping invalid counter in updateCounter:', counter);
@@ -159,7 +161,7 @@ export async function updateCounter(client, guild, counter) {
       return false;
     }
 
-    const count = await getCounterCount(guild, type);
+    const count = await getCounterCount(guild, type, stats);
     if (count === null) {
       logger.error('Unknown counter type:', type);
       return false;

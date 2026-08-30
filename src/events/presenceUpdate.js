@@ -3,7 +3,7 @@ import { logger } from '../utils/logger.js';
 import { getServerCounters, updateCounter } from '../services/serverstatsService.js';
 
 const onlineDebounce = new Map();
-const ONLINE_DEBOUNCE_MS = 60000;
+const ONLINE_DEBOUNCE_MS = 30000;
 
 export default {
     name: Events.PresenceUpdate,

@@ -7,7 +7,7 @@ import cron from 'node-cron';
 import config from './config/application.js';
 import { initializeDatabase } from './utils/database.js';
 import { getGuildConfig } from './services/guildConfig.js';
-import { getServerCounters, saveServerCounters, updateCounter } from './services/serverstatsService.js';
+import { getServerCounters, saveServerCounters, updateCounter, getGuildCounterStats } from './services/serverstatsService.js';
 import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
@@ -236,7 +236,7 @@ GatewayIntentBits.Guilds,
   setupCronJobs() {
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
     cron.schedule('* * * * *', () => checkGiveaways(this));
-    cron.schedule('*/15 * * * *', () => this.updateAllCounters());
+    cron.schedule('* * * * *', () => this.updateAllCounters());
   }
 
   async updateAllCounters() {
@@ -250,13 +250,14 @@ GatewayIntentBits.Guilds,
         const counters = await getServerCounters(this, guildId);
         const validCounters = [];
         const orphanedCounters = [];
+        const stats = await getGuildCounterStats(guild);
         
         for (const counter of counters) {
           if (counter && counter.type && counter.channelId && counter.enabled !== false) {
             const channel = guild.channels.cache.get(counter.channelId);
             if (channel) {
               validCounters.push(counter);
-              await updateCounter(this, guild, counter);
+              await updateCounter(this, guild, counter, stats);
             } else {
               orphanedCounters.push(counter);
               logger.info(`Removing orphaned counter ${counter.id} (type: ${counter.type}, deleted channel: ${counter.channelId}) from guild ${guildId}`);
