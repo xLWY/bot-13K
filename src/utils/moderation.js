@@ -74,11 +74,14 @@ export async function logEvent({ client, guild, guildId, event }) {
         { name: "Target", value: event.target, inline: true },
         { name: "Moderator", value: event.executor, inline: true }
       )
-      .setTimestamp()
-      .setFooter({ 
-        text: `Guild ID: ${guild.id} | Moderator ID: ${event.executor.match(/\((\d+)\)/)?.[1] || 'Unknown'}`,
+      .setTimestamp();
+
+    if (!event.hideFooter) {
+      embed.setFooter({ 
+        text: `Guild ID: ${guild.id} | Moderator ID: ${event.executor.match(/\((\d+)\)/)?.[1] || event.metadata?.moderatorId || 'Unknown'}`,
         iconURL: guild.iconURL()
       });
+    }
 
     if (event.reason) {
       embed.addFields({

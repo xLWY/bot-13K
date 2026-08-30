@@ -86,13 +86,13 @@ export default {
                 event: {
                     action: "DM Sent",
                     target: `<@${targetUser.id}>`,
-                    executor: `${interaction.user.tag} (${interaction.user.id})`,
+                    executor: `<@${interaction.user.id}>`,
                     reason: `Anonymous: ${anonymous ? 'Yes' : 'No'}`,
+                    hideFooter: true,
                     metadata: {
                         userId: targetUser.id,
                         moderatorId: interaction.user.id,
                         anonymous,
-                        messageLength: sanitized.length,
                         content: sanitized
                     }
                 }
