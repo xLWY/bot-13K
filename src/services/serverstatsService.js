@@ -4,12 +4,12 @@ import { logEvent, EVENT_TYPES } from './loggingService.js';
 export const COUNTER_TYPE_CONFIG = {
   members: {
     label: 'Members + Bots',
-    baseName: 'Members & Bots',
+    baseName: 'Membres',
     emoji: '👥'
   },
   members_only: {
     label: 'Members Only',
-    baseName: 'Members',
+    baseName: 'Humains',
     emoji: '👤'
   },
   bots: {
@@ -20,12 +20,12 @@ export const COUNTER_TYPE_CONFIG = {
   online: {
     label: 'Online Members',
     baseName: 'En ligne',
-    emoji: '🟢'
+    emoji: '🌐'
   },
   voice: {
     label: 'In Voice',
-    baseName: 'En vocal',
-    emoji: '🎙️'
+    baseName: 'Vocal',
+    emoji: '🔊'
   }
 };
 
@@ -165,12 +165,25 @@ export async function updateCounter(client, guild, counter) {
       return false;
     }
 
+    if (channel.isVoiceBased && channel.isVoiceBased()) {
+      try {
+        await channel.permissionOverwrites.edit(guild.id, {
+          ViewChannel: true,
+          Connect: false,
+          Speak: null,
+          Stream: null
+        });
+      } catch (error) {
+        logger.debug(`Failed to enforce unjoinable overrides on voice counter ${channel.id}:`, error.message);
+      }
+    }
+
     const baseName = getCounterBaseName(type);
     if (process.env.NODE_ENV !== 'production') {
       logger.debug(`Base name: "${baseName}", Current name: "${channel.name}"`);
     }
     
-    const newName = `${baseName}: ${count}`;
+    const newName = `${getCounterEmoji(type)}・${baseName} : ${count.toLocaleString('en-US')}`;
     if (process.env.NODE_ENV !== 'production') {
       logger.debug(`New name would be: "${newName}"`);
     }

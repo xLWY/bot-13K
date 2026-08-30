@@ -1,6 +1,6 @@
 import { PermissionFlagsBits, ChannelType } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
-import { getServerCounters, saveServerCounters, updateCounter, getCounterBaseName, getCounterTypeLabel } from '../../../services/serverstatsService.js';
+import { getServerCounters, saveServerCounters, updateCounter, getCounterBaseName, getCounterEmoji, getCounterTypeLabel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
 
@@ -55,11 +55,20 @@ export async function handleCreate(interaction, client) {
         }
 
         const targetChannel = await guild.channels.create({
-            name: baseChannelName,
+            name: `${getCounterEmoji(type)}・${baseChannelName}`,
             type: targetChannelType,
             parent: category.id,
             reason: `Counter channel created by ${interaction.user.tag}`
         });
+
+        if (targetChannelType === ChannelType.GuildVoice) {
+            await targetChannel.permissionOverwrites.edit(guild.id, {
+                ViewChannel: true,
+                Connect: false,
+                Speak: null,
+                Stream: null
+            });
+        }
 
         const existingCounter = counters.find(c => c.channelId === targetChannel.id);
         if (existingCounter) {

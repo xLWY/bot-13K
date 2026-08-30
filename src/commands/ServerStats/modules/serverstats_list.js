@@ -62,7 +62,7 @@ export async function handleList(interaction, client) {
 
             embed.addFields({
                 name: "🔧 **Available Counter Types**",
-                value: "👥 **Members + Bots** - Total server members\n👤 **Members Only** - Human members only\n🤖 **Bots Only** - Bot members only\n🟢 **Online Members** - Members currently online\n🎙️ **In Voice** - Members currently in a voice channel",
+                value: "👥 **Members + Bots** - Total server members\n👤 **Members Only** - Human members only\n🤖 **Bots Only** - Bot members only\n🌐 **Online Members** - Members currently online\n🔊 **In Voice** - Members currently in a voice channel",
                 inline: false
             });
 
