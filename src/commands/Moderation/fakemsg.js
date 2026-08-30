@@ -83,8 +83,19 @@ export default {
             const name = (member?.displayName || targetUser.username).substring(0, 80);
             const avatarURL = targetUser.displayAvatarURL({ extension: 'png', size: 256 });
 
+            let avatarBuffer = null;
+            try {
+                const response = await fetch(avatarURL);
+                if (response.ok) {
+                    avatarBuffer = Buffer.from(await response.arrayBuffer());
+                }
+            } catch (_) {
+                avatarBuffer = null;
+            }
+
             const webhook = await channel.createWebhook({
                 name,
+                avatar: avatarBuffer || undefined,
                 reason: `Fake message posted by ${interaction.user.tag}`
             });
 
