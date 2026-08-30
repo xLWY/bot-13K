@@ -7,7 +7,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('logs')
-        .setDescription('Définir le canal des logs du serveur ou afficher le statut actuel')
+        .setDescription('* Définir le canal des logs du serveur ou afficher le statut actuel')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addChannelOption(option =>
             option.setName('channel')

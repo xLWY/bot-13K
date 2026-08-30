@@ -9,7 +9,7 @@ const MAX_PREFIX_LENGTH = 5;
 export default {
     data: new SlashCommandBuilder()
         .setName('prefix')
-        .setDescription('Voir ou modifier le préfixe de commande de ce serveur')
+        .setDescription('* Voir ou modifier le préfixe de commande de ce serveur')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addStringOption(option =>
             option.setName('prefix')

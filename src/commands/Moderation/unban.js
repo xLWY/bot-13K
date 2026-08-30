@@ -8,7 +8,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("unban")
-        .setDescription("Débannir un utilisateur du serveur")
+        .setDescription("* Débannir un utilisateur du serveur")
         .addUserOption(option =>
             option
                 .setName("target")

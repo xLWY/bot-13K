@@ -10,7 +10,7 @@ import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('reactroles')
-        .setDescription('Gérer les panneaux de rôles par réaction')
+        .setDescription('* Gérer les panneaux de rôles par réaction')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(subcommand =>
             subcommand

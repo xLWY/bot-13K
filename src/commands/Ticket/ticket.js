@@ -17,7 +17,7 @@ import ticketConfig from './modules/ticket_dashboard.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("ticket")
-        .setDescription("Gère le système de tickets du serveur.")
+        .setDescription("* Gère le système de tickets du serveur.")
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
         .addSubcommand((subcommand) =>
             subcommand

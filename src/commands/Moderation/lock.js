@@ -9,7 +9,7 @@ export default {
     data: new SlashCommandBuilder()
     .setName("lock")
     .setDescription(
-      "Verrouille le salon actuel (empêche @everyone d'envoyer des messages).",
+      "* Verrouille le salon actuel (empêche @everyone d'envoyer des messages).",
     )
 .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
   category: "moderation",

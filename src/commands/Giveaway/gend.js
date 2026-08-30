@@ -15,7 +15,7 @@ export default {
     data: new SlashCommandBuilder()
         .setName("gend")
         .setDescription(
-            "Termine immédiatement un concours actif et tire le(s) gagnant(s).",
+            "* Termine immédiatement un concours actif et tire le(s) gagnant(s).",
         )
         .addStringOption((option) =>
             option

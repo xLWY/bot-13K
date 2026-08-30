@@ -8,7 +8,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("massban")
-        .setDescription("Bannir plusieurs utilisateurs du serveur d'un coup")
+        .setDescription("* Bannir plusieurs utilisateurs du serveur d'un coup")
         .addStringOption(option =>
             option
                 .setName("users")

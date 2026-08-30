@@ -8,7 +8,7 @@ import greetDashboard from './modules/greet_dashboard.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('greet')
-        .setDescription('Gérer les paramètres de bienvenue et d\'au revoir')
+        .setDescription('* Gérer les paramètres de bienvenue et d\'au revoir')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(subcommand =>
             subcommand

@@ -7,7 +7,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('nuke')
-        .setDescription('Supprime et recrée ce salon à l\'identique, effaçant tous les messages.')
+        .setDescription('* Supprime et recrée ce salon à l\'identique, effaçant tous les messages.')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
     category: 'moderation',
 

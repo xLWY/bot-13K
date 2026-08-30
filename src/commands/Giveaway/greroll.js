@@ -14,7 +14,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("greroll")
-        .setDescription("Relance le tirage des gagnants d'un concours terminé.")
+        .setDescription("* Relance le tirage des gagnants d'un concours terminé.")
         .addStringOption((option) =>
             option
                 .setName("messageid")

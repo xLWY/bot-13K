@@ -16,7 +16,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("gcreate")
-        .setDescription("Lancer un nouveau concours dans un salon spécifié.")
+        .setDescription("* Lancer un nouveau concours dans un salon spécifié.")
         .addStringOption((option) =>
             option
                 .setName("duration")

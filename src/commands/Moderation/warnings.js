@@ -9,7 +9,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("warnings")
-        .setDescription("Voir tous les avertissements d'un utilisateur")
+        .setDescription("* Voir tous les avertissements d'un utilisateur")
         .addUserOption((o) =>
             o
                 .setName("target")

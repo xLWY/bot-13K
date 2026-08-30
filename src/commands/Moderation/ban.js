@@ -8,7 +8,7 @@ import { handleInteractionError } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("ban")
-        .setDescription("Bannir un utilisateur du serveur")
+        .setDescription("* Bannir un utilisateur du serveur")
         .addUserOption((option) =>
             option
                 .setName("target")

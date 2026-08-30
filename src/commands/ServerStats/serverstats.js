@@ -12,7 +12,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("serverstats")
-        .setDescription("Gérer les statistiques du serveur (membres et salons)")
+        .setDescription("* Gérer les statistiques du serveur (membres et salons)")
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
         .addSubcommand(subcommand =>
             subcommand

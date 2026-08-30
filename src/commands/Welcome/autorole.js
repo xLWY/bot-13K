@@ -16,7 +16,7 @@ function createAutoroleInfoEmbed(description) {
 export default {
     data: new SlashCommandBuilder()
         .setName('autorole')
-        .setDescription('Gérer les rôles attribués automatiquement aux nouveaux membres')
+        .setDescription('* Gérer les rôles attribués automatiquement aux nouveaux membres')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(subcommand =>
             subcommand

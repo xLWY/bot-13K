@@ -18,7 +18,7 @@ import {
 export default {
     data: new SlashCommandBuilder()
         .setName("jointocreate")
-        .setDescription("Gérer le système de salons vocaux temporaires.")
+        .setDescription("* Gérer le système de salons vocaux temporaires.")
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .setDMPermission(false)
         .addSubcommand((subcommand) =>

@@ -19,7 +19,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('leveling')
-        .setDescription('Gérer le système de leveling, l\'XP, les niveaux et les notifications de montée de niveau')
+        .setDescription('* Gérer le système de leveling, l\'XP, les niveaux et les notifications de montée de niveau')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(sub =>
             sub.setName('status')

@@ -22,7 +22,7 @@ async function sendTransient(interaction, content) {
 export default {
     data: new SlashCommandBuilder()
         .setName("dm")
-        .setDescription("Envoyer un message privé à un utilisateur (réservé au staff)")
+        .setDescription("* Envoyer un message privé à un utilisateur (réservé au staff)")
         .addUserOption(option =>
             option
                 .setName("user")

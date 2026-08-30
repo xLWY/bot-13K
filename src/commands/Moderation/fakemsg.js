@@ -6,7 +6,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("fakemsg")
-        .setDescription("Publier un message dans un salon, affiché comme venant d'un autre membre")
+        .setDescription("* Publier un message dans un salon, affiché comme venant d'un autre membre")
         .addUserOption(option =>
             option
                 .setName("user")

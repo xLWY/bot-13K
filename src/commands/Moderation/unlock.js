@@ -9,7 +9,7 @@ export default {
     data: new SlashCommandBuilder()
         .setName("unlock")
         .setDescription(
-            "Déverrouille le salon actuel (permet à @everyone d'envoyer à nouveau des messages).",
+            "* Déverrouille le salon actuel (permet à @everyone d'envoyer à nouveau des messages).",
         )
 .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
     category: "moderation",

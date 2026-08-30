@@ -8,7 +8,7 @@ import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("kick")
-    .setDescription("Expulser un utilisateur du serveur")
+    .setDescription("* Expulser un utilisateur du serveur")
     .addUserOption((option) =>
       option
         .setName("target")

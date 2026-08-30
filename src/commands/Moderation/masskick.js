@@ -8,7 +8,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("masskick")
-        .setDescription("Expulser plusieurs utilisateurs du serveur d'un coup")
+        .setDescription("* Expulser plusieurs utilisateurs du serveur d'un coup")
         .addStringOption(option =>
             option
                 .setName("users")
