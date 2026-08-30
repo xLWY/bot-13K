@@ -85,14 +85,15 @@ export default {
                 guild: interaction.guild,
                 event: {
                     action: "DM Sent",
-                    target: `${targetUser.tag} (${targetUser.id})`,
+                    target: `<@${targetUser.id}>`,
                     executor: `${interaction.user.tag} (${interaction.user.id})`,
                     reason: `Anonymous: ${anonymous ? 'Yes' : 'No'}`,
                     metadata: {
                         userId: targetUser.id,
                         moderatorId: interaction.user.id,
                         anonymous,
-                        messageLength: sanitized.length
+                        messageLength: sanitized.length,
+                        content: sanitized
                     }
                 }
             });
