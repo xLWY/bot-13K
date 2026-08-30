@@ -70,16 +70,18 @@ export async function logEvent({ client, guild, guildId, event }) {
     if (event.action === 'DM Sent') {
       const dmEmbed = new EmbedBuilder()
         .setColor(event.color || style.color)
-        .setTitle(`${style.icon} ${event.action}`)
-        .setAuthor({ name: guild.name, iconURL: guild.iconURL() || undefined })
+        .setAuthor({
+          name: `${style.icon} ${event.action}`,
+          iconURL: guild.iconURL() || undefined
+        })
         .setDescription(
           String(event.content || event.metadata?.content || '*pas de contenu*').substring(0, 4096)
         )
         .addFields(
-          { name: "Target", value: event.target, inline: true },
-          { name: "Moderator", value: event.executor, inline: true }
+          { name: 'Target', value: event.target, inline: true },
+          { name: 'Moderator', value: event.executor, inline: true }
         )
-        .setFooter({ text: `<t:${Math.floor(Date.now() / 1000)}:t>` });
+        .setTimestamp();
 
       await logChannel.send({ embeds: [dmEmbed] });
       logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id}`);
