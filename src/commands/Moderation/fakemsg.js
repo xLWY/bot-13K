@@ -2,15 +2,16 @@ import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.j
 import { successEmbed, errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { renderFakeMessageImage } from '../../services/fakeMessageImage.js';
 
 export default {
     data: new SlashCommandBuilder()
         .setName("fakemsg")
-        .setDescription("Publier un message dans un salon, affiché comme venant d'un autre membre")
+        .setDescription("Générer une image imitant un message Discord (avatar, pseudo, texte)")
         .addUserOption(option =>
             option
                 .setName("user")
-                .setDescription("Le membre dont le message doit avoir l'apparence")
+                .setDescription("Le membre à imiter (photo de profil + pseudo)")
                 .setRequired(true)
         )
         .addStringOption(option =>
@@ -22,11 +23,11 @@ export default {
         .addChannelOption(option =>
             option
                 .setName("channel")
-                .setDescription("Le salon où envoyer (par défaut : le salon actuel)")
+                .setDescription("Le salon où envoyer l'image (par défaut : le salon actuel)")
                 .addChannelTypes(ChannelType.GuildText)
                 .setRequired(false)
         )
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageWebhooks)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .setDMPermission(false),
     category: "Moderation",
 
@@ -41,12 +42,12 @@ export default {
             return;
         }
 
-        if (!interaction.member.permissions.has(PermissionFlagsBits.ManageWebhooks)) {
+        if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     errorEmbed(
                         "Permission Denied",
-                        "You need the **Manage Webhooks** permission to use this command."
+                        "You need the **Manage Messages** permission to use this command."
                     ),
                 ],
             });
@@ -80,40 +81,25 @@ export default {
 
         try {
             const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
-            const name = (member?.displayName || targetUser.username).substring(0, 80);
-            const avatarURL = targetUser.displayAvatarURL({ extension: 'png', size: 256 });
+            const name = member?.displayName || targetUser.username || 'Membre';
+            const avatarUrl = targetUser.displayAvatarURL({ extension: 'png', size: 256 });
 
-            let avatarBuffer = null;
-            try {
-                const response = await fetch(avatarURL);
-                if (response.ok) {
-                    avatarBuffer = Buffer.from(await response.arrayBuffer());
-                }
-            } catch (_) {
-                avatarBuffer = null;
-            }
-
-            const webhook = await channel.createWebhook({
+            const image = await renderFakeMessageImage({
                 name,
-                avatar: avatarBuffer || undefined,
-                reason: `Fake message posted by ${interaction.user.tag}`
+                avatarUrl,
+                message,
+                timestamp: new Date()
             });
 
-            try {
-                await webhook.send({
-                    content: message,
-                    username: name,
-                    avatarURL
-                });
-            } finally {
-                await webhook.delete('Fake message sent').catch(() => {});
-            }
+            await channel.send({
+                files: [{ attachment: image, name: 'fakemsg.png' }]
+            });
 
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
-                        `Message publié dans ${channel} avec l'apparence de **${name}**.`,
-                        "✅ Fake message envoyé"
+                        `Image générée et envoyée dans ${channel}.`,
+                        "✅ Image falsifiée"
                     ),
                 ]
             });
@@ -123,7 +109,7 @@ export default {
                 embeds: [
                     errorEmbed(
                         "System Error",
-                        "Failed to post the fake message. Check the bot's Manage Webhooks permission in that channel."
+                        "Failed to generate the fake message image."
                     ),
                 ],
             });
