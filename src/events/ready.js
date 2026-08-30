@@ -16,6 +16,17 @@ export default {
       startupLog(`Serving ${client.guilds.cache.size} guild(s)`);
       startupLog(`Loaded ${client.commands.size} commands`);
 
+      for (const [, guild] of client.guilds.cache) {
+        const presenceCount = guild.presences.cache.size;
+        if (presenceCount === 0) {
+          logger.warn(
+            `[Presence diagnostic] Guild "${guild.name}" has an EMPTY presence cache ` +
+            `(${guild.memberCount} members) — the GuildPresences intent is likely disabled, ` +
+            `or the bot was not restarted after enabling it. Online counters will be frozen/stale.`
+          );
+        }
+      }
+
       seedActiveVoiceSessions(client);
 
       if (typeof client.updateAllCounters === 'function') {
