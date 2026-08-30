@@ -65,9 +65,21 @@ export async function getGuildCounterStats(guild) {
   const botCount = memberCollection.filter((member) => member.user.bot).size;
   const totalCount = typeof guild.memberCount === 'number' ? guild.memberCount : memberCollection.size;
   const humanCount = Math.max(totalCount - botCount, 0);
-  const onlineCount = memberCollection.filter((member) =>
+
+  const memberBasedOnline = memberCollection.filter((member) =>
     !member.user.bot && ['online', 'idle', 'dnd'].includes(member.presence?.status)
   ).size;
+
+  const presenceBasedOnline = guild.presences.cache.filter((presence) => {
+    if (!['online', 'idle', 'dnd'].includes(presence.status)) return false;
+    const isBot = presence.user?.bot ?? guild.client.users.cache.get(presence.userId)?.bot ?? false;
+    return !isBot;
+  }).size;
+
+  const onlineCount = presenceBasedOnline > 0
+    ? presenceBasedOnline
+    : memberBasedOnline;
+
   const voiceCount = guild.channels.cache
     .filter((channel) => channel.isVoiceBased && channel.isVoiceBased())
     .reduce((total, channel) => total + (channel.members?.size || 0), 0);
@@ -77,7 +89,8 @@ export async function getGuildCounterStats(guild) {
     botCount,
     humanCount,
     onlineCount,
-    voiceCount
+    voiceCount,
+    presenceCacheSize: guild.presences.cache.size
   };
 }
 

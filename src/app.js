@@ -13,6 +13,9 @@ import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
 
+const presenceDiagWarned = new Map();
+const PRESENCE_DIAG_INTERVAL_MS = 30 * 60 * 1000;
+
 class TitanBot extends Client {
   constructor() {
     super({
@@ -237,7 +240,36 @@ GatewayIntentBits.Guilds,
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
     cron.schedule('* * * * *', () => checkGiveaways(this));
     cron.schedule('* * * * *', () => this.updateAllCounters());
+    cron.schedule('*/5 * * * *', () => this.refreshOnlineCounterData());
     cron.schedule('*/5 * * * *', () => this.cleanupTemporaryChannels());
+  }
+
+  async refreshOnlineCounterData() {
+    for (const [, guild] of this.guilds.cache) {
+      try {
+        const counters = await getServerCounters(this, guild.id);
+        const hasOnlineCounter = counters.some((c) => c.type === 'online' && c.enabled !== false);
+        if (!hasOnlineCounter) continue;
+
+        if (guild.presences.cache.size === 0) {
+          const now = Date.now();
+          if ((presenceDiagWarned.get(guild.id) || 0) < now - PRESENCE_DIAG_INTERVAL_MS) {
+            presenceDiagWarned.set(guild.id, now);
+            logger.warn(
+              `[Presence diagnostic] Guild "${guild.name}" has an EMPTY presence cache ` +
+              `(${guild.memberCount} members) with an online counter configured. ` +
+              'Enable the PRESENCE intent (Discord Developer Portal → Bot → Privileged Gateway Intents) ' +
+              'and restart the bot, otherwise the "En ligne" counter stays stuck at 0/stale.'
+            );
+          }
+        } else {
+          presenceDiagWarned.delete(guild.id);
+          await guild.members.fetch();
+        }
+      } catch (error) {
+        logger.debug(`Presence refresh failed for guild ${guild.id}:`, error.message);
+      }
+    }
   }
 
   async cleanupTemporaryChannels() {

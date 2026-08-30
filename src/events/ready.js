@@ -22,7 +22,8 @@ export default {
           logger.warn(
             `[Presence diagnostic] Guild "${guild.name}" has an EMPTY presence cache ` +
             `(${guild.memberCount} members) — the GuildPresences intent is likely disabled, ` +
-            `or the bot was not restarted after enabling it. Online counters will be frozen/stale.`
+            `or the bot was not restarted after enabling it. Online counters will be frozen/stale. ` +
+            `Check: Discord Developer Portal → Bot → Privileged Gateway Intents → PRESENCE INTENT.`
           );
         }
       }
