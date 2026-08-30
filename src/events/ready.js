@@ -22,6 +22,10 @@ export default {
         client.updateAllCounters().catch((error) => logger.warn('Initial counter sync failed:', error));
       }
 
+      if (typeof client.cleanupTemporaryChannels === 'function') {
+        client.cleanupTemporaryChannels().catch((error) => logger.warn('Initial temp channel cleanup failed:', error));
+      }
+
       const reconciliationSummary = await reconcileReactionRoleMessages(client);
       startupLog(
         `Reaction role reconciliation: scanned ${reconciliationSummary.scannedMessages}, removed ${reconciliationSummary.removedMessages}, errors ${reconciliationSummary.errors}`

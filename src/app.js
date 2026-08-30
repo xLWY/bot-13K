@@ -1,11 +1,11 @@
 ﻿import 'dotenv/config';
-import { Client, Collection, GatewayIntentBits } from 'discord.js';
+import { Client, Collection, GatewayIntentBits, ChannelType } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
 
 import config from './config/application.js';
-import { initializeDatabase } from './utils/database.js';
+import { initializeDatabase, getJoinToCreateConfig, unregisterTemporaryChannel } from './utils/database.js';
 import { getGuildConfig } from './services/guildConfig.js';
 import { getServerCounters, saveServerCounters, updateCounter, getGuildCounterStats } from './services/serverstatsService.js';
 import { logger, startupLog, shutdownLog } from './utils/logger.js';
@@ -237,6 +237,37 @@ GatewayIntentBits.Guilds,
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
     cron.schedule('* * * * *', () => checkGiveaways(this));
     cron.schedule('* * * * *', () => this.updateAllCounters());
+    cron.schedule('*/5 * * * *', () => this.cleanupTemporaryChannels());
+  }
+
+  async cleanupTemporaryChannels() {
+    for (const [guildId, guild] of this.guilds.cache) {
+      try {
+        const config = await getJoinToCreateConfig(this, guildId);
+        const tempChannelIds = Object.keys(config.temporaryChannels || {});
+        if (tempChannelIds.length === 0) continue;
+
+        for (const channelId of tempChannelIds) {
+          const channel = guild.channels.cache.get(channelId);
+
+          if (!channel) {
+            await unregisterTemporaryChannel(this, guildId, channelId);
+            logger.info(`Cleaned up stale temporary channel registration ${channelId} in guild ${guildId}`);
+            continue;
+          }
+
+          if (channel.type === ChannelType.GuildVoice && channel.members.size === 0) {
+            await channel.delete('Temporary voice channel empty (auto cleanup)').catch((error) => {
+              logger.warn(`Failed to delete empty temporary channel ${channelId}:`, error.message);
+            });
+            await unregisterTemporaryChannel(this, guildId, channelId);
+            logger.info(`Deleted empty temporary voice channel ${channel.name} (${channelId}) in guild ${guildId}`);
+          }
+        }
+      } catch (error) {
+        logger.error(`Error cleaning up temporary channels for guild ${guildId}:`, error);
+      }
+    }
   }
 
   async updateAllCounters() {
