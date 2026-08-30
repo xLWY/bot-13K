@@ -68,23 +68,24 @@ export async function logEvent({ client, guild, guildId, event }) {
     const style = actionStyles[event.action] || { color: getColor('primary'), icon: '🔨' };
 
     if (event.action === 'DM Sent') {
-      try {
-        const { renderDmLogImage } = await import('../services/dmLogImage.js');
-        const guildIconUrl = guild.iconURL({ extension: 'png', size: 128 }) || undefined;
-        const buffer = await renderDmLogImage({
-          guildName: guild.name,
-          guildIconUrl,
-          targetName: event.targetName || event.target,
-          moderatorName: event.moderatorName || event.executor,
-          content: String(event.content || event.metadata?.content || '*pas de contenu*'),
-          timestamp: new Date()
-        });
-        await logChannel.send({ files: [{ attachment: buffer, name: 'dm-log.png' }] });
-        logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id}`);
-        return;
-      } catch (error) {
-        logger.warn(`DM log image rendering failed, falling back to embed:`, error.message);
-      }
+      const contentText = String(event.content || event.metadata?.content || '*pas de contenu*');
+      const dmEmbed = new EmbedBuilder()
+        .setColor(event.color || style.color)
+        .setAuthor({
+          name: `${style.icon} ${event.action}`,
+          iconURL: guild.iconURL() || undefined
+        })
+        .setThumbnail(guild.iconURL() || undefined)
+        .addFields(
+          { name: '🎯 Target', value: event.target, inline: true },
+          { name: '🛡️ Moderator', value: event.executor, inline: true },
+          { name: '💬 Message', value: contentText.length > 1024 ? `${contentText.substring(0, 1021)}...` : contentText }
+        )
+        .setTimestamp();
+
+      await logChannel.send({ embeds: [dmEmbed] });
+      logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id}`);
+      return;
     }
 
     const embed = new EmbedBuilder()
