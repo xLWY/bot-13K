@@ -80,17 +80,31 @@ function wrapText(ctx, text, maxWidth) {
     return lines.length ? lines : [''];
 }
 
-function timeLabel(timestamp) {
-    const d = new Date(timestamp);
-    const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    return `Aujourd'hui à ${hm}`;
+function timeLabel(timestamp, timeZone) {
+    let parts;
+    try {
+        parts = new Intl.DateTimeFormat('fr-FR', {
+            timeZone: timeZone || 'UTC',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(new Date(timestamp));
+    } catch (_) {
+        parts = new Intl.DateTimeFormat('fr-FR', {
+            timeZone: 'UTC',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(new Date(timestamp));
+    }
+    return `Aujourd'hui à ${parts}`;
 }
 
 /**
  * Renders a Discord-chat style mockup: dark channel background, rounded
  * avatar, bold username + timestamp row, message text wrapped below.
  */
-export async function renderFakeMessageImage({ name, avatarUrl, message, timestamp = new Date() }) {
+export async function renderFakeMessageImage({ name, avatarUrl, message, timestamp = new Date(), timeZone = 'Europe/Paris' }) {
     const W = 720;
     const pad = 16;
     const avatarSize = 40;
@@ -143,7 +157,7 @@ export async function renderFakeMessageImage({ name, avatarUrl, message, timesta
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
 
-    const timeText = timeLabel(timestamp);
+    const timeText = timeLabel(timestamp, timeZone);
     const nameMax = bodyW - measure.measureText(timeText).width - 14;
     let nameText = cleanName;
     while (nameText.length > 1 && ctx.measureText(`${nameText}…`).width > nameMax) {

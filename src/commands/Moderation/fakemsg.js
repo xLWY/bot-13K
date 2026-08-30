@@ -20,6 +20,12 @@ export default {
                 .setDescription("Le contenu du message (2000 caractères max)")
                 .setRequired(true)
         )
+        .addStringOption(option =>
+            option
+                .setName("timezone")
+                .setDescription("Fuseau horaire pour l'heure affichée (défaut: Europe/Paris)")
+                .setRequired(false)
+        )
         .addChannelOption(option =>
             option
                 .setName("channel")
@@ -88,7 +94,8 @@ export default {
                 name,
                 avatarUrl,
                 message,
-                timestamp: new Date()
+                timestamp: new Date(),
+                timeZone: interaction.options.getString("timezone") || 'Europe/Paris'
             });
 
             await channel.send({
