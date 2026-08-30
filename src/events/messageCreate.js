@@ -10,6 +10,7 @@ import { addXp } from '../services/xpSystem.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { handlePrefixCommand } from '../utils/prefixCommands.js';
 import { recordMessage } from '../services/statsService.js';
+import { forwardIncomingDm } from '../services/dmForwardService.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -25,7 +26,13 @@ export default {
   async execute(message, client) {
     try {
       
-      if (message.author.bot || !message.guild) return;
+      if (message.author.bot) return;
+
+      if (!message.guild) {
+        logger.info(`[DM] From ${message.author.tag} (${message.author.id}): ${message.content || '[no text]'}`);
+        await forwardIncomingDm(client, message);
+        return;
+      }
 
       await recordMessageStat(message, client);
 
