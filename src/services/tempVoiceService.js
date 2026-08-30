@@ -129,7 +129,18 @@ export async function buildControlPanel(client, voiceChannel, tempInfo) {
             .setStyle(ButtonStyle.Secondary)
     );
 
-    return { embeds: [embed], components: [row] };
+    const blacklistRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`tv_blacklist:${voiceChannel.id}`)
+            .setLabel('🚫 Bannir')
+            .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+            .setCustomId(`tv_unblacklist:${voiceChannel.id}`)
+            .setLabel('✅ Débannir')
+            .setStyle(ButtonStyle.Secondary)
+    );
+
+    return { embeds: [embed], components: [row, blacklistRow] };
 }
 
 export async function createControlPanel(client, guild, voiceChannel) {

@@ -4,6 +4,9 @@ import {
     ButtonStyle,
     MessageFlags,
     ModalBuilder,
+    OverwriteType,
+    PermissionFlagsBits,
+    StringSelectMenuBuilder,
     TextInputBuilder,
     TextInputStyle
 } from 'discord.js';
@@ -282,10 +285,92 @@ const transferHandler = {
     }
 };
 
+const blacklistHandler = {
+    name: 'tv_blacklist',
+    async execute(interaction, client, args) {
+        const resolved = await resolveTarget(interaction, client, args);
+        if (resolved.error) {
+            return replyError(interaction, resolved.error);
+        }
+
+        const { voiceChannel, tempInfo } = resolved;
+
+        const candidates = [...voiceChannel.members.values()]
+            .filter((member) => !member.user.bot && member.id !== tempInfo.ownerId && member.id !== client.user.id);
+
+        if (candidates.length === 0) {
+            return replyError(interaction, "Personne d'autre dans le salon à bannir.");
+        }
+
+        const options = candidates.slice(0, 25).map((member) => ({
+            label: member.displayName.substring(0, 100),
+            value: member.id,
+            description: member.user.username.substring(0, 100)
+        }));
+
+        const select = new StringSelectMenuBuilder()
+            .setCustomId(`tv_blacklist_select:${voiceChannel.id}`)
+            .setPlaceholder('Choisis un membre à bannir du salon')
+            .addOptions(options);
+
+        await interaction.reply({
+            content: '🚫 Sélectionne le membre à **bannir** de ce salon :',
+            components: [new ActionRowBuilder().addComponents(select)],
+            flags: MessageFlags.Ephemeral
+        }).catch(() => {});
+    }
+};
+
+const unblacklistHandler = {
+    name: 'tv_unblacklist',
+    async execute(interaction, client, args) {
+        const resolved = await resolveTarget(interaction, client, args);
+        if (resolved.error) {
+            return replyError(interaction, resolved.error);
+        }
+
+        const { voiceChannel } = resolved;
+
+        const deniedUsers = [];
+        for (const overwrite of voiceChannel.permissionOverwrites.cache.values()) {
+            if (overwrite.type === OverwriteType.Member && overwrite.deny?.has(PermissionFlagsBits.Connect)) {
+                deniedUsers.push(overwrite.id);
+            }
+        }
+
+        if (deniedUsers.length === 0) {
+            return replyError(interaction, "Aucun membre n'est banni de ce salon.");
+        }
+
+        const options = [];
+        for (const userId of deniedUsers.slice(0, 25)) {
+            const member = await interaction.guild.members.fetch(userId).catch(() => null);
+            options.push({
+                label: (member?.displayName || userId).substring(0, 100),
+                value: userId,
+                description: member ? member.user.username.substring(0, 100) : 'Membre indisponible'
+            });
+        }
+
+        const select = new StringSelectMenuBuilder()
+            .setCustomId(`tv_unblacklist_select:${voiceChannel.id}`)
+            .setPlaceholder('Choisis un membre à retirer de la liste noire')
+            .addOptions(options);
+
+        await interaction.reply({
+            content: '✅ Sélectionne le membre à **débannir** du salon :',
+            components: [new ActionRowBuilder().addComponents(select)],
+            flags: MessageFlags.Ephemeral
+        }).catch(() => {});
+    }
+};
+
 export default [
     lockHandler,
     privateHandler,
     renameHandler,
     limitHandler,
-    transferHandler
+    transferHandler,
+    blacklistHandler,
+    unblacklistHandler
 ];
