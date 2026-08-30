@@ -130,6 +130,17 @@ function dateLabel(timestamp) {
     });
 }
 
+/**
+ * Prefers the cleaned display name; if it is fully unusable, falls back to the
+ * (usually plainer) global username before settling on a generic label.
+ */
+function displayNameFor(entry) {
+    const cleaned = sanitizeDisplayName(entry.name);
+    if (cleaned !== 'Membre') return cleaned;
+    const fallback = sanitizeDisplayName(entry.username);
+    return fallback !== 'Membre' ? fallback : 'Membre';
+}
+
 function hexToRgba(hex, alpha) {
     const n = parseInt(hex.slice(1), 16);
     const r = (n >> 16) & 0xff;
@@ -293,7 +304,7 @@ export async function renderTopImage({
         const avatarX = pad + rankSize + 14;
         const avatarSize = 26;
         drawAvatar(ctx, avatars.get(entry.avatarUrl) || null, avatarX, rowCenter - avatarSize / 2, avatarSize, {
-            fallbackText: sanitizeDisplayName(entry.name).charAt(0).toUpperCase(),
+            fallbackText: displayNameFor(entry).charAt(0).toUpperCase(),
             hue: i * 47 + 190
         });
 
@@ -302,7 +313,7 @@ export async function renderTopImage({
         ctx.fillStyle = COLORS.body;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(fitText(ctx, sanitizeDisplayName(entry.name), 170), nameX, rowCenter - 1);
+        ctx.fillText(fitText(ctx, displayNameFor(entry), 170), nameX, rowCenter - 1);
 
         const trackY = rowCenter - barTrackH / 2;
         rounded(ctx, barTrackX, trackY, barTrackW, barTrackH, barTrackH / 2);
@@ -363,7 +374,7 @@ export async function renderTopImage({
         const avatarX = pad + rankSize + 12;
         const avatarSize = 24;
         drawAvatar(ctx, avatars.get(entry.avatarUrl) || null, avatarX, rowCenter - avatarSize / 2, avatarSize, {
-            fallbackText: sanitizeDisplayName(entry.name).charAt(0).toUpperCase(),
+            fallbackText: displayNameFor(entry).charAt(0).toUpperCase(),
             hue: i * 47 + 190
         });
 
@@ -372,7 +383,7 @@ export async function renderTopImage({
         ctx.fillStyle = COLORS.body;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(fitText(ctx, sanitizeDisplayName(entry.name), 420), nameX, rowCenter);
+        ctx.fillText(fitText(ctx, displayNameFor(entry), 420), nameX, rowCenter);
 
         ctx.font = `600 16px ${FONT.semibold}`;
         ctx.fillStyle = leader ? COLORS.text : COLORS.muted;

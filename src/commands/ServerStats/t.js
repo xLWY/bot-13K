@@ -31,6 +31,7 @@ async function resolveMembers(guild, userIds) {
         if (member) {
             members.set(userId, {
                 name: member.displayName || member.user.username,
+                username: member.user.username,
                 avatarUrl: member.user.displayAvatarURL({ extension: 'png', size: 128 })
             });
         }
@@ -89,11 +90,13 @@ export default {
 
         const messageEntries = byMessages.map((u) => ({
             name: members.get(u.userId)?.name || 'Membre',
+            username: members.get(u.userId)?.username || null,
             avatarUrl: members.get(u.userId)?.avatarUrl || null,
             value: u.messages
         }));
         const voiceEntries = byVoice.map((u) => ({
             name: members.get(u.userId)?.name || 'Membre',
+            username: members.get(u.userId)?.username || null,
             avatarUrl: members.get(u.userId)?.avatarUrl || null,
             value: u.voiceSeconds
         }));
