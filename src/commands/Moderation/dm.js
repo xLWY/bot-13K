@@ -15,7 +15,7 @@ async function sendTransient(interaction, content) {
             } catch (_) {
                 // already deleted
             }
-        }, 3000).unref?.();
+        }, 5000).unref?.();
     }
 }
 
