@@ -1,3 +1,4 @@
+import { PermissionFlagsBits } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 
@@ -168,15 +169,23 @@ export async function updateCounter(client, guild, counter, stats) {
     }
 
     if (channel.isVoiceBased && channel.isVoiceBased()) {
-      try {
-        await channel.permissionOverwrites.edit(guild.id, {
-          ViewChannel: true,
-          Connect: false,
-          Speak: null,
-          Stream: null
-        });
-      } catch (error) {
-        logger.debug(`Failed to enforce unjoinable overrides on voice counter ${channel.id}:`, error.message);
+      const currentOverwrite = channel.permissionOverwrites.cache.get(guild.id);
+      const alreadyUnjoinable = Boolean(
+        currentOverwrite &&
+        currentOverwrite.allow.has(PermissionFlagsBits.ViewChannel) &&
+        currentOverwrite.deny.has(PermissionFlagsBits.Connect)
+      );
+      if (!alreadyUnjoinable) {
+        try {
+          await channel.permissionOverwrites.edit(guild.id, {
+            ViewChannel: true,
+            Connect: false,
+            Speak: null,
+            Stream: null
+          });
+        } catch (error) {
+          logger.debug(`Failed to enforce unjoinable overrides on voice counter ${channel.id}:`, error.message);
+        }
       }
     }
 
