@@ -87,6 +87,7 @@ export default {
                     action: "DM Sent",
                     target: `<@${targetUser.id}>`,
                     executor: `<@${interaction.user.id}>`,
+                    content: sanitized,
                     hideFooter: true,
                     metadata: {
                         content: sanitized

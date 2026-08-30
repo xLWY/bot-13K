@@ -67,6 +67,25 @@ export async function logEvent({ client, guild, guildId, event }) {
 
     const style = actionStyles[event.action] || { color: getColor('primary'), icon: '🔨' };
 
+    if (event.action === 'DM Sent') {
+      const dmEmbed = new EmbedBuilder()
+        .setColor(event.color || style.color)
+        .setTitle(`${style.icon} ${event.action}`)
+        .setAuthor({ name: guild.name, iconURL: guild.iconURL() || undefined })
+        .setDescription(
+          String(event.content || event.metadata?.content || '*pas de contenu*').substring(0, 4096)
+        )
+        .addFields(
+          { name: "Target", value: event.target, inline: true },
+          { name: "Moderator", value: event.executor, inline: true }
+        )
+        .setFooter({ text: `<t:${Math.floor(Date.now() / 1000)}:t>` });
+
+      await logChannel.send({ embeds: [dmEmbed] });
+      logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id}`);
+      return;
+    }
+
     const embed = new EmbedBuilder()
       .setColor(event.color || style.color)
       .setTitle(`${style.icon} ${event.action}`)
