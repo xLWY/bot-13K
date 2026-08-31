@@ -10,6 +10,7 @@ import { getConfiguration as getJtcConfig } from '../../services/joinToCreateSer
 import { getAllReactionRoleMessages } from '../../services/reactionRoleService.js';
 import greetDashboard from '../Welcome/modules/greet_dashboard.js';
 import ticketDashboard from '../Ticket/modules/ticket_dashboard.js';
+import levelingDashboard from './modules/leveling_dashboard.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -96,6 +97,11 @@ export default {
                     .setLabel('Tickets')
                     .setEmoji('🎫')
                     .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('panel_leveling')
+                    .setLabel('Leveling / XP')
+                    .setEmoji('📈')
+                    .setStyle(ButtonStyle.Primary),
             );
 
             await InteractionHelper.safeEditReply(interaction, {
@@ -108,7 +114,7 @@ export default {
                 componentType: ComponentType.Button,
                 filter: i =>
                     i.user.id === interaction.user.id &&
-                    ['panel_welcome', 'panel_ticket'].includes(i.customId),
+                    ['panel_welcome', 'panel_ticket', 'panel_leveling'].includes(i.customId),
                 time: 600_000,
             });
 
@@ -119,6 +125,8 @@ export default {
                             return await greetDashboard.execute(btnInteraction, {}, client);
                         case 'panel_ticket':
                             return await ticketDashboard.execute(btnInteraction, guildConfig, client);
+                        case 'panel_leveling':
+                            return await levelingDashboard.execute(btnInteraction, guildConfig, client);
                     }
                 } catch (error) {
                     logger.debug(`Panel module open failed (${btnInteraction.customId}):`, error.message);
