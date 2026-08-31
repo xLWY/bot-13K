@@ -24,7 +24,7 @@ import {
     deleteGiveaway,
     isGiveawayEnded,
     createGiveawayEmbed,
-    createGiveawayButtons,
+    giveawayButtons,
 } from '../../../utils/giveaways.js';
 import {
     parseDuration,
@@ -281,7 +281,7 @@ async function openCreateModal(selectInteraction, rootInteraction, client, guild
 
         const message = await guildChannel(client, guildId, channelId).send({
             embeds: [createGiveawayEmbed(initialData, 'active')],
-            components: [createGiveawayButtons(false)],
+            components: [giveawayButtons(false)],
         });
 
         initialData.messageId = message.id;
@@ -368,7 +368,7 @@ async function handleEnd(btnInteraction, rootInteraction, client, guildId) {
                 if (msg) {
                     await msg.edit({
                         embeds: [createGiveawayEmbed(giveaway, 'ended', result.winners)],
-                        components: [createGiveawayButtons(true)],
+                        components: [giveawayButtons(true)],
                     });
                 }
                 if (result.winners.length > 0) {
