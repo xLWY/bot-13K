@@ -149,6 +149,17 @@ function buildButtonRow(guildConfig, guildId, disabled = false) {
     );
 }
 
+function buildBackRow(disabled = false) {
+    return new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('ticket_cfg_back')
+            .setLabel('Retour au panel')
+            .setEmoji('⬅️')
+            .setStyle(ButtonStyle.Danger)
+            .setDisabled(disabled),
+    );
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function refreshDashboard(rootInteraction, guildConfig, guildId) {
@@ -156,7 +167,7 @@ async function refreshDashboard(rootInteraction, guildConfig, guildId) {
     const selectRow = new ActionRowBuilder().addComponents(buildSelectMenu(guildId));
     await InteractionHelper.safeEditReply(rootInteraction, {
         embeds: [buildDashboardEmbed(guildConfig, rootInteraction.guild)],
-        components: [buttonRow, selectRow],
+        components: [buttonRow, selectRow, buildBackRow()],
     }).catch(() => {});
 }
 
@@ -200,7 +211,7 @@ async function updateLivePanel(client, guild, config) {
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
 export default {
-    async execute(interaction, config, client) {
+    async execute(interaction, config, client, onBack) {
         try {
             const guildId = interaction.guild.id;
             const guildConfig = await getGuildConfig(client, guildId);
@@ -219,7 +230,7 @@ export default {
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [buildDashboardEmbed(guildConfig, interaction.guild)],
-                components: [buttonRow, selectRow],
+                components: [buttonRow, selectRow, buildBackRow()],
             });
 
             const replyMessage = await interaction.fetchReply().catch(() => null);
@@ -241,7 +252,8 @@ export default {
                     (!replyMessageId || i.message.id === replyMessageId) &&
                     (i.customId === `ticket_cfg_dm_toggle_${guildId}` ||
                         i.customId === `ticket_cfg_staff_role_btn_${guildId}` ||
-                        i.customId === `ticket_cfg_delete_${guildId}`),
+                        i.customId === `ticket_cfg_delete_${guildId}` ||
+                        i.customId === `ticket_cfg_back`),
 
                 time: 600_000,
             });
@@ -306,6 +318,11 @@ export default {
                         await handleStaffRole(btnInteraction, interaction, guildConfig, guildId, client);
                     } else if (btnInteraction.customId === `ticket_cfg_delete_${guildId}`) {
                         await handleDeleteSystem(btnInteraction, interaction, guildConfig, guildId, client);
+                    } else if (btnInteraction.customId === 'ticket_cfg_back') {
+                        await btnInteraction.deferUpdate().catch(() => {});
+                        if (typeof onBack === 'function') {
+                            await onBack(btnInteraction);
+                        }
                     }
                 } catch (error) {
                     if (error.code === 40060) return;

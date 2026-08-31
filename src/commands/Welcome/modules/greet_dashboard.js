@@ -140,6 +140,14 @@ function buildButtonRow(cfg, guildId, disabled = false) {
                 .setEmoji('🔔')
                 .setDisabled(disabled),
         ),
+        new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`greet_cfg_back`)
+                .setLabel('Retour au panel')
+                .setEmoji('⬅️')
+                .setStyle(ButtonStyle.Danger)
+                .setDisabled(disabled),
+        ),
     ];
 }
 
@@ -164,7 +172,7 @@ async function refreshDashboard(rootInteraction, cfg, guildId) {
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
 export default {
-    async execute(interaction, config, client) {
+    async execute(interaction, config, client, onBack) {
         try {
             const guildId = interaction.guild.id;
             const cfg = await getWelcomeConfig(client, guildId);
@@ -252,7 +260,8 @@ export default {
                     (i.customId === `greet_cfg_toggle_welcome_${guildId}` ||
                         i.customId === `greet_cfg_toggle_goodbye_${guildId}` ||
                         i.customId === `greet_cfg_ping_welcome_${guildId}` ||
-                        i.customId === `greet_cfg_ping_goodbye_${guildId}`),
+                        i.customId === `greet_cfg_ping_goodbye_${guildId}` ||
+                        i.customId === `greet_cfg_back`),
                 time: 600_000,
             });
 
@@ -313,6 +322,11 @@ export default {
                         ],
                         flags: MessageFlags.Ephemeral,
                     });
+                } else if (customId === `greet_cfg_back`) {
+                    if (typeof onBack === 'function') {
+                        await onBack(btnInteraction);
+                    }
+                    return;
                 }
 
                 await refreshDashboard(interaction, cfg, guildId);
