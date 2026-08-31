@@ -1,6 +1,6 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } from 'discord.js';
-import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
+import { getWelcomeConfig, updateWelcomeConfig, removeWelcomeConfig } from '../../utils/database.js';
 import { formatWelcomeMessage } from '../../utils/welcome.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -30,7 +30,16 @@ export default {
                 .addBooleanOption(option =>
                     option.setName('ping')
                         .setDescription('Si l\'utilisateur doit être mentionné dans le message de bienvenue')
-                        .setRequired(false))),
+                        .setRequired(false))
+                .addChannelOption(option =>
+                    option.setName('pingchannel')
+                        .setDescription('Salon où le membre est pingé à son arrivée (le ping se supprime tout seul)')
+                        .addChannelTypes(ChannelType.GuildText)
+                        .setRequired(false)))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('remove')
+                .setDescription('Supprimer le système de bienvenue (rôles auto et au revoir conservés)')),
 
     async execute(interaction) {
         try {
@@ -61,11 +70,12 @@ export default {
             const message = options.getString('message');
             const image = options.getString('image');
             const ping = options.getBoolean('ping') ?? false;
+            const pingChannel = options.getChannel('pingchannel');
 
             const existingConfig = await getWelcomeConfig(client, guild.id);
             if (existingConfig?.channelId) {
                 logger.info(`[Welcome] Setup blocked because config already exists in channel ${existingConfig.channelId} for guild ${guild.id}`);
-                return await InteractionHelper.sendErrorNotice(interaction, `La bienvenue est déjà configurée pour <#${existingConfig.channelId}>. Utilise **/welcome config** pour personnaliser le canal, le message, le ping ou l\'image.`);
+                return await InteractionHelper.sendErrorNotice(interaction, `La bienvenue est déjà configurée pour <#${existingConfig.channelId}>. Utilise **/welcome remove** puis **/welcome setup** pour la reconfigurer.`);
             }
             
             if (!message || message.trim().length === 0) {
@@ -89,7 +99,8 @@ export default {
                     channelId: channel.id,
                     welcomeMessage: message,
                     welcomeImage: image || undefined,
-                    welcomePing: ping
+                    welcomePing: ping,
+                    pingChannelId: pingChannel?.id || null
                 });
 
                 logger.info(`[Welcome] Setup configured by ${interaction.user.tag} for guild ${guild.name} (${guild.id})`);
@@ -106,9 +117,10 @@ export default {
                     .addFields(
                         { name: 'Aperçu du message', value: previewMessage },
                         { name: 'Mentionner l\'utilisateur', value: ping ? '✅ Oui' : '❌ Non' },
+                        { name: 'Salon de ping auto-supprimé', value: pingChannel ? `${pingChannel} (le ping disparaît tout seul)` : '❌ Non configuré' },
                         { name: 'Statut', value: '✅ Activé' }
                     )
-                    .setFooter({ text: 'Astuce : utilise /welcome config pour personnaliser les paramètres de bienvenue' });
+                    .setFooter({ text: 'Astuce : utilise /welcome remove pour supprimer le système de bienvenue' });
 
                 if (image) {
                     embed.setImage(image);
@@ -118,6 +130,26 @@ export default {
             } catch (error) {
                 logger.error(`[Welcome] Failed to setup welcome system for guild ${guild.id}:`, error);
                 return await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la configuration du système de bienvenue. Veuillez réessayer.');
+            }
+        } else if (subcommand === 'remove') {
+            const existingConfig = await getWelcomeConfig(client, guild.id);
+            if (!existingConfig?.channelId && !existingConfig?.pingChannelId) {
+                return await InteractionHelper.sendErrorNotice(interaction, 'Aucun système de bienvenue ne semble configuré pour ce serveur.');
+            }
+
+            try {
+                await removeWelcomeConfig(client, guild.id);
+                logger.info(`[Welcome] Removed by ${interaction.user.tag} for guild ${guild.name} (${guild.id})`);
+
+                await InteractionHelper.safeEditReply(interaction, {
+                    embeds: [new EmbedBuilder()
+                        .setColor(getColor('success'))
+                        .setTitle('🗑️ Système de bienvenue supprimé')
+                        .setDescription('Les messages de bienvenue sont désactivés. Les rôles auto (`/autorole`) et les au revoir (`/goodbye`) sont conservés.')]
+                });
+            } catch (error) {
+                logger.error(`[Welcome] Failed to remove welcome system for guild ${guild.id}:`, error);
+                return await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la suppression du système de bienvenue. Veuillez réessayer.');
             }
         }
     },

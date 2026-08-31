@@ -8,6 +8,8 @@ import { getServerCounters, updateCounter } from '../services/serverstatsService
 import { setBirthday as dbSetBirthday } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 
+const WELCOME_PING_DELETE_MS = 3000;
+
 export default {
   name: Events.GuildMemberAdd,
   once: false,
@@ -76,6 +78,26 @@ export default {
                         content: messageContent,
                         embeds: [embed] 
                     });
+                }
+            }
+        }
+        
+        if (welcomeConfig?.enabled && welcomeConfig.pingChannelId) {
+            const pingChannel = guild.channels.cache.get(welcomeConfig.pingChannelId);
+            if (pingChannel?.isTextBased?.()) {
+                const pingMe = guild.members.me;
+                const pingPerms = pingMe ? pingChannel.permissionsFor(pingMe) : null;
+                if (pingPerms?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
+                    try {
+                        const pingMessage = await pingChannel.send(user.toString());
+                        setTimeout(async () => {
+                            try { await pingMessage.delete(); } catch (_) {
+                                // already deleted
+                            }
+                        }, WELCOME_PING_DELETE_MS).unref?.();
+                    } catch (error) {
+                        logger.debug(`[Welcome] Could not send welcome ping in ${pingChannel.name}:`, error.message);
+                    }
                 }
             }
         }

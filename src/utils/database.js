@@ -769,6 +769,7 @@ function normalizeWelcomeConfig(raw = {}) {
         welcomeEmbed,
         welcomePing: Boolean(base.welcomePing),
         welcomeImage: base.welcomeImage ?? null,
+        pingChannelId: base.pingChannelId ?? null,
         goodbyeEnabled: Boolean(base.goodbyeEnabled),
         goodbyeChannelId,
         leaveMessage,
@@ -842,6 +843,28 @@ export async function updateWelcomeConfig(client, guildId, updates) {
         return updatedConfig;
     } catch (error) {
         logger.error(`Error updating welcome config for guild ${guildId}:`, error);
+        throw error;
+    }
+}
+
+export async function removeWelcomeConfig(client, guildId) {
+    const key = getWelcomeConfigKey(guildId);
+    try {
+        const currentConfig = await getWelcomeConfig(client, guildId);
+        const cleanConfig = {
+            ...currentConfig,
+            enabled: false,
+            channelId: null,
+            welcomeMessage: "Bienvenue {user} sur {server} !",
+            welcomeEmbed: undefined,
+            welcomePing: false,
+            welcomeImage: null,
+            pingChannelId: null
+        };
+        await client.db.set(key, cleanConfig);
+        return cleanConfig;
+    } catch (error) {
+        logger.error(`Error removing welcome config for guild ${guildId}:`, error);
         throw error;
     }
 }
