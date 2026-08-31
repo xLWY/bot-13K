@@ -4,6 +4,10 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
 import { getWelcomeConfig } from '../../utils/database.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
+import { getLevelingConfig } from '../../services/leveling.js';
+import { getServerCounters } from '../../services/serverstatsService.js';
+import { getConfiguration as getJtcConfig } from '../../services/joinToCreateService.js';
+import { getAllReactionRoleMessages } from '../../services/reactionRoleService.js';
 import greetDashboard from '../Welcome/modules/greet_dashboard.js';
 import ticketDashboard from '../Ticket/modules/ticket_dashboard.js';
 import verificationDashboard from '../Verification/modules/verification_dashboard.js';
@@ -28,6 +32,18 @@ export default {
             const welcomeConfig = await getWelcomeConfig(client, guild.id);
             const guildConfig = await getGuildConfig(client, guild.id).catch(() => ({}));
 
+            const [levelingConfig, jtcConfig, counters, reactionRoles] = await Promise.allSettled([
+                getLevelingConfig(client, guild.id).catch(() => null),
+                getJtcConfig(client, guild.id).catch(() => null),
+                getServerCounters(client, guild.id).catch(() => []),
+                getAllReactionRoleMessages(client, guild.id).catch(() => []),
+            ]);
+
+            const leveling = levelingConfig.status === 'fulfilled' ? levelingConfig.value : null;
+            const jtc = jtcConfig.status === 'fulfilled' ? jtcConfig.value : null;
+            const counterList = counters.status === 'fulfilled' ? counters.value : [];
+            const rrList = reactionRoles.status === 'fulfilled' ? reactionRoles.value : [];
+
             const welcomeStatus = welcomeConfig?.channelId
                 ? (guild.channels.cache.get(welcomeConfig.channelId) ? `<#${welcomeConfig.channelId}>` : '`⚠️ Introuvable`')
                 : '`Non configuré`';
@@ -35,6 +51,10 @@ export default {
                 ? (guild.channels.cache.get(guildConfig.ticketPanelChannelId) ? `<#${guildConfig.ticketPanelChannelId}>` : '`⚠️ Introuvable`')
                 : '`Non configuré`';
             const verificationStatus = guildConfig?.verification?.enabled ? '✅ Activée' : '❌ Désactivée';
+            const levelingStatus = leveling?.enabled ? '✅ Activé' : '❌ Désactivé';
+            const jtcStatus = jtc?.enabled && jtc?.triggerChannels?.length ? `✅ ${jtc.triggerChannels.length} salon(s)` : '❌ Désactivé';
+            const counterStatus = counterList.length ? `✅ ${counterList.length} compteur(s)` : '❌ Aucun';
+            const rrStatus = rrList.length ? `✅ ${rrList.length} message(s)` : '❌ Aucun';
 
             const alerts = [];
             if (welcomeConfig?.channelId && !guild.channels.cache.get(welcomeConfig.channelId)) {
@@ -59,6 +79,12 @@ export default {
                     { name: '🏷️ Bienvenue / Au revoir', value: welcomeStatus, inline: true },
                     { name: '🎫 Tickets', value: ticketStatus, inline: true },
                     { name: '✅ Vérification', value: verificationStatus, inline: true },
+                    { name: '⭐ Leveling / XP', value: levelingStatus, inline: true },
+                    { name: '🔊 Salon vocal', value: jtcStatus, inline: true },
+                    { name: '📊 Compteurs', value: counterStatus, inline: true },
+                    { name: '🎭 Rôles réaction', value: rrStatus, inline: true },
+                    { name: '🎁 Giveaways', value: '`Via /giveaway`', inline: true },
+                    { name: '🏪 Boutique', value: '`Via /shop`', inline: true },
                 )
                 .setFooter({ text: 'Réservé aux administrateurs • /panel' })
                 .setTimestamp();
