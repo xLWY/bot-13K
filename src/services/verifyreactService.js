@@ -6,9 +6,17 @@ const CONFIG_KEY_PREFIX = 'verifyreact:';
 
 export async function getVerifyReactConfig(client, guildId) {
     try {
-        return (await client.db.get(`${CONFIG_KEY_PREFIX}${guildId}`)) || null;
+        const raw = await client.db.get(`${CONFIG_KEY_PREFIX}${guildId}`);
+        if (raw == null) return null;
+        if (typeof raw === 'object') return raw;
+        try {
+            return JSON.parse(raw);
+        } catch (parseError) {
+            logger.debug(`[verifyreact] Stored value for guild ${guildId} is not valid JSON:`, raw);
+            return null;
+        }
     } catch (error) {
-        logger.debug(`Failed to load verifyreact config for guild ${guildId}:`, error.message);
+        logger.debug(`Failed to load verifyreact config for guild ${guildId}:`, error);
         return null;
     }
 }
