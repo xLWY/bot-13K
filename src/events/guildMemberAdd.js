@@ -42,12 +42,9 @@ export default {
                 const messageContent = welcomeConfig.welcomePing ? user.toString() : null;
 
                 const embedTitle = formatWelcomeMessage(
-                    welcomeConfig.welcomeEmbed?.title || '🎉 Welcome!',
+                    welcomeConfig.welcomeEmbed?.title || '🎉 Bienvenue !',
                     formatData
                 );
-                const embedFooter = welcomeConfig.welcomeEmbed?.footer
-                    ? formatWelcomeMessage(welcomeConfig.welcomeEmbed.footer, formatData)
-                    : `Welcome to ${guild.name}!`;
 
                 const canEmbed = permissions.has(PermissionFlagsBits.EmbedLinks);
 
@@ -61,15 +58,9 @@ export default {
                         .setTitle(embedTitle)
                         .setDescription(welcomeMessage)
                         .setThumbnail(user.displayAvatarURL())
-.addFields(
-                        { name: '👤 Membre', value: `${user.tag} (${user.id})`, inline: true },
-                        { name: '👥 Membres', value: guild.memberCount.toString(), inline: true },
-                        { name: '📅 Compte créé', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true }
-                    )
-                        .setTimestamp()
-                        .setFooter({ text: embedFooter });
-                    
-                    if (welcomeConfig.welcomeImage) {
+                        .setTimestamp();
+
+                    if (typeof welcomeConfig.welcomeImage === 'string') {
                         embed.setImage(welcomeConfig.welcomeImage);
                     } else if (welcomeConfig.welcomeEmbed?.image?.url) {
                         embed.setImage(welcomeConfig.welcomeEmbed.image.url);
@@ -84,7 +75,10 @@ export default {
         }
         
         if (welcomeConfig?.enabled && welcomeConfig.pingChannelId) {
-            const pingChannel = guild.channels.cache.get(welcomeConfig.pingChannelId);
+            let pingChannel = guild.channels.cache.get(welcomeConfig.pingChannelId);
+            if (!pingChannel) {
+                try { pingChannel = await guild.channels.fetch(welcomeConfig.pingChannelId); } catch (_) { pingChannel = null; }
+            }
             if (pingChannel?.isTextBased?.()) {
                 const pingMe = guild.members.me;
                 const pingPerms = pingMe ? pingChannel.permissionsFor(pingMe) : null;
@@ -97,7 +91,7 @@ export default {
                             }
                         }, WELCOME_PING_DELETE_MS).unref?.();
                     } catch (error) {
-                        logger.debug(`[Welcome] Could not send welcome ping in ${pingChannel.name}:`, error.message);
+                        logger.debug(`[Welcome] Could not send welcome ping in ${pingChannel?.name}:`, error.message);
                     }
                 }
             }

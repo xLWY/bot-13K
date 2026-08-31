@@ -21,8 +21,12 @@ export default {
                         .setRequired(true))
                 .addStringOption(option =>
                     option.setName('message')
-                        .setDescription('Message de bienvenue. Variables : {user}, {username}, {server}, {memberCount}')
+                        .setDescription('Description du message de bienvenue. Variables : {user}, {username}, {server}, {memberCount}')
                         .setRequired(true))
+                .addStringOption(option =>
+                    option.setName('title')
+                        .setDescription('Titre de la bienvenue (facultatif). Ex : "🎉 Bienvenue {user} !"')
+                        .setRequired(false))
                 .addStringOption(option =>
                     option.setName('image')
                         .setDescription('URL de l\'image à inclure dans le message de bienvenue')
@@ -68,6 +72,7 @@ export default {
         if (subcommand === 'setup') {
             const channel = options.getChannel('channel');
             const message = options.getString('message');
+            const title = options.getString('title');
             const image = options.getString('image');
             const ping = options.getBoolean('ping') ?? false;
             const pingChannel = options.getChannel('pingchannel');
@@ -94,10 +99,13 @@ export default {
             }
 
             try {
+                const existingWelcomeConfig = await getWelcomeConfig(client, guild.id);
+                const existingEmbed = existingWelcomeConfig?.welcomeEmbed || {};
                 await updateWelcomeConfig(client, guild.id, {
                     enabled: true,
                     channelId: channel.id,
                     welcomeMessage: message,
+                    welcomeEmbed: { ...existingEmbed, title: title || existingWelcomeConfig?.welcomeMessage || '🎉 Bienvenue !' },
                     welcomeImage: image || undefined,
                     welcomePing: ping,
                     pingChannelId: pingChannel?.id || null
@@ -109,16 +117,18 @@ export default {
                     user: interaction.user,
                     guild
                 });
+                const previewTitle = title ? formatWelcomeMessage(title, { user: interaction.user, guild }) : null;
 
                 const embed = new EmbedBuilder()
                     .setColor(getColor('success'))
                     .setTitle('✅ Système de bienvenue configuré')
                     .setDescription(`Les messages de bienvenue seront désormais envoyés dans ${channel}`)
                     .addFields(
-                        { name: 'Aperçu du message', value: previewMessage },
-                        { name: 'Mentionner l\'utilisateur', value: ping ? '✅ Oui' : '❌ Non' },
-                        { name: 'Salon de ping auto-supprimé', value: pingChannel ? `${pingChannel} (le ping disparaît tout seul)` : '❌ Non configuré' },
-                        { name: 'Statut', value: '✅ Activé' }
+                        { name: 'Titre', value: previewTitle || 'Aucun (titre par défaut affiché)', inline: true },
+                        { name: 'Description', value: previewMessage, inline: false },
+                        { name: 'Mentionner l\'utilisateur', value: ping ? '✅ Oui' : '❌ Non', inline: true },
+                        { name: 'Salon de ping auto-supprimé', value: pingChannel ? `${pingChannel} (le ping disparaît tout seul)` : '❌ Non configuré', inline: false },
+                        { name: 'Statut', value: '✅ Activé', inline: true }
                     )
                     .setFooter({ text: 'Astuce : utilise /welcome remove pour supprimer le système de bienvenue' });
 
