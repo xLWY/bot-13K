@@ -25,8 +25,16 @@ export default {
         const welcomeChannelId = welcomeConfig?.channelId;
 
         if (welcomeConfig?.enabled && welcomeChannelId) {
-            const channel = guild.channels.cache.get(welcomeChannelId);
-            if (channel?.isTextBased?.()) {
+            let channel = guild.channels.cache.get(welcomeChannelId);
+            if (!channel) {
+                try { channel = await guild.channels.fetch(welcomeChannelId).catch(() => null); } catch (_) { channel = null; }
+            }
+
+            if (!channel?.isTextBased?.()) {
+                if (welcomeConfig.enabled) {
+                    await notifyBrokenWelcomeChannel(member.client, guild, 'bienvenue', welcomeChannelId);
+                }
+            } else {
                 const me = guild.members.me;
                 const permissions = me ? channel.permissionsFor(me) : null;
                 if (!permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
@@ -77,7 +85,7 @@ export default {
         if (welcomeConfig?.enabled && welcomeConfig.pingChannelId) {
             let pingChannel = guild.channels.cache.get(welcomeConfig.pingChannelId);
             if (!pingChannel) {
-                try { pingChannel = await guild.channels.fetch(welcomeConfig.pingChannelId); } catch (_) { pingChannel = null; }
+                try { pingChannel = await guild.channels.fetch(welcomeConfig.pingChannelId).catch(() => null); } catch (_) { pingChannel = null; }
             }
             if (pingChannel?.isTextBased?.()) {
                 const pingMe = guild.members.me;
@@ -94,6 +102,8 @@ export default {
                         logger.debug(`[Welcome] Could not send welcome ping in ${pingChannel?.name}:`, error.message);
                     }
                 }
+            } else {
+                await notifyBrokenWelcomeChannel(member.client, guild, 'salon de ping', welcomeConfig.pingChannelId);
             }
         }
         
@@ -226,6 +236,60 @@ async function assignRoleSafely(member, role) {
         await member.roles.add(role);
     } catch (error) {
         logger.warn(`Failed to assign role ${role.id} to member ${member.id}:`, error);
+    }
+}
+
+const brokenWelcomeAlerts = new Map();
+const BROKEN_WELCOME_COOLDOWN_MS = 30 * 60 * 1000;
+
+async function notifyBrokenWelcomeChannel(client, guild, typeLabel, missingChannelId) {
+    const guildId = guild.id;
+    const now = Date.now();
+    const lastAlert = brokenWelcomeAlerts.get(guildId) || 0;
+
+    if (now - lastAlert < BROKEN_WELCOME_COOLDOWN_MS) {
+        return;
+    }
+    brokenWelcomeAlerts.set(guildId, now);
+
+    const label = typeLabel === 'bienvenue' ? 'canal de bienvenue' : 'salon de ping';
+    const description = `Le **${label}** de bienvenue configuré n'existe plus ou n'est plus accessible.\n\n**Ancien ID :** \`${missingChannelId || 'inconnu'}\`\n\nReconfigure-le avec **\`/welcome setup\`** ou **\`/welcome dashboard\`**.`;
+
+    try {
+        await logEvent({
+            client,
+            guildId,
+            eventType: EVENT_TYPES.CONFIGURATION_CHANGE,
+            data: {
+                title: '⚠️ Canal de bienvenue introuvable',
+                description,
+                fields: [
+                    { name: 'Serveur', value: guild.name, inline: true },
+                    { name: 'Type', value: typeLabel === 'bienvenue' ? 'Message de bienvenue' : 'Salon de ping', inline: true }
+                ]
+            }
+        });
+    } catch (error) {
+        logger.debug('Could not log broken welcome channel:', error.message);
+    }
+
+    try {
+        const owner = await guild.fetchOwner().catch(() => null);
+        if (owner) {
+            await owner.send({
+                embeds: [new EmbedBuilder()
+                    .setColor(getColor('error'))
+                    .setTitle('⚠️ Canal de bienvenue introuvable')
+                    .setDescription(description)
+                    .addFields(
+                        { name: 'Serveur', value: guild.name, inline: true },
+                        { name: 'Type', value: typeLabel === 'bienvenue' ? 'Message de bienvenue' : 'Salon de ping', inline: true }
+                    )
+                    .setTimestamp()]
+            }).catch(() => {});
+        }
+    } catch (error) {
+        logger.debug('Could not DM owner about broken welcome channel:', error.message);
     }
 }
 
