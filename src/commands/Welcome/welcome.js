@@ -5,7 +5,6 @@ import { formatWelcomeMessage } from '../../utils/welcome.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
-import welcomeRole from './modules/welcome_role.js';
 import greetDashboard from './modules/greet_dashboard.js';
 
 export default {
@@ -47,30 +46,6 @@ export default {
             subcommand
                 .setName('remove')
                 .setDescription('Supprimer le système de bienvenue (rôles auto et au revoir conservés)'))
-        .addSubcommandGroup(group =>
-            group
-                .setName('role')
-                .setDescription('Gérer les rôles attribués automatiquement aux nouveaux membres')
-                .addSubcommand(sub =>
-                    sub
-                        .setName('add')
-                        .setDescription('Ajouter un rôle attribué automatiquement aux nouveaux membres')
-                        .addRoleOption(option =>
-                            option.setName('role')
-                                .setDescription('Le rôle à ajouter')
-                                .setRequired(true)))
-                .addSubcommand(sub =>
-                    sub
-                        .setName('remove')
-                        .setDescription('Retirer un rôle de l\'auto-attribution')
-                        .addRoleOption(option =>
-                            option.setName('role')
-                                .setDescription('Le rôle à retirer')
-                                .setRequired(true)))
-                .addSubcommand(sub =>
-                    sub
-                        .setName('list')
-                        .setDescription('Lister tous les rôles auto-attribués')))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('dashboard')
@@ -98,12 +73,7 @@ export default {
             return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/welcome`.');
         }
 
-        const subcommandGroup = options.getSubcommandGroup(false);
         const subcommand = options.getSubcommand();
-
-        if (subcommandGroup === 'role') {
-            return await welcomeRole.execute(interaction, client);
-        }
 
         if (subcommand === 'dashboard') {
             return await greetDashboard.execute(interaction, {}, client);
