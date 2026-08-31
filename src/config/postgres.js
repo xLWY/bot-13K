@@ -15,7 +15,6 @@ const configuredTables = {
     economy: 'economy',
     invite_tracking: 'invite_tracking',
     application_roles: 'application_roles',
-    verification_audit: 'verification_audit',
     temp_data: 'temp_data',
     cache_data: 'cache_data',
 };
@@ -34,7 +33,6 @@ const allowedTableIdentifiers = new Set([
     'economy',
     'invite_tracking',
     'application_roles',
-    'verification_audit',
     'temp_data',
     'cache_data',
 ]);

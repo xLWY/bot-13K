@@ -47,9 +47,6 @@ export const DEFAULT_GUILD_CONFIG = {
     logging: {
         enabled: false,
         enabledEvents: {}
-    },
-    verification: {
-        enabled: false
     }
 };
 

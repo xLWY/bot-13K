@@ -316,74 +316,6 @@ export const botConfig = {
   },
 
   // =========================
-  // VERIFICATION SETTINGS
-  // =========================
-  verification: {
-    // Message shown when posting the verification panel.
-    defaultMessage: "Click the button below to verify yourself and gain access to the server!",
-
-    // Text on the verification button.
-    defaultButtonText: "Verify",
-
-    // Automatic verification behavior.
-    autoVerify: {
-      // How automatic verification decides who is auto-approved:
-      // - "none"        = everyone is auto-verified immediately
-      // - "account_age" = account must be older than set days
-      // - "server_size" = auto-verify everyone only in smaller servers
-      defaultCriteria: "none",
-
-      // Days used when `defaultCriteria` is `account_age`.
-      defaultAccountAgeDays: 7,
-
-      // Member count threshold used when `defaultCriteria` is `server_size`.
-      // Example: 1000 means auto-verify if server has fewer than 1000 members.
-      serverSizeThreshold: 1000,
-
-      // Allowed safety limits for account-age requirements.
-      // 1 = minimum day, 365 = maximum days.
-      minAccountAge: 1,      
-      maxAccountAge: 365,    
-
-      // If true, user receives a DM after verification.
-      sendDMNotification: true,
-
-      // Human-readable descriptions for each criteria mode.
-      criteria: {
-        account_age: "Account must be older than specified days",
-        server_size: "All users if server has less than 1000 members",
-        none: "All users immediately"
-      }
-    },
-
-    // Minimum time between verification attempts (milliseconds).
-    // 5000 = 5 seconds.
-    verificationCooldown: 5000,  
-
-    // Maximum failed attempts allowed inside the time window below.
-    maxVerificationAttempts: 3,   
-
-    // Time window for counting attempts (milliseconds).
-    // 60000 = 1 minute.
-    attemptWindow: 60000,          
-
-    // In-memory safety limits (helps avoid unbounded memory growth).
-    maxCooldownEntries: 10000,
-    maxAttemptEntries: 10000,
-    // Cleanup frequency for cooldown/attempt maps (milliseconds).
-    // 300000 = 5 minutes.
-    cooldownCleanupInterval: 300000, 
-    // Maximum metadata payload size for audit entries (bytes).
-    maxAuditMetadataBytes: 4096,
-    // Maximum number of audit entries kept in memory.
-    maxInMemoryAuditEntries: 1000,
-  // If true, log every verification action.
-  logAllVerifications: true,
-  // If true, preserve verification audit history.
-  keepAuditTrail: true,
-  },
-
-  // =========================
   // WELCOME / GOODBYE MESSAGES
   // =========================
   welcome: {
@@ -497,7 +429,6 @@ export const botConfig = {
     counter: true,
 
     // Security and self-service systems.
-    verification: true,
     reactionRoles: true,
     joinToCreate: true,
 

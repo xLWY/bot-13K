@@ -208,38 +208,6 @@ export async function deleteFromDb(key) {
     }
 }
 
-export async function insertVerificationAudit(record) {
-    try {
-        if (!db.initialized) {
-            await db.initialize();
-        }
-
-        if (db.isAvailable() && typeof pgDb.insertVerificationAudit === 'function') {
-            return await pgDb.insertVerificationAudit(record);
-        }
-
-        const key = `verification:audit:${record.guildId}`;
-        const existing = await getFromDb(key, []);
-        const auditEntries = Array.isArray(existing) ? existing : [];
-        const maxInMemoryAuditEntries = BotConfig?.verification?.maxInMemoryAuditEntries ?? 1000;
-
-        auditEntries.push({
-            ...record,
-            createdAt: record.createdAt || new Date().toISOString()
-        });
-
-        if (auditEntries.length > maxInMemoryAuditEntries) {
-            auditEntries.splice(0, auditEntries.length - maxInMemoryAuditEntries);
-        }
-
-        await setInDb(key, auditEntries);
-        return true;
-    } catch (error) {
-        logger.error('Error storing verification audit:', error);
-        return false;
-    }
-}
-
 /**
  * Extract actual data from database response (for backward compatibility)
  * @param {any} data - Data to unwrap

@@ -97,7 +97,6 @@ const appConfig = {
     counter: true,                  
 
     
-    verification: true,             
     reactionRoles: true,            
     joinToCreate: true,             
 

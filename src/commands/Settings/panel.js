@@ -10,8 +10,6 @@ import { getConfiguration as getJtcConfig } from '../../services/joinToCreateSer
 import { getAllReactionRoleMessages } from '../../services/reactionRoleService.js';
 import greetDashboard from '../Welcome/modules/greet_dashboard.js';
 import ticketDashboard from '../Ticket/modules/ticket_dashboard.js';
-import verificationDashboard from '../Verification/modules/verification_dashboard.js';
-import autoVerifyDashboard from '../Verification/modules/autoVerifyDashboard.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -50,7 +48,6 @@ export default {
             const ticketStatus = guildConfig?.ticketPanelChannelId
                 ? (guild.channels.cache.get(guildConfig.ticketPanelChannelId) ? `<#${guildConfig.ticketPanelChannelId}>` : '`⚠️ Introuvable`')
                 : '`Non configuré`';
-            const verificationStatus = guildConfig?.verification?.enabled ? '✅ Activée' : '❌ Désactivée';
             const levelingStatus = leveling?.enabled ? '✅ Activé' : '❌ Désactivé';
             const jtcStatus = jtc?.enabled && jtc?.triggerChannels?.length ? `✅ ${jtc.triggerChannels.length} salon(s)` : '❌ Désactivé';
             const counterStatus = counterList.length ? `✅ ${counterList.length} compteur(s)` : '❌ Aucun';
@@ -78,7 +75,6 @@ export default {
                 .addFields(
                     { name: '🏷️ Bienvenue / Au revoir', value: welcomeStatus, inline: true },
                     { name: '🎫 Tickets', value: ticketStatus, inline: true },
-                    { name: '✅ Vérification', value: verificationStatus, inline: true },
                     { name: '⭐ Leveling / XP', value: levelingStatus, inline: true },
                     { name: '🔊 Salon vocal', value: jtcStatus, inline: true },
                     { name: '📊 Compteurs', value: counterStatus, inline: true },
@@ -100,16 +96,6 @@ export default {
                     .setLabel('Tickets')
                     .setEmoji('🎫')
                     .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId('panel_verify')
-                    .setLabel('Vérification')
-                    .setEmoji('✅')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId('panel_autoverify')
-                    .setLabel('AutoVérif.')
-                    .setEmoji('🛡️')
-                    .setStyle(ButtonStyle.Primary),
             );
 
             await InteractionHelper.safeEditReply(interaction, {
@@ -122,7 +108,7 @@ export default {
                 componentType: ComponentType.Button,
                 filter: i =>
                     i.user.id === interaction.user.id &&
-                    ['panel_welcome', 'panel_ticket', 'panel_verify', 'panel_autoverify'].includes(i.customId),
+                    ['panel_welcome', 'panel_ticket'].includes(i.customId),
                 time: 600_000,
             });
 
@@ -133,10 +119,6 @@ export default {
                             return await greetDashboard.execute(btnInteraction, {}, client);
                         case 'panel_ticket':
                             return await ticketDashboard.execute(btnInteraction, guildConfig, client);
-                        case 'panel_verify':
-                            return await verificationDashboard.execute(btnInteraction, guildConfig, client);
-                        case 'panel_autoverify':
-                            return await autoVerifyDashboard.execute(btnInteraction, guildConfig, client);
                     }
                 } catch (error) {
                     logger.debug(`Panel module open failed (${btnInteraction.customId}):`, error.message);
