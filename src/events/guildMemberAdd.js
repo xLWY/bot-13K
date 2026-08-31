@@ -61,10 +61,11 @@ export default {
                         .setTitle(embedTitle)
                         .setDescription(welcomeMessage)
                         .setThumbnail(user.displayAvatarURL())
-                        .addFields(
-                            { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
-                            { name: 'Member Count', value: guild.memberCount.toString(), inline: true }
-                        )
+.addFields(
+                        { name: '👤 Membre', value: `${user.tag} (${user.id})`, inline: true },
+                        { name: '👥 Membres', value: guild.memberCount.toString(), inline: true },
+                        { name: '📅 Compte créé', value: `<t:${Math.floor(user.createdTimestamp / 1000)}:R>`, inline: true }
+                    )
                         .setTimestamp()
                         .setFooter({ text: embedFooter });
                     
@@ -135,7 +136,7 @@ export default {
                 guildId: guild.id,
                 eventType: EVENT_TYPES.MEMBER_JOIN,
                 data: {
-                    description: `${user.tag} joined the server`,
+                    description: `${user.tag} a rejoint le serveur`,
                     userId: user.id,
                     fields: [
                         {

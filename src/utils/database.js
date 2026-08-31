@@ -740,15 +740,15 @@ function normalizeWelcomeConfig(raw = {}) {
     const channelId = base.channelId ?? null;
     const goodbyeChannelId = base.goodbyeChannelId ?? null;
 
-    const welcomeMessage = base.welcomeMessage ?? "Bienvenue {user} sur {server} !";
+    const welcomeMessage = base.welcomeMessage ?? "Bienvenue {user} sur **{server}** ! 🎉\n\nNous sommes ravis de t'accueillir parmi nous. N'oublie pas de te présenter et de lire les salons pour découvrir le serveur !";
     const leaveMessage = base.leaveMessage ?? "{user.tag} a quitté le serveur.";
 
     const welcomeEmbed = base.welcomeEmbed ?? {
         title: "🎉 Bienvenue !",
-        description: "Bienvenue {user} sur {server} !",
+        description: "Bienvenue {user} !",
         color: getColor("success"),
         thumbnail: true,
-        footer: "Bienvenue sur {server} !"
+        footer: "Nous sommes déjà {memberCount} membres sur {server} !"
     };
 
     const leaveEmbed = base.leaveEmbed ?? {
