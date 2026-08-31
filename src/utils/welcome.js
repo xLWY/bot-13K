@@ -57,6 +57,9 @@ export function formatWelcomeMessage(message, data) {
         result = replaceAll(result, token, String(value));
     }
 
+    result = result.replace(/\\n/g, '\n');
+    result = result.replace(/#(\d{15,})/g, '<#$1>');
+
     return result;
 }
 
