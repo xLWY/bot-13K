@@ -4,6 +4,9 @@ import { getWelcomeConfig, updateWelcomeConfig, removeWelcomeConfig } from '../.
 import { formatWelcomeMessage } from '../../utils/welcome.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { handleInteractionError } from '../../utils/errorHandler.js';
+import welcomeRole from './modules/welcome_role.js';
+import greetDashboard from './modules/greet_dashboard.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -43,7 +46,35 @@ export default {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('remove')
-                .setDescription('Supprimer le système de bienvenue (rôles auto et au revoir conservés)')),
+                .setDescription('Supprimer le système de bienvenue (rôles auto et au revoir conservés)'))
+        .addSubcommandGroup(group =>
+            group
+                .setName('role')
+                .setDescription('Gérer les rôles attribués automatiquement aux nouveaux membres')
+                .addSubcommand(sub =>
+                    sub
+                        .setName('add')
+                        .setDescription('Ajouter un rôle attribué automatiquement aux nouveaux membres')
+                        .addRoleOption(option =>
+                            option.setName('role')
+                                .setDescription('Le rôle à ajouter')
+                                .setRequired(true)))
+                .addSubcommand(sub =>
+                    sub
+                        .setName('remove')
+                        .setDescription('Retirer un rôle de l\'auto-attribution')
+                        .addRoleOption(option =>
+                            option.setName('role')
+                                .setDescription('Le rôle à retirer')
+                                .setRequired(true)))
+                .addSubcommand(sub =>
+                    sub
+                        .setName('list')
+                        .setDescription('Lister tous les rôles auto-attribués')))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('dashboard')
+                .setDescription('Ouvrir le tableau de bord des messages de bienvenue (et rôles auto)')),
 
     async execute(interaction) {
         try {
@@ -67,7 +98,16 @@ export default {
             return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/welcome`.');
         }
 
+        const subcommandGroup = options.getSubcommandGroup(false);
         const subcommand = options.getSubcommand();
+
+        if (subcommandGroup === 'role') {
+            return await welcomeRole.execute(interaction, client);
+        }
+
+        if (subcommand === 'dashboard') {
+            return await greetDashboard.execute(interaction, {}, client);
+        }
 
         if (subcommand === 'setup') {
             const channel = options.getChannel('channel');
@@ -155,7 +195,7 @@ export default {
                     embeds: [new EmbedBuilder()
                         .setColor(getColor('success'))
                         .setTitle('🗑️ Système de bienvenue supprimé')
-                        .setDescription('Les messages de bienvenue sont désactivés. Les rôles auto (`/autorole`) et les au revoir (`/goodbye`) sont conservés.')]
+                        .setDescription('Les messages de bienvenue sont désactivés. Les rôles auto (via `/welcome role`) et les au revoir (`/goodbye`) sont conservés.')]
                 });
             } catch (error) {
                 logger.error(`[Welcome] Failed to remove welcome system for guild ${guild.id}:`, error);

@@ -7,6 +7,7 @@ import {
     TextInputBuilder,
     TextInputStyle,
     ChannelSelectMenuBuilder,
+    RoleSelectMenuBuilder,
     ButtonBuilder,
     ButtonStyle,
     ChannelType,
@@ -35,6 +36,11 @@ function buildDashboardEmbed(cfg, guild) {
     const welcomePreview = `\`${rawWelcome.length > 55 ? rawWelcome.substring(0, 55) + '…' : rawWelcome}\``;
     const goodbyePreview = `\`${rawGoodbye.length > 55 ? rawGoodbye.substring(0, 55) + '…' : rawGoodbye}\``;
 
+    const autoRoleIds = Array.isArray(cfg.roleIds) ? cfg.roleIds : [];
+    const autoRolePreview = autoRoleIds.length
+        ? autoRoleIds.map(id => `<@&${id}>`).join(', ')
+        : '`Aucun`';
+
     return new EmbedBuilder()
         .setTitle('👋 Tableau de bord des messages de bienvenue')
         .setDescription(
@@ -48,6 +54,7 @@ function buildDashboardEmbed(cfg, guild) {
             { name: '🔴 Canal d\'au revoir', value: goodbyeChannel, inline: true },
             { name: '⚙️ Statut d\'au revoir', value: cfg.goodbyeEnabled ? '✅ Activé' : '❌ Désactivé', inline: true },
             { name: '🔔 Mention d\'au revoir', value: cfg.goodbyePing ? '✅ Activée' : '❌ Désactivée', inline: true },
+            { name: '🎭 Rôle(s) auto', value: autoRolePreview, inline: true },
             { name: '💬 Message de bienvenue', value: welcomePreview, inline: false },
             { name: '💬 Message d\'au revoir', value: goodbyePreview, inline: false },
         )
@@ -70,6 +77,11 @@ function buildSelectMenu(guildId) {
                 .setDescription('Modifier le texte affiché à l\'arrivée d\'un membre')
                 .setValue('welcome_message')
                 .setEmoji('💬'),
+            new StringSelectMenuOptionBuilder()
+                .setLabel('Rôles auto')
+                .setDescription('Ajouter ou retirer les rôles attribués automatiquement')
+                .setValue('auto_role')
+                .setEmoji('🎭'),
             new StringSelectMenuOptionBuilder()
                 .setLabel('Image de bienvenue')
                 .setDescription('Définir l\'image pour les messages de bienvenue')
@@ -195,6 +207,9 @@ export default {
                             break;
                         case 'welcome_message':
                             await handleWelcomeMessage(selectInteraction, interaction, cfg, guildId, client);
+                            break;
+                        case 'auto_role':
+                            await handleAutoRole(selectInteraction, interaction, cfg, guildId, client);
                             break;
                         case 'welcome_image':
                             await handleWelcomeImage(selectInteraction, interaction, cfg, guildId, client);
@@ -742,7 +757,84 @@ async function handleGoodbyeImage(selectInteraction, rootInteraction, cfg, guild
     await refreshDashboard(rootInteraction, cfg, guildId);
 }
 
-// ─── Goodbye Ping ─────────────────────────────────────────────────────────────
+// ─── Auto Role ────────────────────────────────────────────────────────────────
+
+async function handleAutoRole(selectInteraction, rootInteraction, cfg, guildId, client) {
+    try {
+        await selectInteraction.deferUpdate();
+    } catch {
+        return;
+    }
+
+    const currentIds = Array.isArray(cfg.roleIds) ? cfg.roleIds : [];
+
+    const roleSelect = new RoleSelectMenuBuilder()
+        .setCustomId('greet_cfg_auto_role')
+        .setPlaceholder('Ajoute ou retire des rôles auto...')
+        .setMinValues(0)
+        .setMaxValues(25)
+        .setDefaultRoles(currentIds);
+
+    await selectInteraction.followUp({
+        embeds: [
+            new EmbedBuilder()
+                .setTitle('🎭 Rôles auto')
+                .setDescription(
+                    `**Actuel :** ${currentIds.length ? currentIds.map(id => `<@&${id}>`).join(', ') : '`Aucun`'}.\n\nSélectionne les rôles à attribuer automatiquement aux nouveaux membres et valide.`,
+                )
+                .setColor(getColor('info')),
+        ],
+        components: [new ActionRowBuilder().addComponents(roleSelect)],
+        flags: MessageFlags.Ephemeral,
+    });
+
+    const roleCollector = rootInteraction.channel.createMessageComponentCollector({
+        componentType: ComponentType.RoleSelect,
+        filter: i =>
+            i.user.id === selectInteraction.user.id && i.customId === 'greet_cfg_auto_role',
+        time: 60_000,
+        max: 1,
+    });
+
+    roleCollector.on('collect', async roleInteraction => {
+        await roleInteraction.deferUpdate();
+        const selectedRoles = roleInteraction.values || [];
+        const botHighest = roleInteraction.guild.members.me?.roles?.highest;
+        const invalid = selectedRoles.filter(id => {
+            const role = roleInteraction.guild.roles.cache.get(id);
+            return botHighest && role && role.position >= botHighest.position;
+        });
+
+        if (invalid.length > 0) {
+            await InteractionHelper.sendErrorNotice(roleInteraction, `Je ne peux pas attribuer (${invalid.map(id => `<@&${id}>`).join(', ')}) car ils sont plus hauts que mon rôle le plus haut.`);
+            return;
+        }
+
+        cfg.roleIds = selectedRoles;
+        await saveWelcomeConfig(client, guildId, cfg);
+
+        await roleInteraction.followUp({
+            embeds: [
+                successEmbed(
+                    '✅ Rôles auto mis à jour',
+                    selectedRoles.length
+                        ? `Les nouveaux membres recevront : ${selectedRoles.map(id => `<@&${id}>`).join(', ')}.`
+                        : 'Aucun rôle auto n\'est désormais attribué.',
+                ),
+            ],
+            flags: MessageFlags.Ephemeral,
+        });
+
+        await refreshDashboard(rootInteraction, cfg, guildId);
+    });
+
+    roleCollector.on('end', (collected, reason) => {
+        if (reason === 'time' && collected.size === 0) {
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun rôle n\'a été sélectionné. Le paramètre n\'a pas été modifié.')
+                .catch(() => {});
+        }
+    });
+}
 
 async function handleGoodbyePing(selectInteraction, rootInteraction, cfg, guildId, client) {
     await selectInteraction.deferUpdate();
