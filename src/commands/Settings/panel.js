@@ -1,13 +1,13 @@
-import { getColor } from '../config/bot.js';
+import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags, ComponentType } from 'discord.js';
-import { InteractionHelper } from '../utils/interactionHelper.js';
-import { logger } from '../utils/logger.js';
-import { getWelcomeConfig } from '../utils/database.js';
-import { getGuildConfig } from '../services/guildConfig.js';
-import greetDashboard from './Welcome/modules/greet_dashboard.js';
-import ticketDashboard from './Ticket/modules/ticket_dashboard.js';
-import verificationDashboard from './Verification/modules/verification_dashboard.js';
-import autoVerifyDashboard from './Verification/modules/autoVerifyDashboard.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { logger } from '../../utils/logger.js';
+import { getWelcomeConfig } from '../../utils/database.js';
+import { getGuildConfig } from '../../services/guildConfig.js';
+import greetDashboard from '../Welcome/modules/greet_dashboard.js';
+import ticketDashboard from '../Ticket/modules/ticket_dashboard.js';
+import verificationDashboard from '../Verification/modules/verification_dashboard.js';
+import autoVerifyDashboard from '../Verification/modules/autoVerifyDashboard.js';
 
 export default {
     data: new SlashCommandBuilder()
