@@ -79,16 +79,34 @@ export async function handleReactionRoleEvent(client, reaction, user, action) {
         if (!config?.enabled) return;
 
         if (message.channelId !== config.channelId || message.id !== config.messageId) return;
-        if (!emojiMatches(reaction.emoji, config)) return;
+
+        logger.info(`[verifyreact] ${action} reaction event on configured message ${message.id} by ${user.tag} (${user.id})`);
+
+        if (!emojiMatches(reaction.emoji, config)) {
+            logger.debug(`[verifyreact] Emoji ${reaction.emoji?.id ? `<${reaction.emoji?.name}:${reaction.emoji?.id}>` : reaction.emoji?.name} does not match configured emoji`);
+            return;
+        }
 
         const guild = client.guilds.cache.get(guildId);
-        if (!guild) return;
+        if (!guild) {
+            logger.warn(`[verifyreact] Guild ${guildId} not found in cache`);
+            return;
+        }
 
         const member = await guild.members.fetch(user.id).catch(() => null);
-        if (!member) return;
+        if (!member) {
+            logger.warn(`[verifyreact] Member ${user.id} not found in guild ${guildId}`);
+            return;
+        }
 
         const role = guild.roles.cache.get(config.roleId);
-        if (!role) return;
+        if (!role) {
+            logger.warn(`[verifyreact] Configured role ${config.roleId} not found in guild ${guildId}`);
+            await member.send(
+                'Le rôle d\u2019accès configuré est introuvable sur le serveur. Contacte un administrateur.'
+            ).catch(() => {});
+            return;
+        }
 
         const me = guild.members.me;
         const canManage =
@@ -97,9 +115,14 @@ export async function handleReactionRoleEvent(client, reaction, user, action) {
             role.position < me.roles.highest.position;
 
         if (!canManage) {
-            logger.warn(`[verifyreact] Cannot ${action} role ${role.name} for user ${user.id} (permissions/hierarchy).`);
+            const reason = !me
+                ? 'le bot n\'est pas présent dans le serveur.'
+                : !me.permissions.has(PermissionFlagsBits.ManageRoles)
+                    ? 'il me manque la permission Gérer les rôles.'
+                    : 'le rôle à donner est au-dessus de mon rôle le plus haut.';
+            logger.warn(`[verifyreact] Cannot ${action} role ${role.name} for user ${user.id}: ${reason}`);
             await member.send(
-                `Je ne peux pas ${action === 'add' ? 'te donner' : 'te retirer'} le rôle ${role.name} automatiquement. Signale ce problème à un administrateur.`
+                `Je ne peux pas ${action === 'add' ? 'te donner' : 'te retirer'} le rôle ${role.name} : ${reason}`
             ).catch(() => {});
             return;
         }
