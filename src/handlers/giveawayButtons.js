@@ -1,5 +1,5 @@
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
-import { errorEmbed, successEmbed } from '../utils/embeds.js';
+import { successEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 import { TitanBotError, ErrorTypes, handleInteractionError } from '../utils/errorHandler.js';
 import { 
@@ -16,6 +16,7 @@ import {
     createGiveawayButtons
 } from '../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
+import { InteractionHelper } from '../utils/interactionHelper.js';
 
 
 
@@ -106,10 +107,7 @@ export const giveawayEndHandler = {
 
             
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                return interaction.reply({
-                    embeds: [errorEmbed('Permission refusée', "Tu as besoin de la permission « Gérer le serveur » pour terminer un concours.")],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission « Gérer le serveur » pour terminer un concours.");
             }
 
             const guildGiveaways = await getGuildGiveaways(client, interaction.guildId);
@@ -243,10 +241,7 @@ export const giveawayRerollHandler = {
 
             
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                return interaction.reply({
-                    embeds: [errorEmbed('Permission refusée', "Tu as besoin de la permission « Gérer le serveur » pour refaire un tirage.")],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission « Gérer le serveur » pour refaire un tirage.");
             }
 
             const guildGiveaways = await getGuildGiveaways(client, interaction.guildId);
@@ -387,15 +382,7 @@ export const giveawayViewHandler = {
             }
 
             if (!giveaway.ended && !giveaway.isEnded && !isGiveawayEnded(giveaway)) {
-                return interaction.reply({
-                    embeds: [
-                        errorEmbed(
-                            'Concours toujours actif',
-                            'Ce concours n\'est pas encore terminé, les gagnants ne sont donc pas disponibles.'
-                        )
-                    ],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Ce concours n\'est pas encore terminé, les gagnants ne sont donc pas disponibles.');
             }
 
             const winnerIds = Array.isArray(giveaway.winnerIds) ? giveaway.winnerIds : [];

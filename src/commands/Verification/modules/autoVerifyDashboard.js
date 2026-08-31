@@ -14,7 +14,7 @@ import {
     EmbedBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
@@ -244,12 +244,7 @@ export default {
                         await selectInteraction.deferUpdate().catch(() => {});
                     }
 
-                    await selectInteraction
-                        .followUp({
-                            embeds: [errorEmbed('Erreur de configuration', errorMessage)],
-                            flags: MessageFlags.Ephemeral,
-                        })
-                        .catch(() => {});
+                    await InteractionHelper.sendErrorNotice(selectInteraction, errorMessage);
                 }
             });
 
@@ -394,12 +389,7 @@ async function handleCriteria(selectInteraction, rootInteraction, guildConfig, g
 
     criteriaCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Expiré', 'Aucun critère sélectionné. Le paramètre n\'a pas été modifié.')],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun critère sélectionné. Le paramètre n\'a pas été modifié.');
         }
     });
 }
@@ -438,29 +428,13 @@ async function handleRole(selectInteraction, rootInteraction, guildConfig, guild
         const role = roleInteraction.roles.first();
 
         if (role.id === rootInteraction.guild.id || role.managed) {
-            await roleInteraction.followUp({
-                embeds: [
-                    errorEmbed(
-                        'Rôle invalide',
-                        'Veuillez choisir un rôle attribuable normal (pas @everyone ni un rôle géré par un bot).',
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
-            });
+            await InteractionHelper.sendErrorNotice(roleInteraction, 'Veuillez choisir un rôle attribuable normal (pas @everyone ni un rôle géré par un bot).');
             return;
         }
 
         const botMember = rootInteraction.guild.members.me;
         if (role.position >= botMember.roles.highest.position) {
-            await roleInteraction.followUp({
-                embeds: [
-                    errorEmbed(
-                        'Rôle trop élevé',
-                        'Le rôle sélectionné doit se situer en dessous de mon rôle le plus haut dans la hiérarchie des rôles du serveur.',
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
-            });
+            await InteractionHelper.sendErrorNotice(roleInteraction, 'Le rôle sélectionné doit se situer en dessous de mon rôle le plus haut dans la hiérarchie des rôles du serveur.');
             return;
         }
 
@@ -477,12 +451,7 @@ async function handleRole(selectInteraction, rootInteraction, guildConfig, guild
 
     roleCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Expiré', 'Aucun rôle n\'a été sélectionné. Le paramètre n\'a pas été modifié.')],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun rôle n\'a été sélectionné. Le paramètre n\'a pas été modifié.');
         }
     });
 }
@@ -521,10 +490,7 @@ async function handleAccountAge(selectInteraction, rootInteraction, guildConfig,
     const days = parseInt(inputValue, 10);
 
     if (isNaN(days) || days < minAccountAgeDays || days > maxAccountAgeDays) {
-        await submitted.reply({
-            embeds: [errorEmbed('Entrée invalide', `Veuillez saisir un nombre entre ${minAccountAgeDays} et ${maxAccountAgeDays}.`)],
-            flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(submitted, `Veuillez saisir un nombre entre ${minAccountAgeDays} et ${maxAccountAgeDays}.`);
         return;
     }
 

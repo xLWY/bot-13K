@@ -16,7 +16,7 @@ import {
     EmbedBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getGuildConfig, setGuildConfig } from '../../../services/guildConfig.js';
@@ -266,12 +266,7 @@ export default {
                         await selectInteraction.deferUpdate().catch(() => {});
                     }
 
-                    await selectInteraction
-                        .followUp({
-                            embeds: [errorEmbed('Erreur de configuration', errorMessage)],
-                            flags: MessageFlags.Ephemeral,
-                        })
-                        .catch(() => {});
+                    await InteractionHelper.sendErrorNotice(selectInteraction, errorMessage);
                 }
             });
 
@@ -297,13 +292,7 @@ export default {
 
                 // Prevent enabling Verification if AutoVerify is enabled
                 if (!wasEnabled && autoVerifyEnabled) {
-                    await btnInteraction.followUp({
-                        embeds: [errorEmbed(
-                            '❌ Impossible d\'activer la vérification',
-                            'AutoVerify est actuellement activé. Veuillez d\'abord désactiver AutoVerify avant d\'activer le système de vérification manuelle.\n\nExécute `/autoverify` pour accéder au tableau de bord AutoVerify.'
-                        )],
-                        flags: MessageFlags.Ephemeral,
-                    });
+                    await InteractionHelper.sendErrorNotice(btnInteraction, "AutoVerify est actuellement activé. Désactive d'abord AutoVerify avant d'activer le système de vérification manuelle. Exécute `/autoverify` pour accéder au tableau de bord AutoVerify.");
                     return;
                 }
 
@@ -433,15 +422,7 @@ async function handleChannel(selectInteraction, rootInteraction, cfg, guildId, c
         const newChannel = chanInteraction.channels.first();
 
         if (!botHasPermission(newChannel, ['ViewChannel', 'SendMessages', 'EmbedLinks'])) {
-            await chanInteraction.followUp({
-                embeds: [
-                    errorEmbed(
-                        'Permissions manquantes',
-                        `J\'ai besoin des permissions **Voir le canal**, **Envoyer des messages** et **Intégrer des liens** dans ${newChannel}.`,
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
-            });
+            await InteractionHelper.sendErrorNotice(chanInteraction, `J'ai besoin des permissions **Voir le canal**, **Envoyer des messages** et **Intégrer des liens** dans ${newChannel}.`);
             return;
         }
 
@@ -496,12 +477,7 @@ async function handleChannel(selectInteraction, rootInteraction, cfg, guildId, c
 
     chanCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Expiré', 'Aucun canal n\'a été sélectionné. Le paramètre n\'a pas été modifié.')],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun canal n\'a été sélectionné. Le paramètre n\'a pas été modifié.');
         }
     });
 }
@@ -544,28 +520,12 @@ async function handleRole(selectInteraction, rootInteraction, cfg, guildId, clie
         const botMember = guild.members.me;
 
         if (role.id === guild.id || role.managed) {
-            await roleInteraction.followUp({
-                embeds: [
-                    errorEmbed(
-                        'Rôle invalide',
-                        'Veuillez choisir un rôle attribuable normal (pas @everyone ni un rôle géré par un bot).',
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
-            });
+            await InteractionHelper.sendErrorNotice(roleInteraction, 'Veuillez choisir un rôle attribuable normal (pas @everyone ni un rôle géré par un bot).');
             return;
         }
 
         if (role.position >= botMember.roles.highest.position) {
-            await roleInteraction.followUp({
-                embeds: [
-                    errorEmbed(
-                        'Rôle trop élevé',
-                        'Le rôle vérifié doit se situer en dessous de mon rôle le plus haut dans la hiérarchie des rôles du serveur.',
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
-            });
+            await InteractionHelper.sendErrorNotice(roleInteraction, 'Le rôle vérifié doit se situer en dessous de mon rôle le plus haut dans la hiérarchie des rôles du serveur.');
             return;
         }
 
@@ -584,12 +544,7 @@ async function handleRole(selectInteraction, rootInteraction, cfg, guildId, clie
 
     roleCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Expiré', 'Aucun rôle n\'a été sélectionné. Le paramètre n\'a pas été modifié.')],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun rôle n\'a été sélectionné. Le paramètre n\'a pas été modifié.');
         }
     });
 }

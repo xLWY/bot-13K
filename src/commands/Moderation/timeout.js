@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -129,13 +129,7 @@ export default {
             });
         } catch (error) {
             logger.error('Timeout command error:', error);
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        error.userMessage || "Une erreur inattendue est survenue pendant le timeout. Vérifie mes permissions de rôle.",
-                    ),
-                ],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, error.userMessage || "Une erreur inattendue est survenue pendant le timeout. Vérifie mes permissions de rôle.");
         }
     }
 };

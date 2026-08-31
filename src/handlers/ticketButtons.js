@@ -5,7 +5,7 @@ import {
   ActionRowBuilder,
   MessageFlags,
 } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
+import { createEmbed, successEmbed } from '../utils/embeds.js';
 import { createTicket, closeTicket, claimTicket, getTicketTypeForGuild } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
@@ -20,10 +20,7 @@ async function ensureGuildContext(interaction) {
   }
 
   if (!interaction.replied && !interaction.deferred) {
-    await interaction.reply({
-      embeds: [errorEmbed('Serveur uniquement', 'Cette action ne peut être utilisée que dans un serveur.')],
-      flags: MessageFlags.Ephemeral,
-    });
+    await InteractionHelper.sendErrorNotice(interaction, 'Cette action ne peut être utilisée que dans un serveur.');
   }
 
   return false;
@@ -71,9 +68,7 @@ export const createTicketHandler = {
       const rateLimitKey = `${interaction.user.id}:create_ticket`;
       const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
       if (!allowed) {
-        return await interaction.editReply({
-          embeds: [errorEmbed('Trop de tickets', 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.')],
-        }).catch(() => {});
+        return await InteractionHelper.sendErrorNotice(interaction, 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.');
       }
 
       const config = await getGuildConfig(client, interaction.guildId);
@@ -83,14 +78,7 @@ export const createTicketHandler = {
       const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
 
       if (currentTicketCount >= maxTicketsPerUser) {
-        return await interaction.editReply({
-          embeds: [
-            errorEmbed(
-              '🎫 Limite de tickets atteinte',
-              `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.\n\n**Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`,
-            ),
-          ],
-        }).catch(() => {});
+        return await InteractionHelper.sendErrorNotice(interaction, `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}). Fermez vos tickets existants avant d'en créer un nouveau. **Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`);
       }
 
       const type = getTicketTypeForGuild(config, 'support');
@@ -105,14 +93,10 @@ export const createTicketHandler = {
         }).catch(() => {});
       }
 
-      return await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.') + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
-      }).catch(() => {});
+      return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.'));
     } catch (error) {
       logger.error('Error opening ticket type menu:', error);
-      await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible d\'ouvrir le formulaire de création de ticket.')],
-      }).catch(() => {});
+      await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible d\'ouvrir le formulaire de création de ticket.');
     }
   }
 };
@@ -127,9 +111,7 @@ export const createTicketDirectHandler = {
       const rateLimitKey = `${interaction.user.id}:create_ticket`;
       const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
       if (!allowed) {
-        return await interaction.editReply({
-          embeds: [errorEmbed('Trop de tickets', 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.')],
-        }).catch(() => {});
+        return await InteractionHelper.sendErrorNotice(interaction, 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.');
       }
 
       const config = await getGuildConfig(client, interaction.guildId);
@@ -139,14 +121,7 @@ export const createTicketDirectHandler = {
       const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
 
       if (currentTicketCount >= maxTicketsPerUser) {
-        return await interaction.editReply({
-          embeds: [
-            errorEmbed(
-              '🎫 Limite de tickets atteinte',
-              `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.\n\n**Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`,
-            ),
-          ],
-        }).catch(() => {});
+        return await InteractionHelper.sendErrorNotice(interaction, `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}). Fermez vos tickets existants avant d'en créer un nouveau. **Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`);
       }
 
       const typeId = interaction.customId.split(':')[1] || 'support';
@@ -162,14 +137,10 @@ export const createTicketDirectHandler = {
         }).catch(() => {});
       }
 
-      return await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.') + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
-      }).catch(() => {});
+      return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.'));
     } catch (error) {
       logger.error('Error creating ticket:', error);
-      await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
-      }).catch(() => {});
+      await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de créer le ticket.');
     }
   }
 };
@@ -196,24 +167,11 @@ export const createTicketModalHandler = {
           content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
         });
       } else {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', result.error || 'Impossible de créer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
-          flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(interaction, result.error || 'Impossible de créer le ticket.');
       }
     } catch (error) {
       logger.error('Error creating ticket:', error);
-      if (interaction.deferred) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la création de votre ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      } else if (!interaction.replied) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la création de votre ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la création de votre ticket.');
     }
   }
 };
@@ -234,9 +192,7 @@ export const closeTicketHandler = {
       );
 
       if (!permissionCheck.success) {
-        return await interaction.editReply({
-          embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-        }).catch(() => {});
+        return await InteractionHelper.sendErrorNotice(interaction, permissionCheck.details);
       }
 
       const result = await closeTicket(interaction.channel, interaction.user, 'Aucun motif précisé.');
@@ -247,14 +203,10 @@ export const closeTicketHandler = {
         }).catch(() => {});
       }
 
-      return await interaction.editReply({
-        embeds: [errorEmbed('Erreur', result.error || 'Impossible de fermer le ticket.')],
-      }).catch(() => {});
+      return await InteractionHelper.sendErrorNotice(interaction, result.error || 'Impossible de fermer le ticket.');
     } catch (error) {
       logger.error('Error closing ticket:', error);
-      await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'Impossible de fermer le ticket.')],
-      }).catch(() => {});
+      await InteractionHelper.sendErrorNotice(interaction, 'Impossible de fermer le ticket.');
     }
   }
 };
@@ -274,12 +226,7 @@ export const closeTicketModalHandler = {
       );
 
       if (!permissionCheck.success) {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral,
-          });
-        }
+        await InteractionHelper.sendErrorNotice(interaction, permissionCheck.details);
         return;
       }
 
@@ -297,24 +244,11 @@ export const closeTicketModalHandler = {
           flags: MessageFlags.Ephemeral,
         });
       } else {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', result.error || 'Impossible de fermer le ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(interaction, result.error || 'Impossible de fermer le ticket.');
       }
     } catch (error) {
       logger.error('Error submitting close ticket modal:', error);
-      if (interaction.deferred) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la fermeture du ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      } else if (!interaction.replied) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la fermeture du ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la fermeture du ticket.');
     }
   }
 };
@@ -334,12 +268,7 @@ export const claimTicketHandler = {
       );
 
       if (!permissionCheck.success) {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral,
-          });
-        }
+        await InteractionHelper.sendErrorNotice(interaction, permissionCheck.details);
         return;
       }
 
@@ -354,24 +283,11 @@ export const claimTicketHandler = {
           flags: MessageFlags.Ephemeral,
         });
       } else {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', result.error || 'Impossible de réclamer le ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(interaction, result.error || 'Impossible de réclamer le ticket.');
       }
     } catch (error) {
       logger.error('Error claiming ticket:', error);
-      if (interaction.deferred) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la réclamation du ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      } else if (!interaction.replied) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la réclamation du ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la réclamation du ticket.');
     }
   }
 };
@@ -391,12 +307,7 @@ export const pinTicketHandler = {
       );
 
       if (!permissionCheck.success) {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral,
-          });
-        }
+        await InteractionHelper.sendErrorNotice(interaction, permissionCheck.details);
         return;
       }
 
@@ -407,10 +318,7 @@ export const pinTicketHandler = {
       const category = channel.parent;
 
       if (!category) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', 'Ce ticket n\'est dans aucune catégorie.')],
-          flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(interaction, 'Ce ticket n\'est dans aucune catégorie.');
         return;
       }
 
@@ -479,17 +387,7 @@ export const pinTicketHandler = {
       });
     } catch (error) {
       logger.error('Error pinning/unpinning ticket:', error);
-      if (interaction.deferred) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', 'Impossible d\'épingler/désépingler le ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      } else if (!interaction.replied) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Impossible d\'épingler/désépingler le ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await InteractionHelper.sendErrorNotice(interaction, 'Impossible d\'épingler/désépingler le ticket.');
     }
   }
 };
@@ -509,12 +407,7 @@ export const unclaimTicketHandler = {
       );
 
       if (!permissionCheck.success) {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral,
-          });
-        }
+        await InteractionHelper.sendErrorNotice(interaction, permissionCheck.details);
         return;
       }
 
@@ -530,24 +423,11 @@ export const unclaimTicketHandler = {
           flags: MessageFlags.Ephemeral,
         });
       } else {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', result.error || 'Impossible de retirer la réclamation.')],
-          flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(interaction, result.error || 'Impossible de retirer la réclamation.');
       }
     } catch (error) {
       logger.error('Error unclaiming ticket:', error);
-      if (interaction.deferred) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      } else if (!interaction.replied) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue.');
     }
   }
 };
@@ -567,12 +447,7 @@ export const reopenTicketHandler = {
       );
 
       if (!permissionCheck.success) {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral,
-          });
-        }
+        await InteractionHelper.sendErrorNotice(interaction, permissionCheck.details);
         return;
       }
 
@@ -593,24 +468,11 @@ export const reopenTicketHandler = {
           flags: MessageFlags.Ephemeral,
         });
       } else {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', result.error || 'Impossible de rouvrir le ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(interaction, result.error || 'Impossible de rouvrir le ticket.');
       }
     } catch (error) {
       logger.error('Error reopening ticket:', error);
-      if (interaction.deferred) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la réouverture du ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      } else if (!interaction.replied) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la réouverture du ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la réouverture du ticket.');
     }
   }
 };
@@ -630,12 +492,7 @@ export const deleteTicketHandler = {
       );
 
       if (!permissionCheck.success) {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            embeds: [errorEmbed(permissionCheck.error, permissionCheck.details)],
-            flags: MessageFlags.Ephemeral,
-          });
-        }
+        await InteractionHelper.sendErrorNotice(interaction, permissionCheck.details);
         return;
       }
 
@@ -651,24 +508,11 @@ export const deleteTicketHandler = {
           flags: MessageFlags.Ephemeral,
         });
       } else {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', result.error || 'Impossible de supprimer le ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(interaction, result.error || 'Impossible de supprimer le ticket.');
       }
     } catch (error) {
       logger.error('Error deleting ticket:', error);
-      if (interaction.deferred) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la suppression du ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      } else if (!interaction.replied) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Une erreur est survenue lors de la suppression du ticket.')],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
+      await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la suppression du ticket.');
     }
   }
 };

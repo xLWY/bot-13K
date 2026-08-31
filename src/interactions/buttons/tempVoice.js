@@ -24,6 +24,7 @@ import {
     transferTemporaryChannel,
     refreshControlPanel
 } from '../../services/tempVoiceService.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 function getErrorEmbedText(error) {
     return error || 'Une erreur est survenue.';
@@ -58,14 +59,7 @@ async function resolveTarget(interaction, client, args) {
 }
 
 async function replyError(interaction, text) {
-    try {
-        await interaction.reply({
-            content: `❌ ${getErrorEmbedText(text)}`,
-            flags: MessageFlags.Ephemeral
-        });
-    } catch (replyError) {
-        logger.warn('Failed to reply temp voice error:', replyError);
-    }
+    await InteractionHelper.sendErrorNotice(interaction, getErrorEmbedText(text));
 }
 
 const lockHandler = {
@@ -170,12 +164,7 @@ const renameHandler = {
                 return;
             }
             logger.error('Error in temp voice rename modal:', error);
-            try {
-                await interaction.followUp({
-                    content: '❌ Impossible de renommer le salon.',
-                    flags: MessageFlags.Ephemeral
-                });
-            } catch (_) { /* noop */ }
+            await InteractionHelper.sendErrorNotice(interaction, 'Impossible de renommer le salon.');
         }
     }
 };
@@ -220,10 +209,7 @@ const limitHandler = {
             const raw = submission.fields.getTextInputValue('tv_limit_input').trim();
             const limit = parseInt(raw, 10);
             if (isNaN(limit) || limit < 0 || limit > 99) {
-                return submission.reply({
-                    content: '❌ Entrez un nombre entre 0 et 99 (0 = illimité).',
-                    flags: MessageFlags.Ephemeral
-                });
+                return InteractionHelper.sendErrorNotice(submission, 'Entrez un nombre entre 0 et 99 (0 = illimité).');
             }
 
             await voiceChannel.setUserLimit(limit);
@@ -240,12 +226,7 @@ const limitHandler = {
                 return;
             }
             logger.error('Error in temp voice limit modal:', error);
-            try {
-                await interaction.followUp({
-                    content: '❌ Impossible de définir la limite.',
-                    flags: MessageFlags.Ephemeral
-                });
-            } catch (_) { /* noop */ }
+            await InteractionHelper.sendErrorNotice(interaction, 'Impossible de définir la limite.');
         }
     }
 };

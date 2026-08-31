@@ -33,7 +33,7 @@ const ticketTypeSelectHandler = {
         }).catch(() => {});
       }
 
-      return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.') + (result.debug ? `\n\n\`${result.debug}\`` : ''));
+      return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.'));
     } catch (error) {
       logger.error('Error creating ticket from type select:', error);
       await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de créer le ticket.');

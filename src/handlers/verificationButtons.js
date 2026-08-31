@@ -1,5 +1,5 @@
 import { MessageFlags } from 'discord.js';
-import { successEmbed, errorEmbed } from '../utils/embeds.js';
+import { successEmbed } from '../utils/embeds.js';
 import { verifyUser } from '../services/verificationService.js';
 import { handleInteractionError } from '../utils/errorHandler.js';
 import { logger } from '../utils/logger.js';
@@ -17,9 +17,7 @@ export async function handleVerificationButton(interaction, client) {
         await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
 
         if (!interaction.guild) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Serveur uniquement", "Ce bouton ne peut être utilisé que dans un serveur.")],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, "Ce bouton ne peut être utilisé que dans un serveur.");
         }
 
         const guild = interaction.guild;
@@ -39,20 +37,10 @@ export async function handleVerificationButton(interaction, client) {
 
         if (!result.success) {
             if (result.alreadyVerified) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(
-                        "Déjà vérifié",
-                        "Tu es déjà vérifié et tu as accès à tous les salons du serveur."
-                    )],
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, "Tu es déjà vérifié et tu as accès à tous les salons du serveur.");
             }
 
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(
-                    "Échec de la vérification",
-                    "Une erreur est survenue lors de la vérification. Réessaie ou contacte un administrateur."
-                )],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue lors de la vérification. Réessaie ou contacte un administrateur.");
         }
 
         

@@ -23,17 +23,13 @@ export default {
         }
 
         if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Tu as besoin de la permission `Gérer les salons` pour détruire un salon.')]
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission `Gérer les salons` pour détruire un salon.');
         }
 
         const channel = interaction.channel;
 
         if (!channel || !channel.guild || typeof channel.clone !== 'function') {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Cette commande ne peut être utilisée que dans un salon de serveur.')]
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, 'Cette commande ne peut être utilisée que dans un salon de serveur.');
         }
 
         try {

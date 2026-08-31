@@ -1,6 +1,4 @@
-import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 
 import { handleCreate } from './modules/serverstats_create.js';
@@ -108,25 +106,12 @@ export default {
                     await handleDelete(interaction, client);
                     break;
                 default:
-                    await InteractionHelper.safeReply(interaction, {
-                        embeds: [errorEmbed("Sous-commande inconnue.")],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    await InteractionHelper.sendErrorNotice(interaction, "Sous-commande inconnue.");
             }
         } catch (error) {
             logger.error(`Error in serverstats ${subcommand}:`, error);
             
-            const errorEmbedMsg = createEmbed({ 
-                title: "❌ Erreur", 
-                description: "Une erreur est survenue pendant le traitement de ta demande.",
-                color: getColor('error')
-            });
-
-            if (!interaction.replied && !interaction.deferred) {
-                await InteractionHelper.safeReply(interaction, { embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
-            } else {
-                await interaction.followUp({ embeds: [errorEmbedMsg], flags: MessageFlags.Ephemeral }).catch(logger.error);
-            }
+            await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue pendant le traitement de ta demande.");
         }
     }
 };

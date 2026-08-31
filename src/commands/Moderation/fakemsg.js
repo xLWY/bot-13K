@@ -1,5 +1,4 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
-import { errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
@@ -96,14 +95,7 @@ export default {
             }
         } catch (error) {
             logger.error("Error in fakemsg command:", error);
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        "Erreur système",
-                        "Échec de la publication du message factice. Vérifie la permission **Gérer les webhooks** du bot dans ce salon."
-                    ),
-                ],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, "Échec de la publication du message factice. Vérifie la permission **Gérer les webhooks** du bot dans ce salon.");
         }
     }
 };

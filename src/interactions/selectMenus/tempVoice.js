@@ -1,5 +1,4 @@
 import { MessageFlags } from 'discord.js';
-import { logger } from '../../utils/logger.js';
 import { getJoinToCreateConfig, getTemporaryChannelInfo } from '../../utils/database.js';
 import { canControlMember, refreshControlPanel } from '../../services/tempVoiceService.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -23,14 +22,7 @@ async function resolveChannel(interaction, client, args) {
 }
 
 async function replyError(interaction, text) {
-    try {
-        await interaction.reply({
-            content: `❌ ${text}`,
-            flags: MessageFlags.Ephemeral
-        });
-    } catch (replyError) {
-        logger.warn('Failed to reply temp voice select error:', replyError);
-    }
+    await InteractionHelper.sendErrorNotice(interaction, text);
 }
 
 const blacklistSelect = {

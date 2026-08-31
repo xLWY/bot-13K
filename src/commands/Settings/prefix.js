@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { getGuildConfig, setConfigValue } from '../../services/guildConfig.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
@@ -31,10 +31,7 @@ export default {
         }
 
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-            return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Tu as besoin de la permission **Gérer le serveur** pour utiliser `/prefix`.')],
-                flags: MessageFlags.Ephemeral
-            });
+            return InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/prefix`.');
         }
 
         const { guild, options } = interaction;
@@ -54,24 +51,15 @@ export default {
             const trimmedPrefix = newPrefix.trim();
 
             if (trimmedPrefix.length === 0) {
-                return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Le préfixe ne peut pas être vide ou ne contenir que des espaces.')],
-                    flags: MessageFlags.Ephemeral
-                });
+                return InteractionHelper.sendErrorNotice(interaction, 'Le préfixe ne peut pas être vide ou ne contenir que des espaces.');
             }
 
             if (trimmedPrefix.length > MAX_PREFIX_LENGTH) {
-                return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(`Le préfixe ne peut pas dépasser ${MAX_PREFIX_LENGTH} caractères.`)],
-                    flags: MessageFlags.Ephemeral
-                });
+                return InteractionHelper.sendErrorNotice(interaction, `Le préfixe ne peut pas dépasser ${MAX_PREFIX_LENGTH} caractères.`);
             }
 
             if (/\s/.test(trimmedPrefix)) {
-                return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Le préfixe ne peut pas contenir d\'espaces.')],
-                    flags: MessageFlags.Ephemeral
-                });
+                return InteractionHelper.sendErrorNotice(interaction, 'Le préfixe ne peut pas contenir d\'espaces.');
             }
 
             await setConfigValue(client, guild.id, 'prefix', trimmedPrefix);
@@ -84,10 +72,7 @@ export default {
             });
         } catch (error) {
             logger.error(`[Prefix] Failed to update prefix for guild ${guild.id}:`, error);
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Une erreur est survenue lors de la mise à jour du préfixe. Veuillez réessayer.', error, { showDetails: true })],
-                flags: MessageFlags.Ephemeral
-            });
+            await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la mise à jour du préfixe. Veuillez réessayer.');
         }
     }
 };

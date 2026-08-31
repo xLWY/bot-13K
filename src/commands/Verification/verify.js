@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
-import { errorEmbed, infoEmbed, successEmbed } from '../../utils/embeds.js';
+import { infoEmbed, successEmbed } from '../../utils/embeds.js';
 import { withErrorHandling } from '../../utils/errorHandler.js';
 import { verifyUser } from '../../services/verificationService.js';
 import { logger } from '../../utils/logger.js';
@@ -27,13 +27,7 @@ export default {
                     });
                 }
 
-                return await InteractionHelper.safeReply(interaction, {
-                    embeds: [errorEmbed(
-                        "Vérification échouée",
-                        "Une erreur est survenue lors de la vérification. Réessaie ou contacte un administrateur."
-                    )],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue lors de la vérification. Réessaie ou contacte un administrateur.");
             }
 
             await InteractionHelper.safeReply(interaction, {

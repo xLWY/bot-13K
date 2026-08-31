@@ -11,7 +11,7 @@ import {
     ButtonStyle
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { 
@@ -136,10 +136,7 @@ time: 60000
                     ? error.userMessage || "Une erreur est survenue pendant le traitement de ta sélection."
                     : "Une erreur est survenue pendant le traitement de ta sélection.";
                     
-                await selectInteraction.followUp({
-                    embeds: [errorEmbed('Erreur de configuration', errorMessage)],
-                    flags: MessageFlags.Ephemeral,
-                }).catch(() => {});
+                await InteractionHelper.sendErrorNotice(selectInteraction, errorMessage);
             }
         });
 
@@ -200,10 +197,7 @@ time: 600_000,
             const newTemplate = message.content.trim();
             
             if (!newTemplate || newTemplate.length > 100) {
-                await interaction.followUp({
-                    embeds: [errorEmbed('Modèle invalide', 'Le modèle doit contenir entre 1 et 100 caractères.')],
-                    flags: MessageFlags.Ephemeral,
-                });
+                await InteractionHelper.sendErrorNotice(interaction, 'Le modèle doit contenir entre 1 et 100 caractères.');
                 return;
             }
 
@@ -234,19 +228,13 @@ time: 600_000,
                 ? error.userMessage || "Impossible de mettre à jour le modèle de nom."
                 : "Impossible de mettre à jour le modèle de nom.";
                 
-            await interaction.followUp({
-                embeds: [errorEmbed('Échec de la mise à jour', errorMessage)],
-                flags: MessageFlags.Ephemeral,
-            }).catch(() => {});
+            await InteractionHelper.sendErrorNotice(interaction, errorMessage);
         }
     });
 
     collector.on('end', (collected, reason) => {
         if (reason === 'time') {
-            interaction.followUp({
-                embeds: [errorEmbed('Temps écoulé', 'Aucune réponse reçue. Mise à jour du modèle annulée.')],
-                flags: MessageFlags.Ephemeral,
-            }).catch(() => {});
+            InteractionHelper.sendErrorNotice(interaction, 'Aucune réponse reçue. Mise à jour du modèle annulée.').catch(() => {});
         }
     });
 }
@@ -278,10 +266,7 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
             const newLimit = parseInt(message.content.trim());
             
             if (newLimit < 0 || newLimit > 99) {
-                await interaction.followUp({
-                    embeds: [errorEmbed('Limite invalide', 'La limite de membres doit être comprise entre 0 et 99.')],
-                    flags: MessageFlags.Ephemeral,
-                });
+                await InteractionHelper.sendErrorNotice(interaction, 'La limite de membres doit être comprise entre 0 et 99.');
                 return;
             }
 
@@ -312,19 +297,13 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
                 ? error.userMessage || "Impossible de mettre à jour la limite de membres."
                 : "Impossible de mettre à jour la limite de membres.";
                 
-            await interaction.followUp({
-                embeds: [errorEmbed('Échec de la mise à jour', errorMessage)],
-                flags: MessageFlags.Ephemeral,
-            }).catch(() => {});
+            await InteractionHelper.sendErrorNotice(interaction, errorMessage);
         }
     });
 
     collector.on('end', (collected, reason) => {
         if (reason === 'time') {
-            interaction.followUp({
-                embeds: [errorEmbed('Temps écoulé', 'Aucune réponse valide reçue. Mise à jour annulée.')],
-                flags: MessageFlags.Ephemeral,
-            }).catch(() => {});
+            InteractionHelper.sendErrorNotice(interaction, 'Aucune réponse valide reçue. Mise à jour annulée.').catch(() => {});
         }
     });
 }
@@ -361,10 +340,7 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
             const newBitrate = parseInt(message.content.trim());
             
             if (newBitrate < 8 || newBitrate > 384) {
-                await interaction.followUp({
-                    embeds: [errorEmbed('Débit invalide', 'Le débit binaire doit être compris entre 8 et 384 kbps.')],
-                    flags: MessageFlags.Ephemeral,
-                });
+                await InteractionHelper.sendErrorNotice(interaction, 'Le débit binaire doit être compris entre 8 et 384 kbps.');
                 return;
             }
 
@@ -395,19 +371,13 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
                 ? error.userMessage || "Impossible de mettre à jour le débit binaire."
                 : "Impossible de mettre à jour le débit binaire.";
                 
-            await interaction.followUp({
-                embeds: [errorEmbed('Échec de la mise à jour', errorMessage)],
-                flags: MessageFlags.Ephemeral,
-            }).catch(() => {});
+            await InteractionHelper.sendErrorNotice(interaction, errorMessage);
         }
     });
 
     collector.on('end', (collected, reason) => {
         if (reason === 'time') {
-            interaction.followUp({
-                embeds: [errorEmbed('Temps écoulé', 'Aucune réponse valide reçue. Mise à jour annulée.')],
-                flags: MessageFlags.Ephemeral,
-            }).catch(() => {});
+            InteractionHelper.sendErrorNotice(interaction, 'Aucune réponse valide reçue. Mise à jour annulée.').catch(() => {});
         }
     });
 }
@@ -457,10 +427,7 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
                         flags: MessageFlags.Ephemeral,
                     });
                 } else {
-                    await buttonInteraction.followUp({
-                        embeds: [errorEmbed('Échec du retrait', "Impossible de retirer le canal déclencheur.")],
-                        flags: MessageFlags.Ephemeral,
-                    });
+                    await InteractionHelper.sendErrorNotice(buttonInteraction, "Impossible de retirer le canal déclencheur.");
                 }
             } catch (error) {
                 if (error instanceof TitanBotError) {
@@ -473,10 +440,7 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
                     ? error.userMessage || "Une erreur est survenue pendant le retrait du canal déclencheur."
                     : "Une erreur est survenue pendant le retrait du canal déclencheur.";
                     
-                await buttonInteraction.followUp({
-                    embeds: [errorEmbed('Échec du retrait', errorMessage)],
-                    flags: MessageFlags.Ephemeral,
-                }).catch(() => {});
+                await InteractionHelper.sendErrorNotice(buttonInteraction, errorMessage);
             }
         } else {
             await buttonInteraction.followUp({
@@ -488,10 +452,7 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
 
     collector.on('end', (collected, reason) => {
         if (reason === 'time') {
-            interaction.followUp({
-                embeds: [errorEmbed('Temps écoulé', 'Aucune réponse reçue. Retrait annulé.')],
-                flags: MessageFlags.Ephemeral,
-            }).catch(() => {});
+            InteractionHelper.sendErrorNotice(interaction, 'Aucune réponse reçue. Retrait annulé.').catch(() => {});
         }
     });
 }

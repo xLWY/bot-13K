@@ -114,13 +114,7 @@ export default {
                     errorMessage = "Une erreur inattendue est survenue. Veuillez réessayer ou contacter le support.";
                 }
 
-                const errorEmbedObj = errorEmbed("⚠️ Erreur", errorMessage);
-
-                if (interaction.deferred) {
-                    return await InteractionHelper.safeEditReply(interaction, { embeds: [errorEmbedObj] });
-                } else {
-                    return await InteractionHelper.safeReply(interaction, { embeds: [errorEmbedObj], flags: MessageFlags.Ephemeral });
-                }
+                return await InteractionHelper.sendErrorNotice(interaction, errorMessage);
             } catch (replyError) {
                 logger.error('Failed to send error message:', replyError);
             }

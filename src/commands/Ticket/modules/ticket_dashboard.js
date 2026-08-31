@@ -17,7 +17,7 @@ import {
     EmbedBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
@@ -294,12 +294,7 @@ export default {
                             : 'Une erreur inattendue est survenue lors de la mise à jour de la configuration.';
 
                     // Already deferred at the top of the collector
-                    await selectInteraction
-                        .followUp({
-                            embeds: [errorEmbed('Erreur de configuration', errorMessage)],
-                            flags: MessageFlags.Ephemeral,
-                        })
-                        .catch(() => {});
+                    await InteractionHelper.sendErrorNotice(selectInteraction, errorMessage);
                 }
             });
 
@@ -325,26 +320,14 @@ export default {
                             : 'Une erreur inattendue est survenue lors de la mise à jour de la configuration.';
 
                     // Already deferred at the top of the collector
-                    await btnInteraction
-                        .followUp({
-                            embeds: [errorEmbed('Erreur de configuration', errorMessage)],
-                            flags: MessageFlags.Ephemeral,
-                        })
-                        .catch(() => {});
+                    await InteractionHelper.sendErrorNotice(btnInteraction, errorMessage);
                 }
             });
 
             collector.on('end', async (collected, reason) => {
                 buttonCollector.stop();
                 if (reason === 'time') {
-                    const timeoutEmbed = new EmbedBuilder()
-                        .setTitle('⏰ Tableau de bord expiré')
-                        .setDescription('Ce tableau de bord a été fermé pour inactivité. Relancez la commande pour continuer.')
-                        .setColor(getColor('error'));
-                    await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [timeoutEmbed],
-                        components: [],
-                    }).catch(() => {});
+                    await InteractionHelper.sendErrorNotice(interaction, 'Ce tableau de bord a été fermé pour inactivité. Relancez la commande pour continuer.');
                 }
             });
         } catch (error) {
@@ -519,12 +502,7 @@ async function handleStaffRole(selectInteraction, rootInteraction, guildConfig, 
 
     roleCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Délai dépassé', 'Aucun rôle sélectionné. Le rôle staff n\'a pas été modifié.')],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun rôle sélectionné. Le rôle staff n\'a pas été modifié.');
         }
     });
 }
@@ -585,14 +563,7 @@ async function handleOpenCategory(selectInteraction, rootInteraction, guildConfi
 
     catCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [
-                        errorEmbed('Délai dépassé', 'Aucune catégorie sélectionnée. Le réglage n\'a pas été modifié.'),
-                    ],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucune catégorie sélectionnée. Le réglage n\'a pas été modifié.');
         }
     });
 }
@@ -659,14 +630,7 @@ async function handleClosedCategory(
 
     catCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [
-                        errorEmbed('Délai dépassé', 'Aucune catégorie sélectionnée. Le réglage n\'a pas été modifié.'),
-                    ],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucune catégorie sélectionnée. Le réglage n\'a pas été modifié.');
         }
     });
 }
@@ -707,10 +671,7 @@ async function handleMaxTickets(selectInteraction, rootInteraction, guildConfig,
     const newMax = parseInt(raw, 10);
 
     if (isNaN(newMax) || newMax < 1 || newMax > 10) {
-        await submitted.reply({
-            embeds: [errorEmbed('Valeur invalide', 'Le nombre maximum de tickets doit être un entier compris entre **1** et **10**.')],
-            flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(submitted, 'Le nombre maximum de tickets doit être un entier compris entre **1** et **10**.');
         return;
     }
 
@@ -793,18 +754,12 @@ async function handleAddType(selectInteraction, rootInteraction, guildConfig, gu
     const description = submitted.fields.getTextInputValue('type_desc_input').trim();
 
     if (emoji.length === 0 || /\s/.test(emoji) || emoji.length > 40) {
-        await submitted.reply({
-            embeds: [errorEmbed('Emoji invalide', 'L\'emoji doit être un seul emoji ou une emoji personnalisée (ex. `🎁` ou `<:nom:123456789>`).')],
-            flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(submitted, 'L\'emoji doit être un seul emoji ou une emoji personnalisée (ex. `🎁` ou `<:nom:123456789>`).');
         return;
     }
 
     if (label.length === 0 || label.length > 80) {
-        await submitted.reply({
-            embeds: [errorEmbed('Nom invalide', 'Le nom du bouton doit contenir entre **1** et **80** caractères.')],
-            flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(submitted, 'Le nom du bouton doit contenir entre **1** et **80** caractères.');
         return;
     }
 
@@ -843,10 +798,7 @@ async function handleRemoveType(selectInteraction, rootInteraction, guildConfig,
     const currentTypes = resolveTicketTypes(guildConfig);
 
     if (currentTypes.length <= 1) {
-        await selectInteraction.reply({
-            embeds: [errorEmbed('Impossible', 'Au moins un bouton doit rester sur le panneau.')],
-            flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(selectInteraction, 'Au moins un bouton doit rester sur le panneau.');
         return;
     }
 
@@ -913,12 +865,7 @@ async function handleRemoveType(selectInteraction, rootInteraction, guildConfig,
 
     typeCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Délai dépassé', 'Aucun bouton sélectionné. Aucune modification n\'a été effectuée.')],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun bouton sélectionné. Aucune modification n\'a été effectuée.');
         }
     });
 }
@@ -991,10 +938,7 @@ async function handleLogsChannel(selectInteraction, rootInteraction, guildConfig
 
     collector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction.followUp({
-                embeds: [errorEmbed('Délai dépassé', 'Aucun salon sélectionné. Aucune modification n\'a été effectuée.')],
-                flags: MessageFlags.Ephemeral
-            }).catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun salon sélectionné. Aucune modification n\'a été effectuée.');
         }
     });
 }
@@ -1045,10 +989,7 @@ async function handleTranscriptChannel(selectInteraction, rootInteraction, guild
 
     collector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction.followUp({
-                embeds: [errorEmbed('Délai dépassé', 'Aucun salon sélectionné. Aucune modification n\'a été effectuée.')],
-                flags: MessageFlags.Ephemeral
-            }).catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun salon sélectionné. Aucune modification n\'a été effectuée.');
         }
     });
 }
@@ -1112,12 +1053,7 @@ async function handleCheckUser(selectInteraction, rootInteraction, guildConfig, 
 
     userCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Délai dépassé', 'Aucun utilisateur sélectionné.')],
-                    flags: MessageFlags.Ephemeral,
-                })
-                .catch(() => {});
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun utilisateur sélectionné.');
         }
     });
 }
@@ -1158,10 +1094,7 @@ async function handleDeleteSystem(btnInteraction, rootInteraction, guildConfig, 
     const confirmation = submitted.fields.getTextInputValue('delete_confirmation').trim();
 
     if (confirmation !== 'SUPPRIMER') {
-        await submitted.reply({
-            embeds: [errorEmbed('Confirmation incorrecte', 'Vous devez taper "SUPPRIMER" exactement pour confirmer la suppression.')],
-            flags: MessageFlags.Ephemeral,
-        });
+        await InteractionHelper.sendErrorNotice(submitted, 'Vous devez taper "SUPPRIMER" exactement pour confirmer la suppression.');
         await refreshDashboard(rootInteraction, guildConfig, guildId);
         return;
     }

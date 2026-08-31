@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
@@ -26,14 +26,7 @@ export default {
     }
 
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
-      return await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "Permission refusée",
-            "Tu as besoin de la permission `Gérer les salons` pour verrouiller des salons.",
-          ),
-        ],
-      });
+      return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission `Gérer les salons` pour verrouiller des salons.");
 
     const channel = interaction.channel;
     const everyoneRole = interaction.guild.roles.everyone;
@@ -41,14 +34,7 @@ export default {
     try {
       const currentPermissions = channel.permissionsFor(everyoneRole);
       if (currentPermissions.has(PermissionFlagsBits.SendMessages) === false) {
-        return await InteractionHelper.safeEditReply(interaction, {
-          embeds: [
-            errorEmbed(
-              "Salon déjà verrouillé",
-              `${channel} est déjà verrouillé.`,
-            ),
-          ],
-        });
+        return await InteractionHelper.sendErrorNotice(interaction, `${channel} est déjà verrouillé.`);
       }
 
       await channel.permissionOverwrites.edit(
@@ -96,13 +82,7 @@ export default {
       });
     } catch (error) {
       logger.error('Lock command error:', error);
-      await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          errorEmbed(
-            "Une erreur inattendue est survenue en essayant de verrouiller le salon. Vérifie mes permissions (j'ai besoin de « Gérer les salons »).",
-          ),
-        ],
-      });
+      return await InteractionHelper.sendErrorNotice(interaction, "Une erreur inattendue est survenue en essayant de verrouiller le salon. Vérifie mes permissions (j'ai besoin de « Gérer les salons »).");
     }
   }
 };

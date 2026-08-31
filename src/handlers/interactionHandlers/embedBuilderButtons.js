@@ -1,6 +1,7 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, MessageFlags } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const embedBuilderData = new Map();
 const MAX_TEXT_INPUT_LENGTH = 4000;
@@ -219,15 +220,6 @@ async function refreshBuilderMessage(interaction, data, extra = {}) {
   await interaction.editReply(payload);
 }
 
-async function replyEphemeral(interaction, content) {
-  const payload = { content, flags: MessageFlags.Ephemeral };
-  if (interaction.replied || interaction.deferred) {
-    await interaction.followUp(payload);
-    return;
-  }
-  await interaction.reply(payload);
-}
-
 async function showTextModal(interaction, { customId, title, inputCustomId, label, placeholder, style, maxLength, required = false }) {
   const modal = new ModalBuilder()
     .setCustomId(customId)
@@ -252,7 +244,7 @@ export async function handleEmbedBuilderButtons(interaction, client) {
     const ownerId = getBuilderOwnerId(interaction);
 
     if (ownerId && ownerId !== userId) {
-      await replyEphemeral(interaction, '❌ Seule la personne qui a lancé le constructeur peut l’utiliser.');
+      await InteractionHelper.sendErrorNotice(interaction, 'Seule la personne qui a lancé le constructeur peut l’utiliser.');
       return;
     }
 
@@ -353,14 +345,7 @@ export async function handleEmbedBuilderButtons(interaction, client) {
     });
 
     try {
-      const errorMessage = `❌ Erreur: ${error.message}`;
-      if (interaction.deferred) {
-        await interaction.editReply({ content: errorMessage, components: [] });
-      } else if (interaction.replied) {
-        await interaction.followUp({ content: errorMessage, flags: MessageFlags.Ephemeral });
-      } else {
-        await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
-      }
+      await InteractionHelper.sendErrorNotice(interaction, `Erreur : ${error.message}`);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }
@@ -436,7 +421,7 @@ async function cancelEmbed(interaction, userId) {
 
 async function sendEmbed(interaction, data) {
   if (!hasEmbedContent(data)) {
-    await replyEphemeral(interaction, '❌ Ton embed est vide. Ajoute au moins un titre, une description ou un champ.');
+    await InteractionHelper.sendErrorNotice(interaction, 'Ton embed est vide. Ajoute au moins un titre, une description ou un champ.');
     return;
   }
 
@@ -485,7 +470,7 @@ export async function handleEmbedBuilderModals(interaction, client) {
         const parsedColor = parseColor(colorValue);
         if (parsedColor === null) {
           await refreshBuilderMessage(interaction, data);
-          await replyEphemeral(interaction, '❌ Couleur invalide. Utilise un hex (`#00FF00`) ou un nombre décimal (0–16777215).');
+          await InteractionHelper.sendErrorNotice(interaction, 'Couleur invalide. Utilise un hex (`#00FF00`) ou un nombre décimal (0–16777215).');
           return;
         }
         data.color = parsedColor;
@@ -494,7 +479,7 @@ export async function handleEmbedBuilderModals(interaction, client) {
       case 'embed_field_modal': {
         if (data.fields.length >= MAX_EMBED_FIELDS) {
           await refreshBuilderMessage(interaction, data);
-          await replyEphemeral(interaction, '❌ Maximum 25 champs par embed.');
+          await InteractionHelper.sendErrorNotice(interaction, 'Maximum 25 champs par embed.');
           return;
         }
 
@@ -515,7 +500,7 @@ export async function handleEmbedBuilderModals(interaction, client) {
         }
         if (!isValidHttpUrl(imageUrl)) {
           await refreshBuilderMessage(interaction, data);
-          await replyEphemeral(interaction, '❌ URL d’image invalide. Utilise une URL http(s).');
+          await InteractionHelper.sendErrorNotice(interaction, 'URL d’image invalide. Utilise une URL http(s).');
           return;
         }
         data.image = imageUrl;
@@ -529,7 +514,7 @@ export async function handleEmbedBuilderModals(interaction, client) {
         }
         if (!isValidHttpUrl(thumbnailUrl)) {
           await refreshBuilderMessage(interaction, data);
-          await replyEphemeral(interaction, '❌ URL de miniature invalide. Utilise une URL http(s).');
+          await InteractionHelper.sendErrorNotice(interaction, 'URL de miniature invalide. Utilise une URL http(s).');
           return;
         }
         data.thumbnail = thumbnailUrl;
@@ -550,14 +535,7 @@ export async function handleEmbedBuilderModals(interaction, client) {
     });
 
     try {
-      const errorMessage = `❌ Erreur: ${error.message}`;
-      if (interaction.deferred) {
-        await interaction.editReply({ content: errorMessage, components: [] });
-      } else if (interaction.replied) {
-        await interaction.followUp({ content: errorMessage, flags: MessageFlags.Ephemeral });
-      } else {
-        await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
-      }
+      await InteractionHelper.sendErrorNotice(interaction, `Erreur : ${error.message}`);
     } catch (replyError) {
       logger.error('Failed to send error message:', replyError);
     }

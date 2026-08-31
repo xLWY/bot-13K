@@ -6,6 +6,7 @@ import {
     formatVoiceDuration
 } from '../../services/statsService.js';
 import { renderTopImage } from '../../services/statsImage.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const MAX_DISPLAY = 25;
 const DEFAULT_DISPLAY = 10;
@@ -54,7 +55,7 @@ export default {
 
     async execute(interaction, guildConfig, client) {
         if (!interaction.guild) {
-            await interaction.reply({ embeds: [createEmbed({ title: "📊 Classement d'activité", description: "Cette commande ne peut être utilisée que sur un serveur.", color: 'error' })] });
+            await InteractionHelper.sendErrorNotice(interaction, "Cette commande ne peut être utilisée que sur un serveur.");
             return;
         }
 

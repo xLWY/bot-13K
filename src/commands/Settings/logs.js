@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
 import { setLoggingChannel, getLoggingStatus, EVENT_TYPES } from '../../services/loggingService.js';
-import { errorEmbed, successEmbed, infoEmbed } from '../../utils/embeds.js';
+import { successEmbed, infoEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
@@ -29,10 +29,7 @@ export default {
         }
 
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-            return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Tu as besoin de la permission **Gérer le serveur** pour configurer les logs.')],
-                flags: MessageFlags.Ephemeral
-            });
+            return InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour configurer les logs.');
         }
 
         const channel = interaction.options.getChannel('channel');
@@ -40,17 +37,12 @@ export default {
         try {
             if (channel) {
                 if (channel.guildId !== interaction.guildId) {
-                    return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed(`<#${channel.id}> n'est pas dans ce serveur.`)]
-                    });
+                    return InteractionHelper.sendErrorNotice(interaction, `<#${channel.id}> n'est pas dans ce serveur.`);
                 }
 
                 const success = await setLoggingChannel(client, interaction.guild.id, channel.id);
                 if (!success) {
-                    return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Échec de la configuration du canal des logs. Veuillez réessayer.')],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return InteractionHelper.sendErrorNotice(interaction, 'Échec de la configuration du canal des logs. Veuillez réessayer.');
                 }
 
                 logger.info(`[Logs] Set logging channel to ${channel.name} (${channel.id}) in ${interaction.guild.name} (${interaction.guild.id}) by ${interaction.user.tag}`);
@@ -99,10 +91,7 @@ export default {
             });
         } catch (error) {
             logger.error(`[Logs] Failed to configure logging for guild ${interaction.guild.id}:`, error);
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Une erreur est survenue lors de la configuration du canal des logs. Veuillez réessayer.', error, { showDetails: true })],
-                flags: MessageFlags.Ephemeral
-            });
+            await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la configuration du canal des logs. Veuillez réessayer.');
         }
     }
 };

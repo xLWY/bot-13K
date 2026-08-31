@@ -18,7 +18,7 @@ import {
     TextDisplayBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getWelcomeConfig, saveWelcomeConfig } from '../../../utils/database.js';
@@ -225,12 +225,7 @@ export default {
                         await selectInteraction.deferUpdate().catch(() => {});
                     }
 
-                    await selectInteraction
-                        .followUp({
-                            embeds: [errorEmbed('Erreur de configuration', errorMessage)],
-                            flags: MessageFlags.Ephemeral,
-                        })
-                        .catch(() => {});
+                    await InteractionHelper.sendErrorNotice(selectInteraction, errorMessage).catch(() => {});
                 }
             });
 
@@ -380,15 +375,7 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
         const channel = chanInteraction.channels.first();
 
         if (!botHasPermission(channel, ['ViewChannel', 'SendMessages', 'EmbedLinks'])) {
-            await chanInteraction.followUp({
-                embeds: [
-                    errorEmbed(
-                        'Permissions manquantes',
-                        `J\'ai besoin des permissions **Voir le canal**, **Envoyer des messages** et **Intégrer des liens** dans ${channel}.`,
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
-            });
+            await InteractionHelper.sendErrorNotice(chanInteraction, `J\'ai besoin des permissions **Voir le canal**, **Envoyer des messages** et **Intégrer des liens** dans ${channel}.`);
             return;
         }
 
@@ -405,11 +392,7 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
 
     chanCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Expiré', 'Aucun canal n\'a été sélectionné. Le paramètre n\'a pas été modifié.')],
-                    flags: MessageFlags.Ephemeral,
-                })
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun canal n\'a été sélectionné. Le paramètre n\'a pas été modifié.')
                 .catch(() => {});
         }
     });
@@ -519,17 +502,11 @@ async function handleWelcomeImage(selectInteraction, rootInteraction, cfg, guild
         try {
             new URL(imageUrl);
             if (!['http:', 'https:'].includes(new URL(imageUrl).protocol)) {
-                await submitted.reply({
-                    embeds: [errorEmbed('URL invalide', 'L\'URL de l\'image doit commencer par `http://` ou `https://`.')],
-                    flags: MessageFlags.Ephemeral,
-                });
+                await InteractionHelper.sendErrorNotice(submitted, 'L\'URL de l\'image doit commencer par `http://` ou `https://`.');
                 return;
             }
         } catch {
-            await submitted.reply({
-                embeds: [errorEmbed('URL invalide', 'Veuillez fournir une URL d\'image valide.')],
-                flags: MessageFlags.Ephemeral,
-            });
+            await InteractionHelper.sendErrorNotice(submitted, 'Veuillez fournir une URL d\'image valide.');
             return;
         }
     }
@@ -607,15 +584,7 @@ async function handleGoodbyeChannel(selectInteraction, rootInteraction, cfg, gui
         const channel = chanInteraction.channels.first();
 
         if (!botHasPermission(channel, ['ViewChannel', 'SendMessages', 'EmbedLinks'])) {
-            await chanInteraction.followUp({
-                embeds: [
-                    errorEmbed(
-                        'Permissions manquantes',
-                        `J\'ai besoin des permissions **Voir le canal**, **Envoyer des messages** et **Intégrer des liens** dans ${channel}.`,
-                    ),
-                ],
-                flags: MessageFlags.Ephemeral,
-            });
+            await InteractionHelper.sendErrorNotice(chanInteraction, `J\'ai besoin des permissions **Voir le canal**, **Envoyer des messages** et **Intégrer des liens** dans ${channel}.`);
             return;
         }
 
@@ -632,11 +601,7 @@ async function handleGoodbyeChannel(selectInteraction, rootInteraction, cfg, gui
 
     chanCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            selectInteraction
-                .followUp({
-                    embeds: [errorEmbed('Expiré', 'Aucun canal n\'a été sélectionné. Le paramètre n\'a pas été modifié.')],
-                    flags: MessageFlags.Ephemeral,
-                })
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun canal n\'a été sélectionné. Le paramètre n\'a pas été modifié.')
                 .catch(() => {});
         }
     });
@@ -750,17 +715,11 @@ async function handleGoodbyeImage(selectInteraction, rootInteraction, cfg, guild
         try {
             new URL(imageUrl);
             if (!['http:', 'https:'].includes(new URL(imageUrl).protocol)) {
-                await submitted.reply({
-                    embeds: [errorEmbed('URL invalide', 'L\'URL de l\'image doit commencer par `http://` ou `https://`.')],
-                    flags: MessageFlags.Ephemeral,
-                });
+                await InteractionHelper.sendErrorNotice(submitted, 'L\'URL de l\'image doit commencer par `http://` ou `https://`.');
                 return;
             }
         } catch {
-            await submitted.reply({
-                embeds: [errorEmbed('URL invalide', 'Veuillez fournir une URL d\'image valide.')],
-                flags: MessageFlags.Ephemeral,
-            });
+            await InteractionHelper.sendErrorNotice(submitted, 'Veuillez fournir une URL d\'image valide.');
             return;
         }
     }

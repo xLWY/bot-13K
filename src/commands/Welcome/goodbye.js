@@ -1,6 +1,5 @@
 import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags } from 'discord.js';
-import { errorEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } from 'discord.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 import { formatWelcomeMessage } from '../../utils/welcome.js';
 import { logger } from '../../utils/logger.js';
@@ -47,10 +46,7 @@ export default {
         const { options, guild, client } = interaction;
 
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Permissions manquantes', 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/goodbye`.')],
-                flags: MessageFlags.Ephemeral
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/goodbye`.');
         }
 
         const subcommand = options.getSubcommand();
@@ -64,22 +60,13 @@ export default {
             const existingConfig = await getWelcomeConfig(client, guild.id);
             if (existingConfig?.goodbyeChannelId) {
                 logger.info(`[Goodbye] Setup blocked because config already exists in channel ${existingConfig.goodbyeChannelId} for guild ${guild.id}`);
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(
-                        'Configuration d\'au revoir déjà existante',
-                        `L\'au revoir est déjà configuré pour <#${existingConfig.goodbyeChannelId}>. Utilise **/goodbye config** pour personnaliser le canal, le message, le ping ou l\'image.`
-                    )],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, `L\'au revoir est déjà configuré pour <#${existingConfig.goodbyeChannelId}>. Utilise **/goodbye config** pour le personnaliser.`);
             }
 
             
             if (!message || message.trim().length === 0) {
                 logger.warn(`[Goodbye] Empty message provided by ${interaction.user.tag} in ${guild.name}`);
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed('Entrée invalide', 'Le message d\'au revoir ne peut pas être vide')],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Le message d\'au revoir ne peut pas être vide');
             }
 
             
@@ -88,10 +75,7 @@ export default {
                     new URL(image);
                 } catch (e) {
                     logger.warn(`[Goodbye] Invalid image URL provided by ${interaction.user.tag}: ${image}`);
-                    return await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed("URL d'image invalide", "Veuillez fournir une URL d'image valide (doit commencer par http:// ou https://)")],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return await InteractionHelper.sendErrorNotice(interaction, "Veuillez fournir une URL d'image valide (doit commencer par http:// ou https://)");
                 }
             }
 
@@ -135,14 +119,7 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
             } catch (error) {
                 logger.error(`[Goodbye] Failed to setup goodbye system for guild ${guild.id}:`, error);
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(
-                        'Échec de la configuration',
-                        'Une erreur est survenue lors de la configuration du système d\'au revoir. Veuillez réessayer.',
-                        { showDetails: true }
-                    )],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la configuration du système d\'au revoir. Veuillez réessayer.');
             }
         }
     },

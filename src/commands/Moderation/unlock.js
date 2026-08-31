@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
@@ -30,14 +30,7 @@ export default {
                 PermissionFlagsBits.ManageChannels,
             )
         )
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        "Permission refusée",
-                        "Tu as besoin de la permission `Gérer les salons` pour déverrouiller des salons.",
-                    ),
-                ],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission `Gérer les salons` pour déverrouiller des salons.");
 
         const channel = interaction.channel;
         const everyoneRole = interaction.guild.roles.everyone;
@@ -50,14 +43,7 @@ export default {
                 currentPermissions.has(PermissionFlagsBits.SendMessages) ===
                     null
             ) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Salon déjà déverrouillé",
-                            `${channel} n'est pas explicitement verrouillé (tout le monde peut déjà y envoyer des messages).`,
-                        ),
-                    ],
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, `${channel} n'est pas explicitement verrouillé (tout le monde peut déjà y envoyer des messages).`);
             }
 
             await channel.permissionOverwrites.edit(
@@ -111,13 +97,7 @@ export default {
             });
         } catch (error) {
             logger.error('Unlock command error:', error);
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        "Une erreur inattendue est survenue en essayant de déverrouiller le salon. Vérifie mes permissions (j'ai besoin de « Gérer les salons »).",
-                    ),
-                ],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, "Une erreur inattendue est survenue en essayant de déverrouiller le salon. Vérifie mes permissions (j'ai besoin de « Gérer les salons »).");
         }
     }
 };

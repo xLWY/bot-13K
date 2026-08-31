@@ -5,20 +5,6 @@ import { sanitizeMarkdown } from '../../utils/sanitization.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
-async function sendTransient(interaction, content) {
-    const sent = await InteractionHelper.safeEditReply(interaction, { content });
-    if (sent) {
-        setTimeout(async () => {
-            try {
-                const reply = await interaction.fetchReply().catch(() => null);
-                if (reply) await reply.delete().catch(() => {});
-            } catch (_) {
-                // already deleted
-            }
-        }, 5000).unref?.();
-    }
-}
-
 export default {
     data: new SlashCommandBuilder()
         .setName("dm")
@@ -62,11 +48,11 @@ export default {
 
         try {
             if (message.length > 2000) {
-                return await sendTransient(interaction, `<@${interaction.user.id}> message trop long (2000 caractères max)`);
+                return await InteractionHelper.sendErrorNotice(interaction, 'message trop long (2000 caractères max)');
             }
 
             if (targetUser.bot) {
-                return await sendTransient(interaction, `<@${interaction.user.id}> impossible d'envoyer un DM à un bot`);
+                return await InteractionHelper.sendErrorNotice(interaction, "impossible d'envoyer un DM à un bot");
             }
 
             
@@ -97,15 +83,18 @@ export default {
                 }
             });
 
-            await sendTransient(interaction, `<@${targetUser.id}> message bien envoyé`);
+            const sentMessage = await interaction.editReply({ content: `<@${targetUser.id}> message bien envoyé` });
+            if (sentMessage && typeof sentMessage.delete === 'function') {
+                setTimeout(() => { sentMessage.delete().catch(() => {}); }, 5000).unref?.();
+            }
         } catch (error) {
             logger.error('DM command error:', error);
             
             if (error.code === 50007) {
-                return await sendTransient(interaction, `<@${interaction.user.id}> envoi impossible, <@${targetUser.id}> a fermé ses DMs`);
+                return await InteractionHelper.sendErrorNotice(interaction, `envoi impossible, <@${targetUser.id}> a fermé ses DMs`);
             }
             
-            return await sendTransient(interaction, `<@${interaction.user.id}> l'envoi du DM a échoué`);
+            return await InteractionHelper.sendErrorNotice(interaction, "l'envoi du DM a échoué");
         }
     }
 };

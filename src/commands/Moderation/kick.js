@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -112,11 +112,7 @@ export default {
       });
     } catch (error) {
       logger.error('Kick command error:', error);
-      const errorEmbed_default = errorEmbed(
-        "Une erreur inattendue est survenue en essayant d'expulser l'utilisateur.",
-        error.message || "Impossible d'expulser l'utilisateur"
-      );
-      await InteractionHelper.universalReply(interaction, { embeds: [errorEmbed_default] });
+      return await InteractionHelper.sendErrorNotice(interaction, error?.userMessage || error.message || "Impossible d'expulser l'utilisateur");
     }
   }
 };

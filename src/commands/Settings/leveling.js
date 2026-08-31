@@ -12,7 +12,7 @@ import {
     MAX_LEVEL
 } from '../../services/leveling.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
-import { errorEmbed, successEmbed, infoEmbed } from '../../utils/embeds.js';
+import { successEmbed, infoEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
@@ -147,10 +147,7 @@ export default {
         }
 
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-            return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Tu as besoin de la permission **Gérer le serveur** pour gérer le leveling.')],
-                flags: MessageFlags.Ephemeral
-            });
+            return InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour gérer le leveling.');
         }
 
         const guildId = interaction.guild.id;
@@ -233,10 +230,7 @@ export default {
                     const min = interaction.options.getInteger('min');
                     const max = interaction.options.getInteger('max');
                     if (min > max) {
-                        return InteractionHelper.safeEditReply(interaction, {
-                            embeds: [errorEmbed('L\'XP minimum doit être inférieur ou égal à l\'XP maximum.')],
-                            flags: MessageFlags.Ephemeral
-                        });
+                        return InteractionHelper.sendErrorNotice(interaction, 'L\'XP minimum doit être inférieur ou égal à l\'XP maximum.');
                     }
 
                     const leveling = await getLevelingConfig(client, guildId);
@@ -283,10 +277,7 @@ export default {
                 case 'remove': {
                     const target = interaction.options.getUser('user');
                     if (target.bot) {
-                        return InteractionHelper.safeEditReply(interaction, {
-                            embeds: [errorEmbed('Tu ne peux pas modifier l\'XP des bots.')],
-                            flags: MessageFlags.Ephemeral
-                        });
+                        return InteractionHelper.sendErrorNotice(interaction, 'Tu ne peux pas modifier l\'XP des bots.');
                     }
 
                     const amount = interaction.options.getInteger('xp');
@@ -325,10 +316,7 @@ export default {
                 case 'setlevel': {
                     const target = interaction.options.getUser('user');
                     if (target.bot) {
-                        return InteractionHelper.safeEditReply(interaction, {
-                            embeds: [errorEmbed('Tu ne peux pas modifier les niveaux des bots.')],
-                            flags: MessageFlags.Ephemeral
-                        });
+                        return InteractionHelper.sendErrorNotice(interaction, 'Tu ne peux pas modifier les niveaux des bots.');
                     }
 
                     const newLevel = interaction.options.getInteger('level');
@@ -356,10 +344,7 @@ export default {
                 case 'removelevel': {
                     const target = interaction.options.getUser('user');
                     if (target.bot) {
-                        return InteractionHelper.safeEditReply(interaction, {
-                            embeds: [errorEmbed('Tu ne peux pas modifier les niveaux des bots.')],
-                            flags: MessageFlags.Ephemeral
-                        });
+                        return InteractionHelper.sendErrorNotice(interaction, 'Tu ne peux pas modifier les niveaux des bots.');
                     }
 
                     const levels = interaction.options.getInteger('levels');
@@ -390,17 +375,11 @@ export default {
                 }
 
                 default:
-                    return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Action de leveling inconnue.')],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return InteractionHelper.sendErrorNotice(interaction, 'Action de leveling inconnue.');
             }
         } catch (error) {
             logger.error(`[Leveling] Command error for guild ${guildId}:`, error);
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(error.userMessage || 'Une erreur est survenue lors de la gestion du leveling. Veuillez réessayer.', error, { showDetails: true })],
-                flags: MessageFlags.Ephemeral
-            });
+            await InteractionHelper.sendErrorNotice(interaction, error.userMessage || 'Une erreur est survenue lors de la gestion du leveling. Veuillez réessayer.');
         }
     }
 };

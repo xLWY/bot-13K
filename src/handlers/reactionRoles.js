@@ -1,8 +1,8 @@
 import { Events, EmbedBuilder, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { getReactionRoleMessage, addReactionRole, removeReactionRole } from '../services/reactionRoleService.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
-import { errorEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
+import { InteractionHelper } from '../utils/interactionHelper.js';
 
 
 
@@ -168,10 +168,7 @@ export async function handleReactionRoles(interaction) {
             
             if (subcommand === 'create') {
                 if (!member.permissions.has(PermissionFlagsBits.ManageRoles)) {
-                    await interaction.reply({
-                        embeds: [errorEmbed('Tu as besoin de la permission `Gérer les rôles` pour utiliser cette commande.')],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission `Gérer les rôles` pour utiliser cette commande.');
                     return true;
                 }
 
@@ -180,34 +177,22 @@ export async function handleReactionRoles(interaction) {
                 const role = options.getRole('role');
 
                 if (!guild || !member) {
-                    await interaction.reply({
-                        embeds: [errorEmbed('Cette commande ne peut être utilisée que dans un serveur.')],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    await InteractionHelper.sendErrorNotice(interaction, 'Cette commande ne peut être utilisée que dans un serveur.');
                     return true;
                 }
 
                 if (!messageId || !/^\d{17,20}$/.test(messageId)) {
-                    await interaction.reply({
-                        embeds: [errorEmbed('Identifiant de message invalide. Fournis un identifiant de message Discord valide.')],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    await InteractionHelper.sendErrorNotice(interaction, 'Identifiant de message invalide. Fournis un identifiant de message Discord valide.');
                     return true;
                 }
 
                 if (!emoji || emoji.length > 100) {
-                    await interaction.reply({
-                        embeds: [errorEmbed('Émoji invalide. Fournis un émoji valide.')],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    await InteractionHelper.sendErrorNotice(interaction, 'Émoji invalide. Fournis un émoji valide.');
                     return true;
                 }
 
                 if (!role) {
-                    await interaction.reply({
-                        embeds: [errorEmbed('Sélection de rôle invalide.')],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    await InteractionHelper.sendErrorNotice(interaction, 'Sélection de rôle invalide.');
                     return true;
                 }
 
@@ -249,17 +234,7 @@ export async function handleReactionRoles(interaction) {
         return false;
     } catch (error) {
         logger.error('Error in handleReactionRoles:', error);
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({
-                embeds: [errorEmbed('Une erreur est survenue lors du traitement de ta demande.')],
-                flags: MessageFlags.Ephemeral
-            });
-        } else {
-            await interaction.reply({
-                embeds: [errorEmbed('Une erreur est survenue lors du traitement de ta demande.')],
-                flags: MessageFlags.Ephemeral
-            });
-        }
+        await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors du traitement de ta demande.');
         return true;
     }
 }

@@ -1,6 +1,6 @@
 import { getColor } from '../../../config/bot.js';
 import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { createEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { createEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, getCounterEmoji, getCounterTypeLabel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
@@ -24,9 +24,7 @@ export async function handleDelete(interaction, client) {
 
     // Check permissions after deferring
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await InteractionHelper.safeEditReply(interaction, { 
-            embeds: [errorEmbed("Tu as besoin de la permission **Gérer les salons** pour supprimer des compteurs.")]
-        }).catch(logger.error);
+        await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission **Gérer les salons** pour supprimer des compteurs.").catch(logger.error);
         return;
     }
 
@@ -34,17 +32,13 @@ export async function handleDelete(interaction, client) {
         const counters = await getServerCounters(client, guild.id);
 
         if (counters.length === 0) {
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Aucun compteur à supprimer.")]
-            }).catch(logger.error);
+            await InteractionHelper.sendErrorNotice(interaction, "Aucun compteur à supprimer.").catch(logger.error);
             return;
         }
 
         const counterToDelete = counters.find(c => c.id === counterId);
         if (!counterToDelete) {
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(`Aucun compteur avec l'identifiant \`${counterId}\` n'a été trouvé. Utilise \`/serverstats list\` pour voir tous les compteurs.`)]
-            }).catch(logger.error);
+            await InteractionHelper.sendErrorNotice(interaction, `Aucun compteur avec l'identifiant \`${counterId}\` n'a été trouvé. Utilise \`/serverstats list\` pour voir tous les compteurs.`).catch(logger.error);
             return;
         }
 
@@ -71,9 +65,7 @@ export async function handleDelete(interaction, client) {
 
     } catch (error) {
         logger.error("Error in handleDelete:", error);
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed("Une erreur est survenue pendant la récupération des compteurs. Réessaie.")]
-        }).catch(logger.error);
+        await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue pendant la récupération des compteurs. Réessaie.").catch(logger.error);
     }
 }
 

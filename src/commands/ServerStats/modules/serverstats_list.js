@@ -1,6 +1,6 @@
 import { getColor } from '../../../config/bot.js';
 import { PermissionFlagsBits } from 'discord.js';
-import { createEmbed, errorEmbed } from '../../../utils/embeds.js';
+import { createEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, getCounterEmoji as getCounterTypeEmoji, getCounterTypeLabel, getGuildCounterStats } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
@@ -23,9 +23,7 @@ export async function handleList(interaction, client) {
     
     // Check permissions after deferring
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await InteractionHelper.safeEditReply(interaction, { 
-            embeds: [errorEmbed("Tu as besoin de la permission **Gérer les salons** pour voir les compteurs.")]
-        }).catch(logger.error);
+        await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission **Gérer les salons** pour voir les compteurs.").catch(logger.error);
         return;
     }
 
@@ -130,9 +128,7 @@ export async function handleList(interaction, client) {
 
     } catch (error) {
         logger.error("Error displaying counters:", error);
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed("Une erreur est survenue pendant la récupération des compteurs. Réessaie.")]
-        }).catch(logger.error);
+        await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue pendant la récupération des compteurs. Réessaie.").catch(logger.error);
     }
 }
 

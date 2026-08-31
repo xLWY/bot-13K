@@ -12,7 +12,7 @@ import {
 } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
-import { errorEmbed, successEmbed, createEmbed } from '../utils/embeds.js';
+import { successEmbed, createEmbed } from '../utils/embeds.js';
 import { saveTicketData, getTicketData, deleteTicketData, incrementTicketCounter } from '../utils/database.js';
 import { handleEmbedBuilderButtons, handleEmbedBuilderModals } from '../handlers/interactionHandlers/embedBuilderButtons.js';
 import { handleInteractionError, createError, ErrorTypes } from '../utils/errorHandler.js';
@@ -69,9 +69,7 @@ async function fallbackTicketButton(interaction, client) {
     const eligibility = await fallbackEligibility(interaction, client);
     if (!eligibility.ok) {
       if (eligibility.message) {
-        await interaction.editReply({
-          embeds: [errorEmbed(eligibility.title || 'Erreur', eligibility.message)],
-        }).catch(() => {});
+        await InteractionHelper.sendErrorNotice(interaction, eligibility.message);
       }
       return;
     }
@@ -85,9 +83,7 @@ async function fallbackTicketButton(interaction, client) {
     const type = getTicketTypeForGuild(config, typeId);
 
     if (!type) {
-      return await interaction.editReply({
-        embeds: [errorEmbed('Type inconnu', `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur. Contactez un administrateur.`)],
-      }).catch(() => {});
+      return await InteractionHelper.sendErrorNotice(interaction, `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur. Contactez un administrateur.`);
     }
 
     const result = await createTicketFallback(interaction.guild, interaction.member, {
@@ -100,14 +96,10 @@ async function fallbackTicketButton(interaction, client) {
       }).catch(() => {});
     }
 
-    return await interaction.editReply({
-      embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.') + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
-    }).catch(() => {});
+    return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.'));
   } catch (error) {
     logger.error('Fallback ticket button failed:', error);
-    await interaction.editReply({
-      embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
-    }).catch(() => {});
+    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de créer le ticket.');
   }
 }
 
@@ -237,18 +229,10 @@ async function fallbackTicketModal(interaction, client) {
       });
     }
 
-    return await interaction.reply({
-      embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.') + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
-      flags: MessageFlags.Ephemeral,
-    });
+    return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.'));
   } catch (error) {
     logger.error('Fallback ticket modal failed:', error);
-    try {
-      await interaction.reply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — Une erreur est survenue lors de la création de votre ticket.')],
-        flags: MessageFlags.Ephemeral,
-      });
-    } catch (_) { /* fallback already answered */ }
+    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Une erreur est survenue lors de la création de votre ticket.');
   }
 }
 
@@ -390,11 +374,7 @@ async function deleteTicketFallback(interaction) {
   } catch (error) {
     const detail = error?.message || String(error);
     logger.error('Fallback deleteTicket failed:', detail);
-    try {
-      await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de supprimer le ticket.' + `\n\n\`${detail}\``)],
-      });
-    } catch (_) {}
+    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de supprimer le ticket.');
   }
 }
 
@@ -408,14 +388,10 @@ async function reopenTicketFallback(interaction) {
 
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return await interaction.editReply({
-        embeds: [errorEmbed('Erreur', "Ce canal n'est pas un ticket.")],
-      });
+      return await InteractionHelper.sendErrorNotice(interaction, "Ce canal n'est pas un ticket.");
     }
     if (ticketData.status !== 'closed') {
-      return await interaction.editReply({
-        embeds: [errorEmbed('Erreur', "Ce ticket n'est pas fermé.")],
-      });
+      return await InteractionHelper.sendErrorNotice(interaction, "Ce ticket n'est pas fermé.");
     }
 
     const ticketNumber = ticketData.ticketNumber || '';
@@ -472,11 +448,7 @@ async function reopenTicketFallback(interaction) {
   } catch (error) {
     const detail = error?.message || String(error);
     logger.error('Fallback reopenTicket failed:', detail);
-    try {
-      await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de rouvrir le ticket.' + `\n\n\`${detail}\``)],
-      });
-    } catch (_) {}
+    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de rouvrir le ticket.');
   }
 }
 
@@ -494,16 +466,10 @@ async function fallbackTicketClose(interaction, client) {
       });
     }
 
-    return await interaction.editReply({
-      embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de fermer le ticket.' + (result.debug ? `\n\n\`${result.debug}\`` : '')))],
-    });
+    return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de fermer le ticket.'));
   } catch (error) {
     logger.error('Fallback ticket close failed:', error);
-    try {
-      await interaction.editReply({
-        embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de fermer le ticket.')],
-      });
-    } catch (_) { /* fallback already answered */ }
+    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de fermer le ticket.');
   }
 }
 
@@ -515,9 +481,7 @@ async function fallbackTicketSelect(interaction, client) {
     const eligibility = await fallbackEligibility(interaction, client);
     if (!eligibility.ok) {
       if (eligibility.message) {
-        await interaction.editReply({
-          embeds: [errorEmbed(eligibility.title || 'Erreur', eligibility.message)],
-        }).catch(() => {});
+        await InteractionHelper.sendErrorNotice(interaction, eligibility.message);
       }
       return;
     }
@@ -527,9 +491,7 @@ async function fallbackTicketSelect(interaction, client) {
     const type = getTicketTypeForGuild(config, typeId);
 
     if (!type) {
-      return await interaction.editReply({
-        embeds: [errorEmbed('Type inconnu', `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur.`)],
-      }).catch(() => {});
+      return await InteractionHelper.sendErrorNotice(interaction, `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur.`);
     }
 
     const result = await createTicketFallback(interaction.guild, interaction.member, {
@@ -542,14 +504,10 @@ async function fallbackTicketSelect(interaction, client) {
       }).catch(() => {});
     }
 
-    return await interaction.editReply({
-      embeds: [errorEmbed('Erreur', 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.') + (result.debug ? `\n\n\`${result.debug}\`` : ''))],
-    }).catch(() => {});
+    return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.'));
   } catch (error) {
     logger.error('Fallback ticket select failed:', error);
-    await interaction.editReply({
-      embeds: [errorEmbed('Erreur', 'TF v4 — Impossible de créer le ticket.')],
-    }).catch(() => {});
+    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de créer le ticket.');
   }
 }
 
@@ -914,23 +872,7 @@ export default {
           });
 
           try {
-            const genericEmbed = {
-              embeds: [{
-                title: '❓ Erreur inattendue',
-                description: 'Une erreur inattendue est survenue. Merci de réessayer dans un instant.',
-                color: 0xE74C3C,
-                timestamp: new Date().toISOString()
-              }],
-              flags: MessageFlags.Ephemeral
-            };
-
-            if (interaction.deferred) {
-              await interaction.editReply({ embeds: genericEmbed.embeds });
-            } else if (interaction.replied) {
-              await interaction.followUp(genericEmbed);
-            } else {
-              await interaction.reply(genericEmbed);
-            }
+            await InteractionHelper.sendErrorNotice(interaction, 'Une erreur inattendue est survenue. Merci de réessayer dans un instant.');
           } catch (finalError) {
             logger.error('Final fallback reply failed:', {
               event: 'interaction.error_response_double_failed',

@@ -1,5 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
-import { errorEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, TitanBotError } from '../../utils/errorHandler.js';
@@ -19,15 +18,7 @@ export default {
     async execute(interaction, config, client) {
         try {
             if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-                return await InteractionHelper.safeReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            'Permissions manquantes',
-                            'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/greet`.',
-                        ),
-                    ],
-                    flags: MessageFlags.Ephemeral,
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/greet`.');
             }
 
             const subcommand = interaction.options.getSubcommand();
@@ -40,10 +31,7 @@ export default {
             }
         } catch (error) {
             if (error instanceof TitanBotError) {
-                return await InteractionHelper.safeReply(interaction, {
-                    embeds: [errorEmbed('Erreur de configuration', error.userMessage || 'Une erreur est survenue.')],
-                    flags: MessageFlags.Ephemeral,
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, error.userMessage || 'Une erreur est survenue.');
             }
             await handleInteractionError(interaction, error, { command: 'greet' });
         }

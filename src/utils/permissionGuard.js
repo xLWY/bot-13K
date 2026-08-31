@@ -3,9 +3,9 @@
 
 
 
-import { PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { PermissionFlagsBits } from 'discord.js';
 import { logger } from './logger.js';
-import { errorEmbed } from './embeds.js';
+import { InteractionHelper } from './interactionHelper.js';
 
 
 
@@ -69,11 +69,8 @@ export async function checkUserPermissions(
   const member = interaction.member;
   
   if (!member.permissions.has(requiredPermissions)) {
-    await interaction.reply({
-      embeds: [errorEmbed('Permission refusée', errorMessage)],
-      flags: MessageFlags.Ephemeral
-    });
-    
+    await InteractionHelper.sendErrorNotice(interaction, errorMessage);
+
     logger.warn(
       `[PERMISSION_DENIED] User ${member.id} attempted command ${interaction.commandName} in guild ${interaction.guildId}`
     );
@@ -98,19 +95,13 @@ export async function checkBotPermissions(
   const targetChannel = channel || interaction.channel;
   
   if (!targetChannel || !targetChannel.guild) {
-    await interaction.reply({
-      embeds: [errorEmbed('Error', 'Could not determine channel.')],
-      flags: MessageFlags.Ephemeral
-    });
+    await InteractionHelper.sendErrorNotice(interaction, "impossible de déterminer le salon.");
     return false;
   }
   
   const botMember = targetChannel.guild.members.me;
   if (!botMember) {
-    await interaction.reply({
-      embeds: [errorEmbed('Error', 'Could not find bot member in this guild.')],
-      flags: MessageFlags.Ephemeral
-    });
+    await InteractionHelper.sendErrorNotice(interaction, "membre du bot introuvable dans ce serveur.");
     return false;
   }
   
@@ -125,13 +116,10 @@ export async function checkBotPermissions(
   }
   
   if (missingPerms.length > 0) {
-    await interaction.reply({
-      embeds: [errorEmbed(
-        'Missing Permissions',
-        `I need the following permissions in ${targetChannel}: ${missingPerms.join(', ')}`
-      )],
-      flags: MessageFlags.Ephemeral
-    });
+    await InteractionHelper.sendErrorNotice(
+      interaction,
+      `permissions manquantes dans ${targetChannel} : ${missingPerms.join(', ')}`
+    );
     
     logger.warn(
       `[BOT_PERMISSION_DENIED] Bot missing permissions [${missingPerms.join(', ')}] in channel ${targetChannel.id}`

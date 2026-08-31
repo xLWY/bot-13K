@@ -2,7 +2,6 @@ import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags } from 'discord.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../../utils/database.js';
 import { logger } from '../../utils/logger.js';
-import { errorEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 
@@ -11,20 +10,6 @@ function createAutoroleInfoEmbed(description) {
         .setColor(getColor('primary'))
         .setDescription(description)
         .setFooter({ text: new Date().toLocaleString() });
-}
-
-async function sendTransient(interaction, content) {
-    const sent = await InteractionHelper.safeEditReply(interaction, { content });
-    if (sent) {
-        setTimeout(async () => {
-            try {
-                const reply = await interaction.fetchReply().catch(() => null);
-                if (reply) await reply.delete().catch(() => {});
-            } catch (_) {
-                // already deleted
-            }
-        }, 5000).unref?.();
-    }
 }
 
 export default {
@@ -65,10 +50,7 @@ export default {
         }
 
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-            return InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed('Permissions manquantes', 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/autorole`.')],
-                flags: MessageFlags.Ephemeral
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/autorole`.');
         }
 
     const { options, guild, client } = interaction;
@@ -82,21 +64,12 @@ export default {
             const autoVerifyEnabled = Boolean(guildConfig.verification?.autoVerify?.enabled);
 
             if (verificationEnabled || autoVerifyEnabled) {
-                return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(
-                        'Conflit de configuration',
-                        'Impossible d\'activer AutoRole pendant que le système de vérification ou AutoVerify est activé. Désactive-les d\'abord.'
-                    )],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Impossible d\'activer AutoRole pendant que la vérification ou AutoVerify est activé. Désactive-les d\'abord.');
             }
             
             if (role.position >= guild.members.me.roles.highest.position) {
                 logger.warn(`[Autorole] User ${interaction.user.tag} tried to add role ${role.name} (${role.id}) higher than bot's highest role in ${guild.name}`);
-                return InteractionHelper.safeReply(interaction, {
-                    embeds: [errorEmbed('Rôle trop haut', 'Je ne peux pas attribuer des rôles plus hauts que mon rôle le plus haut.')],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Je ne peux pas attribuer des rôles plus hauts que mon rôle le plus haut.');
             }
 
             try {
@@ -107,7 +80,7 @@ export default {
                 
                 if (currentRoleId === role.id) {
                     logger.info(`[Autorole] User ${interaction.user.tag} tried to add duplicate role ${role.name} (${role.id}) in ${guild.name}`);
-                    return sendTransient(interaction, `<@${interaction.user.id}> ce rôle est déjà configuré comme auto-attribué`);
+                    return await InteractionHelper.sendErrorNotice(interaction, 'ce rôle est déjà configuré comme auto-attribué');
                 }
 
                 await updateWelcomeConfig(client, guild.id, {
@@ -125,14 +98,7 @@ export default {
                 });
             } catch (error) {
                 logger.error(`[Autorole] Failed to add role for guild ${guild.id}:`, error);
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(
-                        'Ajout impossible',
-                        'Une erreur est survenue pendant l\'ajout du rôle. Réessaie.',
-                        { showDetails: true }
-                    )],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue pendant l\'ajout du rôle. Réessaie.');
             }
         } 
         
@@ -145,10 +111,7 @@ export default {
                 
                 if (!existingRoles.includes(role.id)) {
                     logger.info(`[Autorole] User ${interaction.user.tag} tried to remove non-existent role ${role.name} (${role.id}) in ${guild.name}`);
-                    return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [errorEmbed('Introuvable', `Le rôle ${role} n'est pas configuré comme auto-attribué.`)],
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return await InteractionHelper.sendErrorNotice(interaction, `Le rôle ${role} n'est pas configuré comme auto-attribué.`);
                 }
 
                 const updatedRoles = existingRoles.filter(id => id !== role.id);
@@ -164,14 +127,7 @@ export default {
                 });
             } catch (error) {
                 logger.error(`[Autorole] Failed to remove role for guild ${guild.id}:`, error);
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(
-                        'Retrait impossible',
-                        'Une erreur est survenue pendant le retrait du rôle. Réessaie.',
-                        { showDetails: true }
-                    )],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue pendant le retrait du rôle. Réessaie.');
             }
         }
         
@@ -244,14 +200,7 @@ export default {
 
             } catch (error) {
                 logger.error(`[Autorole] Failed to list roles for guild ${guild.id}:`, error);
-                await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [errorEmbed(
-                        'Liste impossible',
-                        'Une erreur est survenue pendant l\'affichage des rôles auto-attribués. Réessaie.',
-                        { showDetails: true }
-                    )],
-                    flags: MessageFlags.Ephemeral
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue pendant l\'affichage des rôles auto-attribués. Réessaie.');
             }
         }
     },

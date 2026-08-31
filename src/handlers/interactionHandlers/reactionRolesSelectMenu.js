@@ -26,13 +26,7 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
 
         if (!reactionRoleData) {
             logger.warn(`Reaction role data not found for message ${interaction.message.id} in guild ${interaction.guildId}`);
-            return interaction.editReply({
-                embeds: [
-                    new EmbedBuilder()
-                        .setDescription('❌ Ce message de rôles de réaction n\'est plus actif.')
-                        .setColor(getColor('error'))
-                ]
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, 'Ce message de rôles de réaction n\'est plus actif.');
         }
 
         const member = interaction.member;

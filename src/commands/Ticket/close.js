@@ -1,6 +1,6 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -22,25 +22,11 @@ export default {
 
             const permissionContext = await getTicketPermissionContext({ client, interaction });
             if (!permissionContext.ticketData) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Pas un salon de ticket",
-                            "Cette commande ne peut être utilisée que dans un salon de ticket valide.",
-                        ),
-                    ],
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, "Cette commande ne peut être utilisée que dans un salon de ticket valide.");
             }
 
             if (!permissionContext.canCloseTicket) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Permission refusée",
-                            "Vous devez avoir la permission `Gérer les salons`, le rôle `Staff Tickets` configuré, ou être le créateur du ticket pour le fermer.",
-                        ),
-                    ],
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, "Vous devez avoir la permission `Gérer les salons`, le rôle `Staff Tickets` configuré, ou être le créateur du ticket pour le fermer.");
             }
 
             const channel = interaction.channel;
@@ -54,14 +40,7 @@ export default {
                     guildId: interaction.guildId,
                     error: result.error
                 });
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Pas un salon de ticket",
-                            result.error || "Cette commande ne peut être utilisée que dans un salon de ticket valide.",
-                        ),
-                    ],
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, result.error || "Cette commande ne peut être utilisée que dans un salon de ticket valide.");
             }
 
             await InteractionHelper.safeEditReply(interaction, {

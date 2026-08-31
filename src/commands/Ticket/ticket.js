@@ -5,7 +5,7 @@ import {
   ChannelType,
   MessageFlags,
 } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { createEmbed, successEmbed } from '../../utils/embeds.js';
 import { buildTicketTypeButtons } from '../../services/ticket.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -184,14 +184,7 @@ export default {
             if (subcommand === "setup") {
                 const existingConfig = await getGuildConfig(client, interaction.guildId);
                 if (existingConfig?.ticketPanelChannelId) {
-                    return await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [
-                            errorEmbed(
-                                'Système de tickets déjà actif',
-                                `Ce serveur possède déjà un système de tickets (panneau dans <#${existingConfig.ticketPanelChannelId}>).\n\nUn seul système de tickets est pris en charge par serveur. Utilisez \`/ticket dashboard\` pour modifier la configuration existante, ou choisissez **Supprimer le système** dans le tableau de bord pour repartir de zéro.`,
-                            ),
-                        ],
-                    });
+                    return await InteractionHelper.sendErrorNotice(interaction, `Ce serveur possède déjà un système de tickets (panneau dans <#${existingConfig.ticketPanelChannelId}>). Un seul système est pris en charge : utilisez \`/ticket dashboard\` pour le modifier.`);
                 }
 
                 const panelChannel = interaction.options.getChannel("panel_channel");
@@ -342,19 +335,7 @@ export default {
                         commandName: 'ticket_setup'
                     });
                     if (interaction.deferred || interaction.replied) {
-                        await InteractionHelper.safeEditReply(interaction, {
-                            embeds: [
-                                errorEmbed(
-                                    "Échec de la configuration",
-                                    "Impossible d'envoyer le panneau de tickets ou d'enregistrer la configuration. Vérifiez les permissions du bot (notamment l'envoi de messages dans le salon cible) et la connexion à la base de données.",
-                                ),
-                            ],
-                        }).catch(err => {
-                            logger.error('Failed to send error reply', {
-                                error: err.message,
-                                guildId: interaction.guildId
-                            });
-                        });
+                        await InteractionHelper.sendErrorNotice(interaction, "Impossible d'envoyer le panneau de tickets ou d'enregistrer la configuration. Vérifiez les permissions du bot et la connexion à la base de données.");
                     } else {
                         await handleInteractionError(interaction, error, {
                             commandName: 'ticket_setup',

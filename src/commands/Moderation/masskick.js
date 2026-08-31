@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { checkRateLimit } from '../../utils/rateLimiter.js';
@@ -35,14 +35,7 @@ export default {
         }
 
         if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        "Permission refusée",
-                        "Tu n'as pas la permission d'expulser des membres."
-                    ),
-                ],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, "Tu n'as pas la permission d'expulser des membres.");
         }
 
         const usersInput = interaction.options.getString("users");
@@ -71,36 +64,15 @@ export default {
 .slice(0, 20);
 
             if (userIds.length === 0) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Utilisateurs invalides",
-                            "Fournis des IDs ou mentions valides. Maximum 20 utilisateurs à la fois."
-                        ),
-                    ],
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, "Fournis des IDs ou mentions valides. Maximum 20 utilisateurs à la fois.");
             }
 
             if (userIds.includes(interaction.user.id)) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Auto-expulsion interdite",
-                            "Tu ne peux pas t'inclure toi-même dans une expulsion massive."
-                        ),
-                    ],
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, "Tu ne peux pas t'inclure toi-même dans une expulsion massive.");
             }
 
             if (userIds.includes(client.user.id)) {
-                return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        errorEmbed(
-                            "Expulsion du bot interdite",
-                            "Tu ne peux pas inclure le bot dans une expulsion massive."
-                        ),
-                    ],
-                });
+                return await InteractionHelper.sendErrorNotice(interaction, "Tu ne peux pas inclure le bot dans une expulsion massive.");
             }
 
             const results = {
@@ -198,14 +170,7 @@ export default {
 
         } catch (error) {
             logger.error("Error in masskick command:", error);
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    errorEmbed(
-                        "Erreur système",
-                        "Une erreur est survenue pendant l'expulsion massive. Réessaie plus tard."
-                    ),
-                ],
-            });
+            return await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue pendant l'expulsion massive. Réessaie plus tard.");
         }
     }
 };

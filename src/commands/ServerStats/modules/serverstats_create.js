@@ -1,5 +1,5 @@
 import { PermissionFlagsBits, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed } from '../../../utils/embeds.js';
+import { successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter, getCounterBaseName, getCounterEmoji, getCounterTypeLabel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
@@ -25,17 +25,13 @@ export async function handleCreate(interaction, client) {
 
     // Check permissions after deferring
     if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await InteractionHelper.safeEditReply(interaction, { 
-            embeds: [errorEmbed("Tu as besoin de la permission **Gérer les salons** pour créer des compteurs.")]
-        }).catch(logger.error);
+        await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission **Gérer les salons** pour créer des compteurs.").catch(logger.error);
         return;
     }
 
     try {
         if (!category || category.type !== ChannelType.GuildCategory) {
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Choisis une catégorie valide pour le salon du compteur.")]
-            }).catch(logger.error);
+            await InteractionHelper.sendErrorNotice(interaction, "Choisis une catégorie valide pour le salon du compteur.").catch(logger.error);
             return;
         }
 
@@ -48,9 +44,7 @@ export async function handleCreate(interaction, client) {
 
         if (duplicateType) {
             const duplicateChannel = guild.channels.cache.get(duplicateType.channelId);
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(`Un compteur **${getCounterTypeLabel(type)}** existe déjà pour ce serveur${duplicateChannel ? ` dans ${duplicateChannel}` : ''}. Supprime-le d'abord avant d'en créer un autre.`)]
-            }).catch(logger.error);
+            await InteractionHelper.sendErrorNotice(interaction, `Un compteur **${getCounterTypeLabel(type)}** existe déjà pour ce serveur${duplicateChannel ? ` dans ${duplicateChannel}` : ''}. Supprime-le d'abord avant d'en créer un autre.`).catch(logger.error);
             return;
         }
 
@@ -72,9 +66,7 @@ export async function handleCreate(interaction, client) {
 
         const existingCounter = counters.find(c => c.channelId === targetChannel.id);
         if (existingCounter) {
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed(`Un compteur existe déjà pour le salon **${targetChannel.name}**. Supprime-le d'abord ou choisis un autre type.`)]
-            }).catch(logger.error);
+            await InteractionHelper.sendErrorNotice(interaction, `Un compteur existe déjà pour le salon **${targetChannel.name}**. Supprime-le d'abord ou choisis un autre type.`).catch(logger.error);
             return;
         }
 
@@ -92,17 +84,13 @@ export async function handleCreate(interaction, client) {
         const saved = await saveServerCounters(client, guild.id, counters);
         if (!saved) {
             await targetChannel.delete('Échec de création du compteur pendant l\'enregistrement').catch(() => null);
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Échec de l'enregistrement des données du compteur. Réessaie.")]
-            }).catch(logger.error);
+            await InteractionHelper.sendErrorNotice(interaction, "Échec de l'enregistrement des données du compteur. Réessaie.").catch(logger.error);
             return;
         }
 
         const updated = await updateCounter(client, guild, newCounter);
         if (!updated) {
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [errorEmbed("Le compteur a été créé mais le nom du salon n'a pas pu être modifié. Il sera actualisé lors du prochain passage automatique.")]
-            }).catch(logger.error);
+            await InteractionHelper.sendErrorNotice(interaction, "Le compteur a été créé mais le nom du salon n'a pas pu être modifié. Il sera actualisé lors du prochain passage automatique.").catch(logger.error);
             return;
         }
 
@@ -112,9 +100,7 @@ export async function handleCreate(interaction, client) {
 
     } catch (error) {
         logger.error("Error creating counter:", error);
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [errorEmbed("Une erreur est survenue pendant la création du compteur. Réessaie.")]
-        }).catch(logger.error);
+        await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue pendant la création du compteur. Réessaie.").catch(logger.error);
     }
 }
 

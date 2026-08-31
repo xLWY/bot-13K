@@ -1,4 +1,4 @@
-import { createEmbed, errorEmbed, successEmbed } from '../utils/embeds.js';
+import { createEmbed, successEmbed } from '../utils/embeds.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
@@ -123,10 +123,7 @@ const wipedataConfirmHandler = {
     } catch (error) {
       logger.error('Wipedata confirm button handler error:', error);
       
-      await interaction.editReply({
-        embeds: [errorEmbed('Échec de la suppression des données', "Une erreur est survenue lors de la suppression de tes données. Réessaie plus tard ou contacte le support.")],
-        components: []
-      });
+      await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue lors de la suppression de tes données. Réessaie plus tard ou contacte le support.");
     }
   }
 };
@@ -154,12 +151,7 @@ const wipedataCancelHandler = {
     } catch (error) {
       logger.error('Wipedata cancel button handler error:', error);
       
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          embeds: [errorEmbed('Erreur', 'Impossible d\'annuler la suppression des données.')],
-          flags: MessageFlags.Ephemeral
-        });
-      }
+      await InteractionHelper.sendErrorNotice(interaction, 'Impossible d\'annuler la suppression des données.');
     }
   }
 };
