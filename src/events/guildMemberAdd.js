@@ -8,7 +8,7 @@ import { getServerCounters, updateCounter } from '../services/serverstatsService
 import { setBirthday as dbSetBirthday } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 
-const WELCOME_PING_DELETE_MS = 3000;
+const WELCOME_PING_DELETE_MS = 600_000;
 
 export default {
   name: Events.GuildMemberAdd,
@@ -92,7 +92,12 @@ export default {
                 const pingPerms = pingMe ? pingChannel.permissionsFor(pingMe) : null;
                 if (pingPerms?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
                     try {
-                        const pingMessage = await pingChannel.send(user.toString());
+                        const pingMessage = await pingChannel.send(
+                            formatWelcomeMessage(
+                                welcomeConfig.pingMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋",
+                                { user, guild, member }
+                            )
+                        );
                         setTimeout(async () => {
                             try { await pingMessage.delete(); } catch (_) {
                                 // already deleted
