@@ -73,8 +73,8 @@ export default {
                 guild: interaction.guild,
                 event: {
                     action: "Warnings Viewed",
-                    target: `${target.tag} (${target.id})`,
-                    executor: `${interaction.user.tag} (${interaction.user.id})`,
+                    target: `<@${target.id}> (${target.id})`,
+                    executor: `<@${interaction.user.id}> (${interaction.user.id})`,
                     reason: `Consultation de ${totalWarns} avertissements`,
                     metadata: {
                         userId: target.id,

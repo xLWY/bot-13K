@@ -88,7 +88,7 @@ export default {
         event: {
           action: "Messages Purged",
           target: `${channel} (${deletedCount} messages)`,
-          executor: `${interaction.user.tag} (${interaction.user.id})`,
+          executor: `<@${interaction.user.id}> (${interaction.user.id})`,
           reason: `${deletedCount} messages supprimés`,
           metadata: {
             channelId: channel.id,

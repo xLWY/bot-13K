@@ -70,8 +70,8 @@ export default {
                     guild: interaction.guild,
                     event: {
                         action: "User Warned",
-                        target: `${target.tag} (${target.id})`,
-                        executor: `${moderator.tag} (${moderator.id})`,
+                        target: `<@${target.id}> (${target.id})`,
+                        executor: `<@${moderator.id}> (${moderator.id})`,
                         reason,
                         metadata: {
                             userId: target.id,

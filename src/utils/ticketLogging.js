@@ -143,41 +143,19 @@ async function createTicketLogEmbed(guild, event) {
   const fields = [];
   
   if (event.userId) {
-    try {
-      const user = await guild.client.users.fetch(event.userId).catch(() => null);
-      if (user) {
-        fields.push({
-          name: '👤 Utilisateur',
-          value: `${user.tag} (${event.userId})`,
-          inline: true
-        });
-      }
-    } catch (error) {
-      fields.push({
-        name: '👤 Utilisateur',
-        value: `<@${event.userId}> (${event.userId})`,
-        inline: true
-      });
-    }
+    fields.push({
+      name: '👤 Utilisateur',
+      value: `<@${event.userId}> (${event.userId})`,
+      inline: true
+    });
   }
   
   if (event.executorId) {
-    try {
-      const executor = await guild.client.users.fetch(event.executorId).catch(() => null);
-      if (executor) {
-        fields.push({
-          name: '🔨 Exécuté par',
-          value: `${executor.tag} (${event.executorId})`,
-          inline: true
-        });
-      }
-    } catch (error) {
-      fields.push({
-        name: '🔨 Exécuté par',
-        value: `<@${event.executorId}> (${event.executorId})`,
-        inline: true
-      });
-    }
+    fields.push({
+      name: '🔨 Exécuté par',
+      value: `<@${event.executorId}> (${event.executorId})`,
+      inline: true
+    });
   }
   
   if (event.priority) {

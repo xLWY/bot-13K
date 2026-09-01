@@ -63,7 +63,7 @@ export default {
         event: {
           action: "Channel Locked",
           target: channel.toString(),
-          executor: `${interaction.user.tag} (${interaction.user.id})`,
+          executor: `<@${interaction.user.id}> (${interaction.user.id})`,
           metadata: {
             channelId: channel.id,
             category: channel.parent?.name || 'None',

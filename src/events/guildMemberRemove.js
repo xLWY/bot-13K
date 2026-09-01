@@ -85,12 +85,12 @@ export default {
                 guildId: guild.id,
                 eventType: EVENT_TYPES.MEMBER_LEAVE,
                 data: {
-                    description: `${user.tag} a quitté le serveur`,
+                    description: `<@${user.id}> a quitté le serveur`,
                     userId: user.id,
                     fields: [
                         {
                             name: '👤 Member',
-                            value: `${user.tag} (${user.id})`,
+                            value: `<@${user.id}> (${user.id})`,
                             inline: true
                         },
                         {

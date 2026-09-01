@@ -51,7 +51,7 @@ export default {
                 event: {
                     action: 'Channel Nuked',
                     target: newChannel.toString(),
-                    executor: `${interaction.user.tag} (${interaction.user.id})`,
+                    executor: `<@${interaction.user.id}> (${interaction.user.id})`,
                     metadata: {
                         newChannelId: newChannel.id,
                         oldChannelId: channel.id,

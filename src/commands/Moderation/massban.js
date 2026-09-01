@@ -128,8 +128,8 @@ export default {
                         guild: interaction.guild,
                         event: {
                             action: "Member Banned",
-                            target: `${user.tag} (${user.id})`,
-                            executor: `${interaction.user.tag} (${interaction.user.id})`,
+                            target: `<@${user.id}> (${user.id})`,
+                            executor: `<@${interaction.user.id}> (${interaction.user.id})`,
                             reason: `${reason} (Bannissement massif)`,
                             metadata: {
                                 userId: user.id,

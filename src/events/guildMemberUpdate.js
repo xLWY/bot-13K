@@ -15,7 +15,7 @@ export default {
       
       fields.push({
         name: '👤 Member',
-        value: `${newMember.user.tag} (${newMember.user.id})`,
+        value: `<@${newMember.user.id}> (${newMember.user.id})`,
         inline: true
       });
 
@@ -38,7 +38,7 @@ export default {
           guildId: newMember.guild.id,
           eventType: EVENT_TYPES.MEMBER_NAME_CHANGE,
           data: {
-            description: `Member nickname changed: ${newMember.user.tag}`,
+            description: `Member nickname changed: <@${newMember.user.id}>`,
             userId: newMember.user.id,
             fields
           }

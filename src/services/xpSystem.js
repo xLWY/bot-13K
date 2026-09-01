@@ -68,12 +68,12 @@ export async function addXp(client, guild, member, xpToAdd) {
             guildId: guild.id,
             eventType: EVENT_TYPES.LEVELING_LEVELUP,
             data: {
-              description: `${member.user.tag} a atteint le niveau ${levelData.level}`,
+              description: `<@${member.user.id}> a atteint le niveau ${levelData.level}`,
               userId: member.user.id,
               fields: [
                 {
                   name: '👤 Membre',
-                  value: `${member.user.tag} (${member.user.id})`,
+                  value: `<@${member.user.id}> (${member.user.id})`,
                   inline: true
                 },
                 {

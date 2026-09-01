@@ -133,13 +133,13 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
                     guildId: interaction.guildId,
                     eventType: EVENT_TYPES.REACTION_ROLE_UPDATE,
                     data: {
-                        description: `Rôles de réaction mis à jour pour ${member.user.tag}`,
+                        description: `Rôles de réaction mis à jour pour <@${member.user.id}>`,
                         userId: member.user.id,
                         channelId: interaction.channelId,
                         fields: [
                             {
                                 name: '👤 Membre',
-                                value: `${member.user.tag} (${member.user.id})`,
+                                value: `<@${member.user.id}> (${member.user.id})`,
                                 inline: false
                             },
                             ...(addedRoles.length > 0 ? [{

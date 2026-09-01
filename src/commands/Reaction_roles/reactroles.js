@@ -309,7 +309,7 @@ async function handleSetup(interaction) {
             guildId: interaction.guildId,
             eventType: EVENT_TYPES.REACTION_ROLE_CREATE,
             data: {
-                description: `Panneau de rôles par réaction créé par ${interaction.user.tag}`,
+                description: `Panneau de rôles par réaction créé par <@${interaction.user.id}>`,
                 userId: interaction.user.id,
                 channelId: channel.id,
                 fields: [
@@ -942,7 +942,7 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
             guildId,
             eventType: EVENT_TYPES.REACTION_ROLE_DELETE,
             data: {
-                description: `Panneau de rôles par réaction supprimé par ${submitted.user.tag}`,
+                description: `Panneau de rôles par réaction supprimé par <@${submitted.user.id}>`,
                 userId: submitted.user.id,
                 channelId: panelData.channelId,
                 fields: [

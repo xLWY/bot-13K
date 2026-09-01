@@ -91,8 +91,8 @@ export default {
         guild: interaction.guild,
         event: {
           action: "Member Kicked",
-          target: `${targetUser.tag} (${targetUser.id})`,
-          executor: `${interaction.user.tag} (${interaction.user.id})`,
+          target: `<@${targetUser.id}> (${targetUser.id})`,
+          executor: `<@${interaction.user.id}> (${interaction.user.id})`,
           reason,
           metadata: {
             userId: targetUser.id,

@@ -167,12 +167,12 @@ export default {
                 guildId: guild.id,
                 eventType: EVENT_TYPES.MEMBER_JOIN,
                 data: {
-                    description: `${user.tag} a rejoint le serveur`,
+                    description: `<@${user.id}> a rejoint le serveur`,
                     userId: user.id,
                     fields: [
                         {
                             name: '👤 Member',
-                            value: `${user.tag} (${user.id})`,
+                            value: `<@${user.id}> (${user.id})`,
                             inline: true
                         },
                         {

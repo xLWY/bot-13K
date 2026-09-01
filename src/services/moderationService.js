@@ -132,8 +132,8 @@ export class ModerationService {
         guild,
         event: {
           action: 'Member Banned',
-          target: `${user.tag} (${user.id})`,
-          executor: `${moderator.user.tag} (${moderator.id})`,
+          target: `<@${user.id}> (${user.id})`,
+          executor: `<@${moderator.id}> (${moderator.id})`,
           reason,
           metadata: {
             userId: user.id,
@@ -207,8 +207,8 @@ export class ModerationService {
         guild,
         event: {
           action: 'Member Kicked',
-          target: `${member.user.tag} (${member.id})`,
-          executor: `${moderator.user.tag} (${moderator.id})`,
+          target: `<@${member.id}> (${member.id})`,
+          executor: `<@${moderator.id}> (${moderator.id})`,
           reason,
           metadata: {
             userId: member.id,
@@ -282,8 +282,8 @@ export class ModerationService {
         guild,
         event: {
           action: 'Member Timed Out',
-          target: `${member.user.tag} (${member.id})`,
-          executor: `${moderator.user.tag} (${moderator.id})`,
+          target: `<@${member.id}> (${member.id})`,
+          executor: `<@${moderator.id}> (${moderator.id})`,
           reason,
           duration: `${durationMinutes} minutes`,
           metadata: {
@@ -356,8 +356,8 @@ export class ModerationService {
         guild,
         event: {
           action: 'Member Untimeouted',
-          target: `${member.user.tag} (${member.id})`,
-          executor: `${moderator.user.tag} (${moderator.id})`,
+          target: `<@${member.id}> (${member.id})`,
+          executor: `<@${moderator.id}> (${moderator.id})`,
           reason,
           metadata: {
             userId: member.id,
@@ -419,8 +419,8 @@ export class ModerationService {
         guild,
         event: {
           action: 'Member Unbanned',
-          target: `${user.tag} (${user.id})`,
-          executor: `${moderator.user.tag} (${moderator.id})`,
+          target: `<@${user.id}> (${user.id})`,
+          executor: `<@${moderator.id}> (${moderator.id})`,
           reason,
           metadata: {
             userId: user.id,

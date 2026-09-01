@@ -52,12 +52,12 @@ export default {
           guildId: guild.id,
           eventType: EVENT_TYPES.MEMBER_NAME_CHANGE,
           data: {
-            description: `${newUser.tag} updated their username`,
+            description: `<@${newUser.id}> updated their username`,
             userId: newUser.id,
             fields: [
               {
                 name: '👤 User',
-                value: `${newUser.tag} (${newUser.id})`,
+                value: `<@${newUser.id}> (${newUser.id})`,
                 inline: true
               },
               ...fields

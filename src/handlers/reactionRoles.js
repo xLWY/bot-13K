@@ -47,13 +47,13 @@ async function handleReactionAdd(client, reaction, user) {
                 guildId: guild.id,
                 eventType: EVENT_TYPES.REACTION_ROLE_ADD,
                 data: {
-                    description: `Rôle de réaction attribué à ${user.tag}`,
+                    description: `Rôle de réaction attribué à <@${user.id}>`,
                     userId: user.id,
                     channelId: message.channel.id,
                     fields: [
                         {
                             name: '👤 Membre',
-                            value: `${user.tag} (${user.id})`,
+                            value: `<@${user.id}> (${user.id})`,
                             inline: true
                         },
                         {
@@ -121,13 +121,13 @@ async function handleReactionRemove(client, reaction, user) {
                 guildId: guild.id,
                 eventType: EVENT_TYPES.REACTION_ROLE_REMOVE,
                 data: {
-                    description: `Rôle de réaction retiré à ${user.tag}`,
+                    description: `Rôle de réaction retiré à <@${user.id}>`,
                     userId: user.id,
                     channelId: message.channel.id,
                     fields: [
                         {
                             name: '👤 Membre',
-                            value: `${user.tag} (${user.id})`,
+                            value: `<@${user.id}> (${user.id})`,
                             inline: true
                         },
                         {

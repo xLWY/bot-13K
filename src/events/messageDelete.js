@@ -62,7 +62,7 @@ export default {
       if (message.author) {
         fields.push({
           name: '👤 Author',
-          value: `${message.author.tag} (${message.author.id})`,
+          value: `<@${message.author.id}> (${message.author.id})`,
           inline: true
         });
       }
