@@ -16,7 +16,13 @@ export default {
             option
                 .setName("message")
                 .setDescription("Le contenu du message (2000 caractères max)")
-                .setRequired(true)
+                .setRequired(false)
+        )
+        .addAttachmentOption(option =>
+            option
+                .setName("image")
+                .setDescription("Une image à envoyer en pièce jointe")
+                .setRequired(false)
         )
         .addChannelOption(option =>
             option
@@ -46,9 +52,14 @@ export default {
 
         const targetUser = interaction.options.getUser("user");
         const message = interaction.options.getString("message");
+        const image = interaction.options.getAttachment("image");
         const channel = interaction.options.getChannel("channel") || interaction.channel;
 
-        if (message.length > 2000) {
+        if (!message && !image) {
+            return await InteractionHelper.sendErrorNotice(interaction, "Indique un message ou une image à envoyer.");
+        }
+
+        if (message && message.length > 2000) {
             return await InteractionHelper.sendErrorNotice(interaction, "Les messages doivent faire moins de 2000 caractères.");
         }
 
@@ -90,10 +101,11 @@ export default {
 
             try {
                 await webhook.send({
-                    content: message,
+                    content: message || undefined,
                     username: name,
                     avatarURL,
-                    threadId: threadId || undefined
+                    threadId: threadId || undefined,
+                    files: image ? [image.url] : undefined
                 });
             } finally {
                 await webhook.delete('Message factice envoyé').catch(() => {});
