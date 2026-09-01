@@ -14,7 +14,7 @@ import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { successEmbed, createEmbed } from '../utils/embeds.js';
 import { saveTicketData, getTicketData, deleteTicketData, incrementTicketCounter } from '../utils/database.js';
-import { handleEmbedBuilderButtons, handleEmbedBuilderModals } from '../handlers/interactionHandlers/embedBuilderButtons.js';
+import { handleEmbedBuilderButtons, handleEmbedBuilderModals, handleEmbedBuilderChannelSelect } from '../handlers/interactionHandlers/embedBuilderButtons.js';
 import { handleInteractionError, createError, ErrorTypes } from '../utils/errorHandler.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { createInteractionTraceContext, runWithTraceContext } from '../utils/traceContext.js';
@@ -776,6 +776,27 @@ export default {
               customId: interaction.customId
             }, interactionTraceContext));
           }
+        } else if (interaction.isChannelSelectMenu()) {
+          if (interaction.customId === 'embed_channel_select') {
+            try {
+              await handleEmbedBuilderChannelSelect(interaction, client);
+            } catch (error) {
+              await handleInteractionError(interaction, error, withTraceContext({
+                type: 'channel_select',
+                customId: interaction.customId,
+                handler: 'embed_builder'
+              }, interactionTraceContext));
+            }
+            return;
+          }
+          logger.warn('Unhandled channel select menu interaction:', {
+            event: 'interaction.channelselect.unhandled',
+            customId: interaction.customId,
+            traceId: interactionTraceContext.traceId,
+            guildId: interaction.guildId,
+            userId: interaction.user?.id
+          });
+          return;
         } else if (interaction.isModalSubmit()) {
           // Handle embed builder modals
           if (interaction.customId.startsWith('embed_') && interaction.customId.endsWith('_modal')) {

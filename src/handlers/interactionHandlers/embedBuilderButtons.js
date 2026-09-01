@@ -1,4 +1,4 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder, ChannelType } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -25,7 +25,8 @@ function createEmptyEmbedData() {
     thumbnail: null,
     footer: null,
     author: null,
-    timestamp: false
+    timestamp: false,
+    channelId: null
   };
 }
 
@@ -152,6 +153,10 @@ function getBuilderComponents() {
         .setLabel('Définir Footer')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
+        .setCustomId('embed_channel')
+        .setLabel('Salon d\'envoi')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
         .setCustomId('embed_send')
         .setLabel('Envoyer Embed')
         .setStyle(ButtonStyle.Success)
@@ -191,7 +196,8 @@ function getStatusEmbed(data) {
       { name: '🎨 Couleur', value: fieldValue(formatColor(data.color)), inline: true },
       { name: '📊 Champs', value: fieldValue(String(data.fields.length)), inline: true },
       { name: '🖼️ Image', value: fieldValue(data.image ? 'Définie' : 'Non définie'), inline: true },
-      { name: '👾 Miniature', value: fieldValue(data.thumbnail ? 'Définie' : 'Non définie'), inline: true }
+      { name: '👾 Miniature', value: fieldValue(data.thumbnail ? 'Définie' : 'Non définie'), inline: true },
+      { name: '📢 Salon d\'envoi', value: data.channelId ? `<#${data.channelId}>` : 'Salon actuel', inline: true }
     );
 }
 
@@ -333,6 +339,9 @@ export async function handleEmbedBuilderButtons(interaction, client) {
       case 'embed_send':
         await sendEmbed(interaction, data);
         break;
+      case 'embed_channel':
+        await showChannelSelect(interaction, data);
+        break;
       default:
         logger.warn(`Unknown embed builder button: ${customId}`);
     }
@@ -391,6 +400,30 @@ async function showFieldModal(interaction) {
   await interaction.showModal(modal);
 }
 
+async function showChannelSelect(interaction, data) {
+  const channelSelect = new ChannelSelectMenuBuilder()
+    .setCustomId('embed_channel_select')
+    .setPlaceholder('Choisis le salon d\'envoi...')
+    .addChannelTypes(ChannelType.GuildText)
+    .setMaxValues(1);
+
+  const selectRow = new ActionRowBuilder().addComponents(channelSelect);
+
+  await refreshBuilderMessage(interaction, data, {
+    embeds: [
+      new EmbedBuilder()
+        .setTitle('📢 Choisir le salon d\'envoi')
+        .setDescription('Sélectionne le salon où l\'embed sera envoyé.\n\n**Actuel :** ' + (data.channelId ? `<#${data.channelId}>` : 'Salon actuel'))
+        .setColor(getColor('info')),
+      getStatusEmbed(data)
+    ],
+    components: [
+      selectRow,
+      ...getBuilderComponents().slice(0, 2)
+    ]
+  });
+}
+
 async function showPreview(interaction, data) {
   await refreshBuilderMessage(interaction, data, {
     embeds: [generatePreviewEmbed(data), getStatusEmbed(data)]
@@ -429,21 +462,76 @@ async function sendEmbed(interaction, data) {
     await interaction.deferUpdate();
   }
 
+  let targetChannel = interaction.channel;
+  if (data.channelId) {
+    targetChannel = interaction.guild?.channels.cache.get(data.channelId)
+      ?? await interaction.guild?.channels.fetch(data.channelId).catch(() => null);
+  }
+
+  if (!targetChannel?.isTextBased?.() || targetChannel.type === ChannelType.GuildForum) {
+    await InteractionHelper.sendErrorNotice(interaction, 'Le salon choisi est introuvable ou n\'est pas un salon texte.');
+    return;
+  }
+
   const finalEmbed = generatePreviewEmbed(data);
-  await interaction.channel.send({ embeds: [finalEmbed] });
+  await targetChannel.send({ embeds: [finalEmbed] });
 
   clearEmbedData(interaction.user.id);
 
   await refreshBuilderMessage(interaction, createEmptyEmbedData(), {
     embeds: [
       new EmbedBuilder()
-        .setDescription('✅ Embed envoyé avec succès.')
+        .setDescription(`✅ Embed envoyé avec succès dans ${targetChannel}.`)
         .setColor(getColor('success'))
     ],
     components: []
   });
 
-  logger.info(`Embed sent by user ${interaction.user.id} in channel ${interaction.channelId}`);
+  logger.info(`Embed sent by user ${interaction.user.id} in channel ${targetChannel.id}`);
+}
+
+export async function handleEmbedBuilderChannelSelect(interaction, client) {
+  try {
+    const userId = interaction.user.id;
+    const customId = interaction.customId;
+    const ownerId = getBuilderOwnerId(interaction);
+
+    if (ownerId && ownerId !== userId) {
+      await InteractionHelper.sendErrorNotice(interaction, 'Seule la personne qui a lancé le constructeur peut l’utiliser.');
+      return;
+    }
+
+    const data = getEmbedData(userId);
+    const selected = interaction.channels.first();
+
+    if (!selected) {
+      await InteractionHelper.sendErrorNotice(interaction, 'Choisis un salon texte.');
+      return;
+    }
+    if (selected.type !== ChannelType.GuildText) {
+      await InteractionHelper.sendErrorNotice(interaction, 'Choisis un salon texte.');
+      return;
+    }
+
+    data.channelId = selected.id;
+
+    logger.info(`Embed builder channel selected: ${selected.id} by user ${userId}`);
+
+    await refreshBuilderMessage(interaction, data);
+  } catch (error) {
+    logger.error(`Embed builder channel select handler failed`, {
+      error: error.message,
+      stack: error.stack,
+      customId: interaction.customId,
+      userId: interaction.user.id
+    });
+
+    try {
+      await InteractionHelper.sendErrorNotice(interaction, `Erreur : ${error.message}`);
+    } catch (replyError) {
+      logger.error('Failed to send error message:', replyError);
+    }
+  }
 }
 
 export async function handleEmbedBuilderModals(interaction, client) {

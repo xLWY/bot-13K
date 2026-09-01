@@ -60,6 +60,10 @@ export default {
             .setLabel('Définir Footer')
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
+            .setCustomId('embed_channel')
+            .setLabel('Salon d\'envoi')
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
             .setCustomId('embed_send')
             .setLabel('Envoyer Embed')
             .setStyle(ButtonStyle.Success)
