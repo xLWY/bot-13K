@@ -1,15 +1,12 @@
-import { EmbedBuilder, MessageFlags } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { getColor } from '../../config/bot.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 import { getReactionRoleMessage } from '../../services/reactionRoleService.js';
 
 export async function handleReactionRolesSelectMenu(interaction, client) {
     try {
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
-        if (!deferSuccess) return;
+        await interaction.deferUpdate().catch(() => {});
 
         if (!interaction.inGuild() || !interaction.guild || !interaction.member) {
             throw createError(
@@ -128,31 +125,6 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
                 }
             }
         }
-
-        let description = '🎭 **Rôles mis à jour avec succès !**\n\n';
-
-        if (addedRoles.length > 0) {
-            description += `✅ **Ajoutés :** ${addedRoles.map(name => `**${name}**`).join(', ')}\n`;
-        }
-
-        if (removedRoles.length > 0) {
-            description += `❌ **Retirés :** ${removedRoles.map(name => `**${name}**`).join(', ')}\n`;
-        }
-
-        if (addedRoles.length === 0 && removedRoles.length === 0) {
-            description += 'Aucun changement n\'a été apporté à tes rôles.';
-        }
-
-        if (skippedRoles.length > 0) {
-            description += `\n⚠️ **Ignorés :** ${skippedRoles.length} rôle${skippedRoles.length !== 1 ? 's' : ''} (problèmes de permission)`;
-        }
-
-        const responseEmbed = new EmbedBuilder()
-            .setDescription(description)
-            .setColor(getColor('success'))
-            .setTimestamp();
-
-        await interaction.editReply({ components: [] });
 
         if (addedRoles.length > 0 || removedRoles.length > 0) {
             try {
