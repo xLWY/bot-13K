@@ -1,5 +1,4 @@
 import { SlashCommandBuilder, AttachmentBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { fileURLToPath } from 'url';
@@ -19,14 +18,7 @@ export default {
         try {
             const attachment = new AttachmentBuilder(IMAGE_PATH, { name: 'fedor.png' });
 
-            const embed = createEmbed({
-                title: '',
-                description: '',
-            })
-                .setImage('attachment://fedor.png');
-
             await InteractionHelper.safeReply(interaction, {
-                embeds: [embed],
                 files: [attachment],
             });
 
