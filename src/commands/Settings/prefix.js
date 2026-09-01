@@ -40,7 +40,7 @@ export default {
         try {
             if (!newPrefix) {
                 const guildConfig = await getGuildConfig(client, guild.id);
-                const currentPrefix = guildConfig.prefix || '!';
+                const currentPrefix = guildConfig.prefix;
 
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [successEmbed(`Le préfixe actuel de ce serveur est \`${currentPrefix}\``, 'ℹ️ Préfixe actuel')],

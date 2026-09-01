@@ -18,9 +18,6 @@ const OPTION_TYPE = {
     ATTACHMENT: 11
 };
 
-const DEFAULT_PREFIX = '!';
-const STATBOT_PREFIX = 's?';
-
 /**
  * Splits a string into tokens, keeping "quoted phrases" and 'single quoted' together.
  */
@@ -307,12 +304,10 @@ export async function handlePrefixCommand(message, client) {
         logger.error('Failed to load guild config for prefix command check:', error);
     }
 
-    const configuredPrefix = guildConfig?.prefix || DEFAULT_PREFIX;
-    const matchedPrefix = [configuredPrefix, STATBOT_PREFIX].find((p) => p && message.content.startsWith(p));
-    if (!matchedPrefix) return false;
-    const deleteTriggerAfterRun = matchedPrefix === configuredPrefix;
+    const configuredPrefix = guildConfig?.prefix;
+    if (!configuredPrefix || !message.content.startsWith(configuredPrefix)) return false;
 
-    const withoutPrefix = message.content.slice(matchedPrefix.length).trim();
+    const withoutPrefix = message.content.slice(configuredPrefix.length).trim();
     if (!withoutPrefix) return false;
 
     const tokens = tokenize(withoutPrefix);
@@ -348,14 +343,14 @@ export async function handlePrefixCommand(message, client) {
             const groupToken = tokens.shift();
             const group = optionDefs.find(o => o.name === groupToken?.toLowerCase());
             if (!group) {
-                await replyWithNotice(message, `utilisation : ${usageLine(matchedPrefix, commandName, null, [])} — groupes disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
+                await replyWithNotice(message, `utilisation : ${usageLine(configuredPrefix, commandName, null, [])} — groupes disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommandGroup = group.name;
             const subToken = tokens.shift();
             const sub = group.options?.find(o => o.name === subToken?.toLowerCase());
             if (!sub) {
-                await replyWithNotice(message, `utilisation : \`${matchedPrefix}${commandName} ${group.name} <sous-commande>\` — disponibles : ${(group.options || []).map(o => o.name).join(', ')}`);
+                await replyWithNotice(message, `utilisation : \`${configuredPrefix}${commandName} ${group.name} <sous-commande>\` — disponibles : ${(group.options || []).map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommand = sub.name;
@@ -364,7 +359,7 @@ export async function handlePrefixCommand(message, client) {
             const subToken = tokens.shift();
             const sub = optionDefs.find(o => o.name === subToken?.toLowerCase());
             if (!sub) {
-                await replyWithNotice(message, `utilisation : \`${matchedPrefix}${commandName} <sous-commande>\` — disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
+                await replyWithNotice(message, `utilisation : \`${configuredPrefix}${commandName} <sous-commande>\` — disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommand = sub.name;
@@ -382,14 +377,14 @@ export async function handlePrefixCommand(message, client) {
 
         const parsed = buildOptionsFromTokens(message, optionDefs, tokens);
         if (parsed.error) {
-            await replyWithNotice(message, `${parsed.error} — utilisation : ${usageLine(matchedPrefix, commandName, subcommand, optionDefs)}`);
+            await replyWithNotice(message, `${parsed.error} — utilisation : ${usageLine(configuredPrefix, commandName, subcommand, optionDefs)}`);
             return true;
         }
 
         const optionsAccessor = makeOptionsAccessor(parsed.values, message, subcommand, subcommandGroup);
         const interaction = createPrefixInteraction(message, client, commandName, optionsAccessor);
 
-        logger.info(`Prefix command executed: ${matchedPrefix}${commandName} by ${message.author.tag}`, {
+        logger.info(`Prefix command executed: ${configuredPrefix}${commandName} by ${message.author.tag}`, {
             event: 'prefix.command.received',
             guildId: message.guild.id,
             userId: message.author.id,
@@ -406,9 +401,7 @@ export async function handlePrefixCommand(message, client) {
             logger.error('Failed to send prefix command error response:', innerError);
         }
     } finally {
-        if (deleteTriggerAfterRun) {
-            await tryDeletePrefixMessage(message);
-        }
+        await tryDeletePrefixMessage(message);
     }
 
     return true;
