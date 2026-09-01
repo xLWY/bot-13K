@@ -22,11 +22,6 @@ export default {
                         .setRequired(true)
                 )
                 .addStringOption(option =>
-                    option.setName('title')
-                        .setDescription('Titre du panneau de rôles par réaction')
-                        .setRequired(true)
-                )
-                .addStringOption(option =>
                     option.setName('description')
                         .setDescription('Description du panneau de rôles par réaction')
                         .setRequired(true)
@@ -195,8 +190,8 @@ async function handleSetup(interaction) {
     logger.info(`Reaction role setup initiated by ${interaction.user.tag} in guild ${interaction.guild.name}`);
     
     const channel = interaction.options.getChannel('channel');
-    const title = interaction.options.getString('title');
     const description = interaction.options.getString('description');
+    const title = '';
     
     // Validate channel type
     if (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.GuildAnnouncement) {
