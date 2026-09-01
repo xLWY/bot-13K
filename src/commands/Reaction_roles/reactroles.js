@@ -301,9 +301,7 @@ async function handleSetup(interaction) {
             .addOptions(
                 roles.map(role => ({
                     label: role.name,
-                    description: `Ajouter/retirer le rôle ${role.name}`,
-                    value: role.id,
-                    emoji: '🎭'
+                    value: role.id
                 }))
             )
     );
@@ -526,9 +524,7 @@ async function rebuildLivePanelMessage(guild, panelData) {
                 .addOptions(
                     roleObjects.map(r => ({
                         label: r.name.substring(0, 100),
-                        description: `Ajouter/retirer le rôle ${r.name}`.substring(0, 100),
-                        value: r.id,
-                        emoji: '🎭',
+                        value: r.id
                     })),
                 ),
         );
