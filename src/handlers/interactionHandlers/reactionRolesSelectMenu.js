@@ -152,7 +152,7 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
             .setColor(getColor('success'))
             .setTimestamp();
 
-        await interaction.editReply({ content: '\u200B', components: [] });
+        await interaction.editReply({ components: [] });
 
         if (addedRoles.length > 0 || removedRoles.length > 0) {
             try {
