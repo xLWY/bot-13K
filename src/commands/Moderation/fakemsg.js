@@ -22,7 +22,7 @@ export default {
             option
                 .setName("channel")
                 .setDescription("Le salon où envoyer (par défaut : le salon actuel)")
-                .addChannelTypes(ChannelType.GuildText)
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildForum)
                 .setRequired(false)
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageWebhooks)
@@ -52,7 +52,18 @@ export default {
             return await InteractionHelper.sendErrorNotice(interaction, "Les messages doivent faire moins de 2000 caractères.");
         }
 
-        if (!channel || channel.type !== ChannelType.GuildText) {
+        let targetChannel = channel;
+        let threadId = null;
+
+        if (channel.isThread?.()) {
+            threadId = channel.id;
+            targetChannel = channel.parent;
+        }
+
+        if (
+            !targetChannel ||
+            (targetChannel.type !== ChannelType.GuildText && targetChannel.type !== ChannelType.GuildForum)
+        ) {
             return await InteractionHelper.sendErrorNotice(interaction, "Choisis un salon textuel.");
         }
 
@@ -71,7 +82,7 @@ export default {
                 avatarBuffer = null;
             }
 
-            const webhook = await channel.createWebhook({
+            const webhook = await targetChannel.createWebhook({
                 name,
                 avatar: avatarBuffer || undefined,
                 reason: `Message factice posté par ${interaction.user.tag}`
@@ -81,7 +92,8 @@ export default {
                 await webhook.send({
                     content: message,
                     username: name,
-                    avatarURL
+                    avatarURL,
+                    threadId: threadId || undefined
                 });
             } finally {
                 await webhook.delete('Message factice envoyé').catch(() => {});
