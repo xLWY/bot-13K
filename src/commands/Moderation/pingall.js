@@ -1,7 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
-import { getColor } from '../../config/bot.js';
 
 const COOLDOWN_MS = 5 * 60 * 1000;
 const cooldowns = new Map();
@@ -34,17 +33,7 @@ export default {
 
         const remaining = hasCooldown(interaction.user.id);
         if (remaining > 0) {
-            const mins = Math.ceil(remaining / 60000);
-            return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    {
-                        color: getColor('warning'),
-                        title: '⏳ Temps de recharge',
-                        description: `Attends encore **${mins} minute${mins > 1 ? 's' : ''}** avant de re-pinger tout le monde.`,
-                    },
-                ],
-                flags: MessageFlags.Ephemeral,
-            });
+            return;
         }
 
         const pingChannel = interaction.channel;
