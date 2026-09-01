@@ -212,17 +212,6 @@ async function handleSetup(interaction) {
         );
     }
 
-    // Check if guild has reached max of 5 panels
-    const existingPanels = await getAllReactionRoleMessages(interaction.client, interaction.guildId);
-    if (existingPanels && existingPanels.length >= 5) {
-        throw createError(
-            'Panel limit reached',
-            ErrorTypes.VALIDATION,
-            'Votre serveur a atteint le maximum de 5 panneaux de rôles par réaction. Supprimez un panneau existant pour en créer un nouveau.',
-            { maxPanels: 5, currentPanels: existingPanels.length }
-        );
-    }
-    
     // Collect and validate roles
     const roles = [];
     const roleValidationErrors = [];
