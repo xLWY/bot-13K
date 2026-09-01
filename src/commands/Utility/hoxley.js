@@ -10,6 +10,7 @@ const IMAGE_PATH = path.resolve(__dirname, '../../../assets/images/hoxley.png');
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
+    hiddenFromSlash: true,
     data: new SlashCommandBuilder()
         .setName('hoxley')
         .setDescription('* Envoyer une image'),

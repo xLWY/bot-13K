@@ -146,6 +146,10 @@ export async function registerCommands(client, guildId) {
 const registeredNames = new Set();
         
         for (const command of client.commands.values()) {
+            if (command.hiddenFromSlash) {
+                logger.debug(`Skipping slash registration for hidden command: ${command.data.name}`);
+                continue;
+            }
             if (command.data && typeof command.data.toJSON === 'function') {
                 const commandName = command.data.name;
                 
