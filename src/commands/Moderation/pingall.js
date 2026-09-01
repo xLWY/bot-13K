@@ -56,7 +56,7 @@ export default {
 
         if (isPrefix) {
             const pingMessage = await pingChannel
-                .send({ content: `${mentionText} — ${interaction.user} a quelque chose d'important à vous annoncer ! ${interaction.user} relisez le message précédent.` })
+                .send({ content: mentionText })
                 .catch(err => {
                     logger.debug('Failed to send pingall message:', err);
                     return null;
@@ -75,7 +75,7 @@ export default {
         await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
 
         const pingMessage = await pingChannel
-            .send({ content: `${mentionText} — ${interaction.user} a quelque chose d'important à vous annoncer ! ${interaction.user} relisez le message précédent.` })
+            .send({ content: mentionText })
             .catch(err => {
                 logger.debug('Failed to send pingall message:', err);
                 return null;
