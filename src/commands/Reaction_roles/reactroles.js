@@ -169,10 +169,8 @@ export default {
 
 function buildPanelContent(title, description, roleObjects) {
     const roleList = roleObjects.length > 0
-        ? roleObjects.map(r => `• ${r}`).join('\n')
+        ? roleObjects.map(r => `• ${r.name}`).join('\n')
         : 'Aucun rôle disponible';
-
-    const body = description || roleList;
 
     if (description) {
         return `${description}\n\n${roleList}`.substring(0, 2000);
