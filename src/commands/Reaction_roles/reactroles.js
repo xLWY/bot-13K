@@ -168,15 +168,7 @@ export default {
 // ─── Panel Content Builder ────────────────────────────────────────────────────
 
 function buildPanelContent(title, description, roleObjects) {
-    const roleList = roleObjects.length > 0
-        ? roleObjects.map(r => `• ${r.name}`).join('\n')
-        : 'Aucun rôle disponible';
-
-    if (description) {
-        return `${description}\n\n${roleList}`.substring(0, 2000);
-    }
-
-    return roleList.substring(0, 2000);
+    return (description || '').substring(0, 2000);
 }
 
 // ─── Setup Subcommand ─────────────────────────────────────────────────────────
