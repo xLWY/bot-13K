@@ -355,10 +355,6 @@ async function handleSetup(interaction) {
     } catch (logError) {
         logger.warn('Failed to log reaction role creation:', logError);
     }
-
-    await InteractionHelper.safeEditReply(interaction, {
-        embeds: [successEmbed('Succès', `✅ Panneau de rôles par réaction créé dans ${channel} !\n\n${message.url}`)]
-    });
 }
 
 // ─── Dashboard Subcommand ─────────────────────────────────────────────────────
