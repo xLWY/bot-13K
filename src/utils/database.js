@@ -738,7 +738,8 @@ function normalizeWelcomeConfig(raw = {}) {
         welcomePing: Boolean(base.welcomePing),
         welcomeImage: base.welcomeImage ?? null,
         pingChannelId: base.pingChannelId ?? null,
-        pingMessage: base.pingMessage ?? "**{user}** vient d'arriver, dites-lui bonjour ! 👋",
+        arrivalChannelId: base.arrivalChannelId ?? null,
+        arrivalMessage: base.arrivalMessage ?? "**{user}** vient d'arriver, dites-lui bonjour ! 👋",
         goodbyeEnabled: Boolean(base.goodbyeEnabled),
         goodbyeChannelId,
         leaveMessage,
@@ -829,7 +830,8 @@ export async function removeWelcomeConfig(client, guildId) {
             welcomePing: false,
             welcomeImage: null,
             pingChannelId: null,
-            pingMessage: "**{user}** vient d'arriver, dites-lui bonjour ! 👋"
+            arrivalChannelId: null,
+            arrivalMessage: "**{user}** vient d'arriver, dites-lui bonjour ! 👋"
         };
         await client.db.set(key, cleanConfig);
         return cleanConfig;

@@ -8,7 +8,8 @@ import { getServerCounters, updateCounter } from '../services/serverstatsService
 import { setBirthday as dbSetBirthday } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 
-const WELCOME_PING_DELETE_MS = 600_000;
+const WELCOME_PING_DELETE_MS = 3000;
+const WELCOME_ARRIVAL_DELETE_MS = 600_000;
 
 export default {
   name: Events.GuildMemberAdd,
@@ -92,12 +93,7 @@ export default {
                 const pingPerms = pingMe ? pingChannel.permissionsFor(pingMe) : null;
                 if (pingPerms?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
                     try {
-                        const pingMessage = await pingChannel.send(
-                            formatWelcomeMessage(
-                                welcomeConfig.pingMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋",
-                                { user, guild, member }
-                            )
-                        );
+                        const pingMessage = await pingChannel.send(user.toString());
                         setTimeout(async () => {
                             try { await pingMessage.delete(); } catch (_) {
                                 // already deleted
@@ -109,6 +105,36 @@ export default {
                 }
             } else {
                 await notifyBrokenWelcomeChannel(member.client, guild, 'salon de ping', welcomeConfig.pingChannelId);
+            }
+        }
+        
+        if (welcomeConfig?.enabled && welcomeConfig.arrivalChannelId) {
+            let arrivalChannel = guild.channels.cache.get(welcomeConfig.arrivalChannelId);
+            if (!arrivalChannel) {
+                try { arrivalChannel = await guild.channels.fetch(welcomeConfig.arrivalChannelId).catch(() => null); } catch (_) { arrivalChannel = null; }
+            }
+            if (arrivalChannel?.isTextBased?.()) {
+                const arrivalMe = guild.members.me;
+                const arrivalPerms = arrivalMe ? arrivalChannel.permissionsFor(arrivalMe) : null;
+                if (arrivalPerms?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
+                    try {
+                        const arrivalMsg = await arrivalChannel.send(
+                            formatWelcomeMessage(
+                                welcomeConfig.arrivalMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋",
+                                { user, guild, member }
+                            )
+                        );
+                        setTimeout(async () => {
+                            try { await arrivalMsg.delete(); } catch (_) {
+                                // already deleted
+                            }
+                        }, WELCOME_ARRIVAL_DELETE_MS).unref?.();
+                    } catch (error) {
+                        logger.debug(`[Welcome] Could not send welcome arrival in ${arrivalChannel?.name}:`, error.message);
+                    }
+                }
+            } else {
+                await notifyBrokenWelcomeChannel(member.client, guild, "salon d'arrivée", welcomeConfig.arrivalChannelId);
             }
         }
         

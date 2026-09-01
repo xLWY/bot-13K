@@ -39,11 +39,16 @@ export default {
                         .setRequired(false))
                 .addChannelOption(option =>
                     option.setName('pingchannel')
-                        .setDescription('Salon où le message « X vient d\'arriver » est posté (10 min)')
+                        .setDescription('Salon où le membre est pingé à son arrivée (le ping se supprime tout seul)')
+                        .addChannelTypes(ChannelType.GuildText)
+                        .setRequired(false))
+                .addChannelOption(option =>
+                    option.setName('arrivalchannel')
+                        .setDescription('Salon du message d\'arrivée « X vient d\'arriver » (auto-supprimé après 10 min)')
                         .addChannelTypes(ChannelType.GuildText)
                         .setRequired(false))
                 .addStringOption(option =>
-                    option.setName('pingmessage')
+                    option.setName('arrivalmessage')
                         .setDescription('Texte du message d\'arrivée. Variables : {user}, {username}, {server}')
                         .setRequired(false)))
         .addSubcommand(subcommand =>
@@ -90,7 +95,8 @@ export default {
             const image = options.getString('image');
             const ping = options.getBoolean('ping') ?? false;
             const pingChannel = options.getChannel('pingchannel');
-            const pingMessage = options.getString('pingmessage');
+            const arrivalChannel = options.getChannel('arrivalchannel');
+            const arrivalMessage = options.getString('arrivalmessage');
 
             const existingConfig = await getWelcomeConfig(client, guild.id);
             if (existingConfig?.channelId) {
@@ -124,7 +130,8 @@ export default {
                     welcomeImage: image || undefined,
                     welcomePing: ping,
                     pingChannelId: pingChannel?.id || null,
-                    pingMessage: pingMessage || undefined
+                    arrivalChannelId: arrivalChannel?.id || null,
+                    arrivalMessage: arrivalMessage || undefined
                 });
 
                 logger.info(`[Welcome] Setup configured by ${interaction.user.tag} for guild ${guild.name} (${guild.id})`);
@@ -143,8 +150,9 @@ export default {
                         { name: 'Titre', value: previewTitle || 'Aucun (titre par défaut affiché)', inline: true },
                         { name: 'Description', value: previewMessage, inline: false },
                         { name: 'Mentionner l\'utilisateur', value: ping ? '✅ Oui' : '❌ Non', inline: true },
-                        { name: 'Salon d\'arrivée (10 min)', value: pingChannel ? `${pingChannel}` : '❌ Non configuré', inline: false },
-                        { name: 'Message d\'arrivée', value: pingMessage ? formatWelcomeMessage(pingMessage, { user: interaction.user, guild }) : '`Défaut : {user} vient d\'arriver, dites-lui bonjour !`', inline: false },
+                        { name: 'Salon de ping auto-supprimé', value: pingChannel ? `${pingChannel} (le ping disparaît tout seul)` : '❌ Non configuré', inline: false },
+                        { name: 'Salon d\'arrivée (10 min)', value: arrivalChannel ? `${arrivalChannel}` : '❌ Non configuré', inline: false },
+                        { name: 'Message d\'arrivée', value: arrivalMessage ? formatWelcomeMessage(arrivalMessage, { user: interaction.user, guild }) : '`Défaut : {user} vient d\'arriver, dites-lui bonjour !`', inline: false },
                         { name: 'Statut', value: '✅ Activé', inline: true }
                     )
                     .setFooter({ text: 'Astuce : utilise /welcome remove pour supprimer le système de bienvenue' });

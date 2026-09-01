@@ -33,17 +33,17 @@ function buildDashboardEmbed(cfg, guild) {
 
     const rawWelcome = cfg.welcomeMessage || 'Bienvenue {user} sur {server} !';
     const rawGoodbye = cfg.leaveMessage || '{user.tag} a quitté le serveur.';
-    const rawPing = cfg.pingMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋";
+    const rawArrival = cfg.arrivalMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋";
     const welcomePreview = `\`${rawWelcome.length > 55 ? rawWelcome.substring(0, 55) + '…' : rawWelcome}\``;
     const goodbyePreview = `\`${rawGoodbye.length > 55 ? rawGoodbye.substring(0, 55) + '…' : rawGoodbye}\``;
-    const pingPreview = `\`${rawPing.length > 55 ? rawPing.substring(0, 55) + '…' : rawPing}\``;
+    const arrivalPreview = `\`${rawArrival.length > 55 ? rawArrival.substring(0, 55) + '…' : rawArrival}\``;
 
     const autoRoleIds = Array.isArray(cfg.roleIds) ? cfg.roleIds : [];
     const autoRolePreview = autoRoleIds.length
         ? autoRoleIds.map(id => `<@&${id}>`).join(', ')
         : '`Aucun`';
 
-            const pingChannelName = cfg.pingChannelId ? `<#${cfg.pingChannelId}>` : '`Non défini`';
+            const arrivalChannelName = cfg.arrivalChannelId ? `<#${cfg.arrivalChannelId}>` : '`Non défini`';
 
     return new EmbedBuilder()
         .setTitle('👋 Tableau de bord des messages de bienvenue')
@@ -61,8 +61,8 @@ function buildDashboardEmbed(cfg, guild) {
             { name: '🎭 Rôle(s) auto', value: autoRolePreview, inline: true },
             { name: '💬 Message de bienvenue', value: welcomePreview, inline: false },
             { name: '💬 Message d\'au revoir', value: goodbyePreview, inline: false },
-            { name: '👋 Message d\'arrivée (10 min)', value: pingPreview, inline: false },
-            { name: '🚪 Salon d\'arrivée', value: pingChannelName, inline: true },
+            { name: '👋 Message d\'arrivée (10 min)', value: arrivalPreview, inline: false },
+            { name: '🚪 Salon d\'arrivée', value: arrivalChannelName, inline: true },
         )
         .setFooter({ text: 'Le tableau de bord se ferme après 10 minutes d\'inactivité' })
         .setTimestamp();
@@ -111,12 +111,12 @@ function buildSelectMenu(guildId) {
             new StringSelectMenuOptionBuilder()
                 .setLabel('Salon d\'arrivée')
                 .setDescription('Salon où le message « X vient d\'arriver » est posté (10 min)')
-                .setValue('ping_channel')
+                .setValue('arrival_channel')
                 .setEmoji('🚪'),
             new StringSelectMenuOptionBuilder()
                 .setLabel('Message d\'arrivée')
                 .setDescription('Modifier le texte affiché à l\'arrivée d\'un membre')
-                .setValue('ping_message')
+                .setValue('arrival_message')
                 .setEmoji('👋'),
         );
 }
@@ -247,10 +247,10 @@ export default {
                         case 'goodbye_image':
                             await handleGoodbyeImage(selectInteraction, interaction, cfg, guildId, client);
                             break;
-                        case 'ping_channel':
+                        case 'arrival_channel':
                             await handlePingChannel(selectInteraction, interaction, cfg, guildId, client);
                             break;
-                        case 'ping_message':
+                        case 'arrival_message':
                             await handlePingMessage(selectInteraction, interaction, cfg, guildId, client);
                             break;
                     }
@@ -901,7 +901,7 @@ async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildI
     }
 
     const channelSelect = new ChannelSelectMenuBuilder()
-        .setCustomId('greet_cfg_ping_channel')
+        .setCustomId('greet_cfg_arrival_channel')
         .setPlaceholder('Sélectionne un canal texte...')
         .addChannelTypes(ChannelType.GuildText)
         .setMaxValues(1);
@@ -911,7 +911,7 @@ async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildI
             new EmbedBuilder()
                 .setTitle('🚪 Salon d\'arrivée')
                 .setDescription(
-                    `**Actuel :** ${cfg.pingChannelId ? `<#${cfg.pingChannelId}>` : '`Non défini`'}\n\nSélectionne le salon où le message « X vient d\'arriver » sera posté. Il reste affiché 10 minutes puis disparaît.`,
+                    `**Actuel :** ${cfg.arrivalChannelId ? `<#${cfg.arrivalChannelId}>` : '`Non défini`'}\n\nSélectionne le salon où le message « X vient d\'arriver » sera posté. Il reste affiché 10 minutes puis disparaît.`,
                 )
                 .setColor(getColor('info')),
         ],
@@ -922,7 +922,7 @@ async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildI
     const chanCollector = rootInteraction.channel.createMessageComponentCollector({
         componentType: ComponentType.ChannelSelect,
         filter: i =>
-            i.user.id === selectInteraction.user.id && i.customId === 'greet_cfg_ping_channel',
+            i.user.id === selectInteraction.user.id && i.customId === 'greet_cfg_arrival_channel',
         time: 60_000,
         max: 1,
     });
@@ -936,7 +936,7 @@ async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildI
             return;
         }
 
-        cfg.pingChannelId = channel.id;
+        cfg.arrivalChannelId = channel.id;
         await saveWelcomeConfig(client, guildId, cfg);
 
         await chanInteraction.followUp({
@@ -959,7 +959,7 @@ async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildI
 
 async function handlePingMessage(selectInteraction, rootInteraction, cfg, guildId, client) {
     const modal = new ModalBuilder()
-        .setCustomId('greet_cfg_ping_message')
+        .setCustomId('greet_cfg_arrival_message')
         .setTitle('Modifier le message d\'arrivée')
         .addComponents(
             new ActionRowBuilder().addComponents(
@@ -967,7 +967,7 @@ async function handlePingMessage(selectInteraction, rootInteraction, cfg, guildI
                     .setCustomId('message_input')
                     .setLabel('Message (variables : {user}, {username}, {server})')
                     .setStyle(TextInputStyle.Paragraph)
-                    .setValue(cfg.pingMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋")
+                    .setValue(cfg.arrivalMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋")
                     .setMaxLength(2000)
                     .setMinLength(1)
                     .setRequired(true),
@@ -983,14 +983,14 @@ async function handlePingMessage(selectInteraction, rootInteraction, cfg, guildI
     const submitted = await selectInteraction
         .awaitModalSubmit({
             filter: i =>
-                i.customId === 'greet_cfg_ping_message' && i.user.id === selectInteraction.user.id,
+                i.customId === 'greet_cfg_arrival_message' && i.user.id === selectInteraction.user.id,
             time: 120_000,
         })
         .catch(() => null);
 
     if (!submitted) return;
 
-    cfg.pingMessage = submitted.fields.getTextInputValue('message_input').trim() || "**{user}** vient d'arriver, dites-lui bonjour ! 👋";
+    cfg.arrivalMessage = submitted.fields.getTextInputValue('message_input').trim() || "**{user}** vient d'arriver, dites-lui bonjour ! 👋";
     await saveWelcomeConfig(client, guildId, cfg);
 
     await submitted.reply({
