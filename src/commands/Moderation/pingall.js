@@ -68,20 +68,6 @@ export default {
                 }, 1000);
             }
 
-            await interaction.reply({
-                embeds: [
-                    {
-                        color: getColor('success'),
-                        title: '📢 Ping envoyé',
-                        description: '`@everyone` a été notifié, le message de ping sera supprimé automatiquement.',
-                    },
-                ],
-            }).catch(() => null);
-
-            setTimeout(() => {
-                interaction.deleteReply().catch(err => logger.debug('Failed to auto-delete pingall confirmation:', err));
-            }, 4000);
-
             cooldowns.set(interaction.user.id, Date.now() + COOLDOWN_MS);
             return;
         }
@@ -101,21 +87,8 @@ export default {
             }, 1000);
         }
 
-        await InteractionHelper.safeEditReply(interaction, {
-            embeds: [
-                {
-                    color: getColor('success'),
-                    title: '📢 Ping envoyé',
-                    description: '`@everyone` a été notifié, le message de ping sera supprimé automatiquement.',
-                },
-            ],
-            flags: MessageFlags.Ephemeral,
-        });
-
         cooldowns.set(interaction.user.id, Date.now() + COOLDOWN_MS);
 
-        setTimeout(() => {
-            interaction.deleteReply().catch(err => logger.debug('Failed to auto-delete pingall response:', err));
-        }, 5000);
+        interaction.deleteReply().catch(err => logger.debug('Failed to delete pingall defer:', err));
     },
 };
