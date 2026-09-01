@@ -54,7 +54,7 @@ export default {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('remove')
-                .setDescription('Supprimer le système de bienvenue (rôles auto et au revoir conservés)'))
+                .setDescription('Supprimer le système de bienvenue (rôles auto conservés)'))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('dashboard')
@@ -180,7 +180,7 @@ export default {
                     embeds: [new EmbedBuilder()
                         .setColor(getColor('success'))
                         .setTitle('🗑️ Système de bienvenue supprimé')
-                        .setDescription('Les messages de bienvenue sont désactivés. Les rôles auto (via `/welcome role`) et les au revoir (`/goodbye`) sont conservés.')]
+                        .setDescription('Les messages de bienvenue sont désactivés. Les rôles auto (via `/welcome role`) sont conservés.')]
                 });
             } catch (error) {
                 logger.error(`[Welcome] Failed to remove welcome system for guild ${guild.id}:`, error);
