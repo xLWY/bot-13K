@@ -164,7 +164,7 @@ export async function getReactionRoleMessage(client, guildId, messageId) {
 
 
 
-export async function createReactionRoleMessage(client, guildId, channelId, messageId, roleIds) {
+export async function createReactionRoleMessage(client, guildId, channelId, messageId, roleIds, title = '', description = '') {
     try {
         validateGuildId(guildId);
         validateMessageId(messageId);
@@ -206,6 +206,8 @@ export async function createReactionRoleMessage(client, guildId, channelId, mess
             guildId,
             channelId,
             messageId,
+            title,
+            description,
             roles: roleIds,
             createdAt: new Date().toISOString()
         };

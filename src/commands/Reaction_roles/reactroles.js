@@ -149,7 +149,7 @@ export default {
                         const msg = await channel.messages.fetch(panel.messageId).catch(() => null);
                         if (!msg) return null;
                         
-                        const title = msg?.embeds?.[0]?.title ?? 'Panneau sans titre';
+                        const title = panel.title || msg?.embeds?.[0]?.title || 'Panneau sans titre';
                         const channelName = channel?.name ?? 'unknown';
                         
                         return {
@@ -169,6 +169,22 @@ export default {
         }
     }
 };
+
+// ─── Panel Content Builder ────────────────────────────────────────────────────
+
+function buildPanelContent(title, description, roleObjects) {
+    const roleList = roleObjects.length > 0
+        ? roleObjects.map(r => `• ${r}`).join('\n')
+        : 'Aucun rôle disponible';
+
+    return [
+        `**${title}**`,
+        description,
+        '**Rôles disponibles**',
+        roleList,
+        'Sélectionnez vos rôles dans le menu déroulant ci-dessous'
+    ].filter(Boolean).join('\n\n').substring(0, 2000);
+}
 
 // ─── Setup Subcommand ─────────────────────────────────────────────────────────
 
@@ -297,18 +313,8 @@ async function handleSetup(interaction) {
             )
     );
 
-    const panelEmbed = new EmbedBuilder()
-        .setTitle(title)
-        .setDescription(description)
-        .setColor(getColor('info'))
-        .addFields({
-            name: 'Rôles disponibles',
-            value: roles.map(role => `• ${role}`).join('\n')
-        })
-        .setFooter({ text: 'Sélectionnez vos rôles dans le menu déroulant ci-dessous' });
-
     const message = await channel.send({
-        embeds: [panelEmbed],
+        content: buildPanelContent(title, description, roles),
         components: [row]
     });
 
@@ -318,7 +324,9 @@ async function handleSetup(interaction) {
         interaction.guildId,
         channel.id,
         message.id,
-        roleIds
+        roleIds,
+        title,
+        description
     );
     
     logger.info(`Reaction role message created: ${message.id} with ${roles.length} roles by ${interaction.user.tag}`);
@@ -506,25 +514,13 @@ async function rebuildLivePanelMessage(guild, panelData) {
         const channel = guild.channels.cache.get(panelData.channelId);
         if (!channel) return;
         const msg = await channel.messages.fetch(panelData.messageId).catch(() => null);
-        if (!msg || !msg.embeds[0]) return;
+        if (!msg) return;
 
         const roleObjects = panelData.roles
             .map(id => guild.roles.cache.get(id))
             .filter(Boolean);
 
         if (roleObjects.length === 0) return;
-
-        const currentEmbed = msg.embeds[0];
-        const updatedEmbed = EmbedBuilder.from(currentEmbed);
-        const fields = currentEmbed.fields.map(f => ({ name: f.name, value: f.value, inline: f.inline }));
-        const roleFieldIdx = fields.findIndex(f => f.name === 'Rôles disponibles');
-        const newRoleValue = roleObjects.map(r => `• ${r}`).join('\n');
-        if (roleFieldIdx !== -1) {
-            fields[roleFieldIdx] = { name: 'Rôles disponibles', value: newRoleValue, inline: false };
-        } else {
-            fields.push({ name: 'Rôles disponibles', value: newRoleValue, inline: false });
-        }
-        updatedEmbed.setFields(fields);
 
         const selectRow = new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
@@ -542,7 +538,10 @@ async function rebuildLivePanelMessage(guild, panelData) {
                 ),
         );
 
-        await msg.edit({ embeds: [updatedEmbed], components: [selectRow] });
+        await msg.edit({
+            content: buildPanelContent(panelData.title, panelData.description, roleObjects),
+            components: [selectRow],
+        });
     } catch (error) {
         logger.warn('Could not rebuild live reaction role panel:', error.message);
     }
@@ -552,7 +551,7 @@ async function rebuildLivePanelMessage(guild, panelData) {
 
 async function showPanelDashboard(interaction, panelData, discordMsg, guildId, guild) {
     const channel = guild.channels.cache.get(panelData.channelId);
-    const title = discordMsg?.embeds?.[0]?.title ?? 'Panneau sans titre';
+    const title = panelData.title || discordMsg?.embeds?.[0]?.title || 'Panneau sans titre';
     const roleList =
         panelData.roles.length > 0
             ? panelData.roles.map(id => `<@&${id}>`).join(', ')
@@ -620,8 +619,8 @@ async function handleEditText(buttonInteraction, rootInteraction, panelData, gui
         ? await channel.messages.fetch(panelData.messageId).catch(() => null)
         : null;
 
-    const currentTitle = discordMsg?.embeds?.[0]?.title ?? '';
-    const currentDesc = discordMsg?.embeds?.[0]?.description ?? '';
+    const currentTitle = panelData.title || discordMsg?.embeds?.[0]?.title || '';
+    const currentDesc = panelData.description || discordMsg?.embeds?.[0]?.description || '';
 
     const modal = new ModalBuilder()
         .setCustomId('rr_edit_text')
@@ -670,11 +669,22 @@ async function handleEditText(buttonInteraction, rootInteraction, panelData, gui
     const newTitle = submitted.fields.getTextInputValue('panel_title').trim();
     const newDesc = submitted.fields.getTextInputValue('panel_description').trim();
 
+    panelData.title = newTitle;
+    panelData.description = newDesc;
+    const key = `reaction_roles:${guildId}:${panelData.messageId}`;
+    await client.db.set(key, panelData).catch(err => {
+        logger.warn('Could not save updated panel text:', err.message);
+    });
+
     if (discordMsg) {
-        const updatedEmbed = EmbedBuilder.from(discordMsg.embeds[0]).setTitle(newTitle).setDescription(newDesc);
-        await discordMsg.edit({ embeds: [updatedEmbed] }).catch(err => {
-            logger.warn('Could not edit live panel message:', err.message);
-        });
+        const roleObjects = panelData.roles
+            .map(id => guild.roles.cache.get(id))
+            .filter(Boolean);
+        await discordMsg
+            .edit({ content: buildPanelContent(newTitle, newDesc, roleObjects) })
+            .catch(err => {
+                logger.warn('Could not edit live panel message:', err.message);
+            });
     }
 
     await submitted.reply({
@@ -910,7 +920,7 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
     const discordMsg = channel
         ? await channel.messages.fetch(panelData.messageId).catch(() => null)
         : null;
-    const title = discordMsg?.embeds?.[0]?.title ?? 'ce panneau';
+    const title = panelData.title || discordMsg?.embeds?.[0]?.title || 'ce panneau';
 
     const deleteModal = new ModalBuilder()
         .setCustomId('rr_delete_confirm_modal')
