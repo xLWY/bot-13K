@@ -177,13 +177,13 @@ function buildPanelContent(title, description, roleObjects) {
         ? roleObjects.map(r => `• ${r}`).join('\n')
         : 'Aucun rôle disponible';
 
-    return [
-        `**${title}**`,
-        description,
-        '**Rôles disponibles**',
-        roleList,
-        'Sélectionnez vos rôles dans le menu déroulant ci-dessous'
-    ].filter(Boolean).join('\n\n').substring(0, 2000);
+    const body = description || roleList;
+
+    if (description) {
+        return `${description}\n\n${roleList}`.substring(0, 2000);
+    }
+
+    return roleList.substring(0, 2000);
 }
 
 // ─── Setup Subcommand ─────────────────────────────────────────────────────────
