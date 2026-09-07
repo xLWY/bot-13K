@@ -1,5 +1,6 @@
 import { EmbedBuilder, ChannelType } from 'discord.js';
 import { getGuildConfig } from './guildConfig.js';
+import { resolveLogMentions } from '../utils/logMentions.js';
 import { logger } from '../utils/logger.js';
 
 
@@ -206,7 +207,9 @@ export async function logEvent({
       return;
     }
 
-    const embed = createLogEmbed(guild, eventType, data);
+    const resolvedData = await resolveLogEventData(client, guild, data);
+
+    const embed = createLogEmbed(guild, eventType, resolvedData);
     
     const messageOptions = { embeds: [embed] };
     if (attachments.length > 0) {
@@ -282,6 +285,42 @@ function getLogChannelForEvent(config, eventType) {
 
 
 
+
+
+
+
+async function resolveLogEventData(client, guild, data) {
+    if (!data || typeof data !== 'object') {
+        return data;
+    }
+
+    const resolvedTitle = typeof data.title === 'string'
+        ? await resolveLogMentions(client, guild, data.title)
+        : data.title;
+
+    const resolvedDescription = typeof data.description === 'string'
+        ? await resolveLogMentions(client, guild, data.description)
+        : data.description;
+
+    const resolvedFields = Array.isArray(data.fields)
+        ? await Promise.all(data.fields.map(async field => {
+            const name = typeof field?.name === 'string'
+                ? await resolveLogMentions(client, guild, field.name)
+                : field?.name;
+            const value = typeof field?.value === 'string'
+                ? await resolveLogMentions(client, guild, field.value)
+                : field?.value;
+            return { ...field, name, value };
+        }))
+        : data.fields;
+
+    return {
+        ...data,
+        title: resolvedTitle,
+        description: resolvedDescription,
+        fields: resolvedFields
+    };
+}
 
 
 

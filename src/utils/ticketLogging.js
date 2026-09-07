@@ -1,6 +1,7 @@
 ﻿import { EmbedBuilder, ChannelType } from 'discord.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { EVENT_TYPES } from '../services/loggingService.js';
+import { resolveLogMentions } from './logMentions.js';
 import { logger } from './logger.js';
 
 
@@ -47,7 +48,7 @@ export async function logTicketEvent({ client, guildId, event }) {
       return;
     }
 
-    const embed = await createTicketLogEmbed(guild, event);
+    const embed = await createTicketLogEmbed(client, guild, event);
     
     const messageOptions = { embeds: [embed] };
     
@@ -113,7 +114,7 @@ function mapTicketEventType(eventType) {
 
 
 
-async function createTicketLogEmbed(guild, event) {
+async function createTicketLogEmbed(client, guild, event) {
   const embed = new EmbedBuilder();
   
   const eventColors = {
@@ -129,8 +130,10 @@ async function createTicketLogEmbed(guild, event) {
   embed.setColor(eventColors[event.type] || 0x95a5a6);
   
   const eventInfo = getEventDisplayInfo(event);
-  embed.setTitle(eventInfo.title);
-  embed.setDescription(eventInfo.description);
+  const resolvedTitle = await resolveLogMentions(client, guild, eventInfo.title);
+  const resolvedDescription = await resolveLogMentions(client, guild, eventInfo.description);
+  embed.setTitle(resolvedTitle);
+  embed.setDescription(resolvedDescription);
   
   embed.setTimestamp();
   
@@ -204,7 +207,11 @@ async function createTicketLogEmbed(guild, event) {
     });
   }
   
-  embed.addFields(fields);
+  embed.addFields(await Promise.all(fields.map(async field => ({
+    ...field,
+    name: typeof field?.name === 'string' ? await resolveLogMentions(client, guild, field.name) : field?.name,
+    value: typeof field?.value === 'string' ? await resolveLogMentions(client, guild, field.value) : field?.value,
+  }))));
   
   return embed;
 }
