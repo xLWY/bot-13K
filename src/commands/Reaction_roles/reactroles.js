@@ -171,6 +171,59 @@ function buildPanelContent(title, description, roleObjects) {
     return (description || '').substring(0, 2000);
 }
 
+function buildReactionRoleSelect(roleObjects) {
+    return new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId('reaction_roles')
+            .setPlaceholder('Sélectionnez vos rôles')
+            .setMinValues(0)
+            .setMaxValues(Math.min(roleObjects.length, 25))
+            .addOptions(
+                roleObjects.map(role => ({
+                    label: role.name.substring(0, 100),
+                    value: role.id
+                }))
+            )
+    );
+}
+
+function parseMessageReference(raw) {
+    const value = (raw || '').trim();
+    const linkMatch = value.match(/channels\/(\d{17,19})\/(\d{17,19})(?:\/(\d{17,19}))?/);
+    if (linkMatch) {
+        return { channelId: linkMatch[2], messageId: linkMatch[3] || null };
+    }
+
+    const digits = value.match(/(\d{17,19})/);
+    return { channelId: null, messageId: digits ? digits[1] : null };
+}
+
+function extractRoleIdsFromMessage(message) {
+    const found = [];
+
+    for (const row of message.components || []) {
+        for (const component of row.components || []) {
+            if (Array.isArray(component.options) && component.options.length > 0) {
+                for (const option of component.options) {
+                    if (/^\d{17,19}$/.test(option.value) && !found.includes(option.value)) {
+                        found.push(option.value);
+                    }
+                }
+                continue;
+            }
+
+            const customId = component.customId || '';
+            if (/reaction[_-]?roles?[_-]/i.test(customId)) {
+                for (const id of customId.match(/\d{17,19}/g) || []) {
+                    if (!found.includes(id)) found.push(id);
+                }
+            }
+        }
+    }
+
+    return found;
+}
+
 // ─── Setup Subcommand ─────────────────────────────────────────────────────────
 
 async function handleSetup(interaction) {
@@ -271,19 +324,7 @@ async function handleSetup(interaction) {
     }
 
     // Create the reaction role message
-    const row = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
-            .setCustomId('reaction_roles')
-            .setPlaceholder('Sélectionnez vos rôles')
-            .setMinValues(0)
-            .setMaxValues(roles.length)
-            .addOptions(
-                roles.map(role => ({
-                    label: role.name,
-                    value: role.id
-                }))
-            )
-    );
+    const row = buildReactionRoleSelect(roles);
 
     const message = await channel.send({
         content: buildPanelContent(title, description, roles),
@@ -358,44 +399,42 @@ async function handleDashboard(interaction, selectedPanelId) {
 
     let panels = await getAllReactionRoleMessages(client, guildId);
 
-    if (!panels || panels.length === 0) {
-        return await InteractionHelper.sendErrorNotice(interaction, 'Aucun panneau de rôles par réaction n\'existe encore. Utilisez `/reactroles setup` pour en créer un.');
-    }
-
     // Filter out panels whose messages no longer exist
     const validPanels = [];
-    for (const panel of panels) {
-        const channel = guild.channels.cache.get(panel.channelId);
+    for (const panel of panels || []) {
+        const normalized = {
+            ...panel,
+            roles: Array.isArray(panel.roles)
+                ? panel.roles
+                : (panel.roles && typeof panel.roles === 'object' ? Object.values(panel.roles) : []),
+        };
+
+        const channel = guild.channels.cache.get(normalized.channelId);
         if (!channel) {
-            await deleteReactionRoleMessage(client, guildId, panel.messageId).catch(() => {});
+            await deleteReactionRoleMessage(client, guildId, normalized.messageId).catch(() => {});
             continue;
         }
         
-        const msg = await channel.messages.fetch(panel.messageId).catch(() => null);
+        const msg = await channel.messages.fetch(normalized.messageId).catch(() => null);
         if (!msg) {
-            await deleteReactionRoleMessage(client, guildId, panel.messageId).catch(() => {});
+            await deleteReactionRoleMessage(client, guildId, normalized.messageId).catch(() => {});
             continue;
         }
-        validPanels.push(panel);
+        validPanels.push(normalized);
     }
 
-    if (validPanels.length === 0) {
-        return await InteractionHelper.sendErrorNotice(interaction, 'Aucun panneau de rôles par réaction n\'existe encore. Utilisez `/reactroles setup` pour en créer un.');
-    }
-
-    // If a panel was selected, use it. Otherwise, pick a random one.
     let activePanelData = null;
-    if (selectedPanelId) {
-        activePanelData = validPanels.find(p => p.messageId === selectedPanelId);
-        if (!activePanelData) {
-            return await InteractionHelper.sendErrorNotice(interaction, 'Ce panneau n\'existe plus ou a été supprimé.');
+    if (validPanels.length > 0) {
+        if (selectedPanelId) {
+            activePanelData = validPanels.find(p => p.messageId === selectedPanelId) || null;
+        } else {
+            activePanelData = validPanels[0];
         }
-    } else {
-        // Pick a random panel from valid panels
-        activePanelData = validPanels[Math.floor(Math.random() * validPanels.length)];
+    } else if (selectedPanelId) {
+        return await InteractionHelper.sendErrorNotice(interaction, 'Ce panneau n\'existe plus ou a été supprimé.');
     }
 
-    const discordMsg = await fetchPanelDiscordMessage(guild, activePanelData);
+    const discordMsg = activePanelData ? await fetchPanelDiscordMessage(guild, activePanelData) : null;
     await showPanelDashboard(interaction, activePanelData, discordMsg, guildId, guild);
 
     InteractionHelper.armDashboardSession(interaction);
@@ -413,7 +452,8 @@ async function handleDashboard(interaction, selectedPanelId) {
         filter: i =>
             i.user.id === interaction.user.id &&
             (i.customId === `rr_edit_text_${guildId}` ||
-                i.customId === `rr_delete_${guildId}`),
+                i.customId === `rr_delete_${guildId}` ||
+                i.customId === `rr_import_${guildId}`),
         time: 300_000,
     });
 
@@ -421,6 +461,11 @@ async function handleDashboard(interaction, selectedPanelId) {
         InteractionHelper.armDashboardSession(interaction);
         try {
             if (ci.customId === `rr_opts_${guildId}`) {
+                if (!activePanelData) {
+                    await sendPanelNotice(ci, 'Aucun panneau sélectionné. Importe un message existant pour commencer.');
+                    return;
+                }
+
                 const option = ci.values[0];
                 switch (option) {
                     case 'add_role':
@@ -445,6 +490,24 @@ async function handleDashboard(interaction, selectedPanelId) {
     buttonCollector.on('collect', async btnInteraction => {
         InteractionHelper.armDashboardSession(interaction);
         try {
+            if (btnInteraction.customId === `rr_import_${guildId}`) {
+                const imported = await handleImportMessage(btnInteraction, rootInteraction, guildId, guild, client);
+                if (imported) {
+                    activePanelData = imported;
+                    if (!validPanels.some(p => p.messageId === imported.messageId)) {
+                        validPanels.push(imported);
+                    }
+                    const importedMsg = await fetchPanelDiscordMessage(guild, imported);
+                    await showPanelDashboard(rootInteraction, imported, importedMsg, guildId, guild);
+                }
+                return;
+            }
+
+            if (!activePanelData) {
+                await sendPanelNotice(btnInteraction, 'Aucun panneau sélectionné. Utilise « ♻️ Importer un message » pour en reprendre un.');
+                return;
+            }
+
             if (btnInteraction.customId === `rr_edit_text_${guildId}`) {
                 await handleEditText(btnInteraction, rootInteraction, activePanelData, guildId, guild, client);
             } else if (btnInteraction.customId === `rr_delete_${guildId}`) {
@@ -493,23 +556,9 @@ async function rebuildLivePanelMessage(guild, panelData) {
 
         if (roleObjects.length === 0) return;
 
-        const selectRow = new ActionRowBuilder().addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('reaction_roles')
-                .setPlaceholder('Sélectionnez vos rôles')
-                .setMinValues(0)
-                .setMaxValues(roleObjects.length)
-                .addOptions(
-                    roleObjects.map(r => ({
-                        label: r.name.substring(0, 100),
-                        value: r.id
-                    })),
-                ),
-        );
-
         await msg.edit({
             content: buildPanelContent(panelData.title, panelData.description, roleObjects),
-            components: [selectRow],
+            components: [buildReactionRoleSelect(roleObjects)],
         });
     } catch (error) {
         logger.warn('Could not rebuild live reaction role panel:', error.message);
@@ -519,6 +568,33 @@ async function rebuildLivePanelMessage(guild, panelData) {
 // ─── View Builders ────────────────────────────────────────────────────────────
 
 async function showPanelDashboard(interaction, panelData, discordMsg, guildId, guild) {
+    const importButton = new ButtonBuilder()
+        .setCustomId(`rr_import_${guildId}`)
+        .setLabel('Importer un message')
+        .setStyle(ButtonStyle.Success)
+        .setEmoji('♻️');
+
+    if (!panelData) {
+        const emptyEmbed = new EmbedBuilder()
+            .setTitle('♻️ Tableau de bord des rôles par réaction')
+            .setDescription(
+                'Aucun panneau n\'est enregistré pour le moment.\n\nCopie **l\'ID** (ou le **lien**) d\'un ancien message de rôles envoyé par le bot : le bot récupère son texte, son embed et ses rôles, reconnecte le menu, et le message garde son apparence d\'origine.\n\nTu peux aussi créer un panneau neuf avec `/reactroles setup`.',
+            )
+            .setColor(getColor('info'))
+            .addFields(
+                { name: '📍 Salon actuel', value: `<#${interaction.channelId}>`, inline: true },
+                { name: '🎭 Rôles', value: '`Aucun`', inline: true },
+            )
+            .setFooter({ text: 'Le tableau de bord se ferme après 5 minutes d\'inactivité' })
+            .setTimestamp();
+
+        await InteractionHelper.safeEditReply(interaction, {
+            embeds: [emptyEmbed],
+            components: [new ActionRowBuilder().addComponents(importButton)],
+        });
+        return;
+    }
+
     const channel = guild.channels.cache.get(panelData.channelId);
     const title = panelData.title || discordMsg?.embeds?.[0]?.title || 'Panneau sans titre';
     const roleList =
@@ -574,10 +650,223 @@ async function showPanelDashboard(interaction, panelData, discordMsg, guildId, g
     await InteractionHelper.safeEditReply(interaction, {
         embeds: [embed],
         components: [
-            new ActionRowBuilder().addComponents(editTextButton, deleteButton),
+            new ActionRowBuilder().addComponents(editTextButton, importButton, deleteButton),
             new ActionRowBuilder().addComponents(optionsSelect),
         ],
     });
+}
+
+// ─── Panel Notices ────────────────────────────────────────────────────────────
+
+async function sendPanelNotice(interaction, text) {
+    try {
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({
+                content: `<@${interaction.user.id}> ${text}`,
+                flags: MessageFlags.Ephemeral,
+            });
+        } else {
+            await interaction.reply({
+                content: text,
+                flags: MessageFlags.Ephemeral,
+            });
+        }
+    } catch (error) {
+        logger.debug('Reaction role panel notice failed:', error.message);
+    }
+}
+
+// ─── Import Existing Message ──────────────────────────────────────────────────
+
+async function handleImportMessage(btnInteraction, rootInteraction, guildId, guild, client) {
+    const modal = new ModalBuilder()
+        .setCustomId('rr_import_modal')
+        .setTitle('Importer un message existant')
+        .addComponents(
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('message_reference')
+                    .setLabel('ID ou lien du message')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('ID du message ou lien Discord')
+                    .setMinLength(17)
+                    .setMaxLength(120)
+                    .setRequired(true),
+            ),
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('channel_id')
+                    .setLabel('ID du salon (si différent)')
+                    .setStyle(TextInputStyle.Short)
+                    .setMinLength(1)
+                    .setMaxLength(25)
+                    .setRequired(false),
+            ),
+        );
+
+    const shown = await btnInteraction.showModal(modal).then(() => true).catch(() => false);
+    if (!shown) {
+        await sendPanelNotice(btnInteraction, 'Impossible d\'ouvrir la fenêtre de saisie. Réessaie.');
+        return null;
+    }
+
+    const submitted = await btnInteraction
+        .awaitModalSubmit({
+            filter: i => i.customId === 'rr_import_modal' && i.user.id === btnInteraction.user.id,
+            time: 120_000,
+        })
+        .catch(() => null);
+
+    if (!submitted) return null;
+
+    const reference = parseMessageReference(submitted.fields.getTextInputValue('message_reference'));
+    const channelInput = (submitted.fields.getTextInputValue('channel_id') || '').trim();
+    const channelReference = channelInput ? parseMessageReference(channelInput) : { channelId: null };
+
+    if (!reference.messageId) {
+        await submitted.reply({
+            embeds: [warningEmbed('Cet identifiant n\'est pas un ID de message Discord valide. Copie l\'ID du message (clic droit → Copier l\'identifiant du message) ou son lien.', '⚠️ Identifiant invalide')],
+            flags: MessageFlags.Ephemeral,
+        });
+        return null;
+    }
+
+    const channelId = channelReference.channelId || reference.channelId || rootInteraction.channelId;
+    const channel = guild.channels.cache.get(channelId)
+        || await guild.channels.fetch(channelId).catch(() => null);
+
+    if (!channel || !channel.isTextBased()) {
+        await submitted.reply({
+            embeds: [warningEmbed('Salon introuvable ou non textuel. Vérifie l\'ID du salon.', '⚠️ Salon invalide')],
+            flags: MessageFlags.Ephemeral,
+        });
+        return null;
+    }
+
+    const me = guild.members.me;
+    const channelPermissions = channel.permissionsFor(me);
+    const missingPermissions = [
+        [PermissionFlagsBits.ViewChannel, 'Voir le salon'],
+        [PermissionFlagsBits.SendMessages, 'Envoyer des messages'],
+        [PermissionFlagsBits.ManageRoles, 'Gérer les rôles'],
+    ].filter(([flag]) => !channelPermissions?.has(flag)).map(([, label]) => label);
+
+    if (missingPermissions.length > 0) {
+        await submitted.reply({
+            embeds: [warningEmbed(`Il me manque ces permissions dans <#${channel.id}> : ${missingPermissions.join(', ')}.`, '⚠️ Permissions manquantes')],
+            flags: MessageFlags.Ephemeral,
+        });
+        return null;
+    }
+
+    const message = await channel.messages.fetch(reference.messageId).catch(() => null);
+    if (!message) {
+        await submitted.reply({
+            embeds: [warningEmbed('Message introuvable dans ce salon. Vérifie l\'ID, ou indique le bon salon.', '⚠️ Message introuvable')],
+            flags: MessageFlags.Ephemeral,
+        });
+        return null;
+    }
+
+    if (message.author.id !== client.user.id) {
+        await submitted.reply({
+            embeds: [warningEmbed('Ce message n\'a pas été envoyé par moi, je ne peux donc pas le reconnecter. Copie l\'ID d\'un message du bot.', '⚠️ Message d\'un autre utilisateur')],
+            flags: MessageFlags.Ephemeral,
+        });
+        return null;
+    }
+
+    const roleIds = extractRoleIdsFromMessage(message);
+    if (roleIds.length === 0) {
+        await submitted.reply({
+            embeds: [warningEmbed('Ce message ne contient aucun menu de rôles ou aucun bouton de rôle. Il faut un message envoyé par le bot avec un menu déroulant `reaction_roles` (ou d\'anciens boutons de rôles).', '⚠️ Aucun rôle détecté')],
+            flags: MessageFlags.Ephemeral,
+        });
+        return null;
+    }
+
+    const roleObjects = [];
+    const skipped = [];
+
+    for (const roleId of roleIds.slice(0, 25)) {
+        const role = guild.roles.cache.get(roleId) || await guild.roles.fetch(roleId).catch(() => null);
+
+        if (!role) {
+            skipped.push(`\`${roleId}\` (rôle supprimé)`);
+            continue;
+        }
+        if (role.managed) {
+            skipped.push(`**${role.name}** (géré par une intégration)`);
+            continue;
+        }
+        if (role.position >= me.roles.highest.position) {
+            skipped.push(`**${role.name}** (au-dessus de mon rôle)`);
+            continue;
+        }
+        if (hasDangerousPermissions(role)) {
+            skipped.push(`**${role.name}** (permissions sensibles)`);
+            continue;
+        }
+
+        roleObjects.push(role);
+    }
+
+    if (roleObjects.length === 0) {
+        await submitted.reply({
+            embeds: [warningEmbed(`Rôles ignorés :\n${skipped.join('\n') || '`Aucun`'}\n\nAucun rôle utilisable n'a été trouvé dans ce message.`, '⚠️ Aucun rôle utilisable')],
+            flags: MessageFlags.Ephemeral,
+        });
+        return null;
+    }
+
+    await message.edit({ components: [buildReactionRoleSelect(roleObjects)] });
+
+    const title = (message.embeds?.[0]?.title || '').substring(0, 256);
+    const description = (message.content || '').substring(0, 2000);
+
+    const panel = await createReactionRoleMessage(
+        client,
+        guildId,
+        channel.id,
+        message.id,
+        roleObjects.map(role => role.id),
+        title,
+        description
+    );
+
+    logger.info(`Reaction role message imported: ${message.id} with ${roleObjects.length} roles by ${btnInteraction.user.tag}`);
+
+    try {
+        await logEvent({
+            client,
+            guildId,
+            eventType: EVENT_TYPES.REACTION_ROLE_CREATE,
+            data: {
+                description: `Panneau de rôles par réaction réimporté par <@${btnInteraction.user.id}>`,
+                userId: btnInteraction.user.id,
+                channelId: channel.id,
+                fields: [
+                    { name: '📍 Salon', value: channel.toString(), inline: true },
+                    { name: '📊 Rôles', value: `${roleObjects.length} rôles`, inline: true },
+                    { name: '🏷️ Liste des rôles', value: roleObjects.map(role => role.toString()).join(', '), inline: false },
+                    { name: '🔗 Lien du message', value: message.url, inline: false }
+                ]
+            }
+        });
+    } catch (logError) {
+        logger.warn('Failed to log reaction role import:', logError);
+    }
+
+    const skippedNote = skipped.length > 0 ? `\n\nRôles ignorés : ${skipped.join(', ')}` : '';
+    await submitted.reply({
+        embeds: [successEmbed(
+            `Message réimporté avec **${roleObjects.length}** rôle(s). Son texte et son embed sont inchangés, le menu est reconnecté.${skippedNote}`,
+            '♻️ Message récupéré'
+        )],
+        flags: MessageFlags.Ephemeral,
+    });
+
+    return panel;
 }
 
 // ─── Edit Panel Text ──────────────────────────────────────────────────────────
