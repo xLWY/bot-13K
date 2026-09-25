@@ -39,6 +39,21 @@ const MAX_SELECT_OPTIONS = 25;
 const STEP_TIMEOUT_MS = 90_000;
 
 const activeCreateFlows = new Set();
+const activeRootCollectors = new Map();
+
+function registerRootCollectors(key, collectors) {
+    const previous = activeRootCollectors.get(key);
+    if (previous) {
+        for (const collector of previous) {
+            try {
+                collector.stop('replaced');
+            } catch {
+                void 0;
+            }
+        }
+    }
+    activeRootCollectors.set(key, collectors);
+}
 
 function typeLabel(type) {
     return TYPE_LABELS[type] || type;
@@ -246,13 +261,10 @@ export default {
                 flags: MessageFlags.Ephemeral,
             });
 
-            const rootMessageId = interaction.message?.id;
-
             const buttonCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.Button,
                 filter: i =>
                     i.user.id === interaction.user.id &&
-                    i.message?.id === rootMessageId &&
                     ['ss_dash_create', 'ss_dash_refresh', 'ss_dash_back'].includes(i.customId),
                 time: 600_000,
             });
@@ -288,10 +300,7 @@ export default {
 
             const selectCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
-                filter: i =>
-                    i.user.id === interaction.user.id &&
-                    i.message?.id === rootMessageId &&
-                    i.customId === 'ss_dash_select',
+                filter: i => i.user.id === interaction.user.id && i.customId === 'ss_dash_select',
                 time: 600_000,
             });
 
@@ -306,6 +315,8 @@ export default {
                     await InteractionHelper.sendErrorNotice(selectInteraction, 'Impossible de gérer ce compteur. Réessaie.').catch(() => {});
                 }
             });
+
+            registerRootCollectors(`${guildId}:${interaction.user.id}`, [buttonCollector, selectCollector]);
         } catch (error) {
             logger.error('ServerStats dashboard failed to open:', error);
             await InteractionHelper.sendErrorNotice(interaction, 'Impossible d\'ouvrir le tableau de bord des compteurs. Réessaie.').catch(() => {});
