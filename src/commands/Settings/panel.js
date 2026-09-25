@@ -13,6 +13,7 @@ import ticketDashboard from '../Ticket/modules/ticket_dashboard.js';
 import levelingDashboard from './modules/leveling_dashboard.js';
 import giveawayDashboard from './modules/giveaway_dashboard.js';
 import shopDashboard from './modules/shop_dashboard.js';
+import serverstatsDashboard from './modules/serverstats_dashboard.js';
 
 export function openPanel(interaction, client, guildId) {
     const guild = interaction.guild || client.guilds.cache.get(guildId);
@@ -80,6 +81,7 @@ export function openPanel(interaction, client, guildId) {
             { id: 'panel_welcome', label: 'Bienvenue', emoji: '🏷️' },
             { id: 'panel_ticket', label: 'Tickets', emoji: '🎫' },
             { id: 'panel_leveling', label: 'Leveling', emoji: '📈' },
+            { id: 'panel_serverstats', label: 'Compteurs', emoji: '📊' },
             { id: 'panel_giveaway', label: 'Giveaways', emoji: '🎁' },
             { id: 'panel_shop', label: 'Boutique', emoji: '🏪' },
         ];
@@ -108,7 +110,7 @@ export function openPanel(interaction, client, guildId) {
             componentType: ComponentType.Button,
             filter: i =>
                 i.user.id === interaction.user.id &&
-                ['panel_welcome', 'panel_ticket', 'panel_leveling', 'panel_giveaway', 'panel_shop'].includes(i.customId),
+                ['panel_welcome', 'panel_ticket', 'panel_leveling', 'panel_serverstats', 'panel_giveaway', 'panel_shop'].includes(i.customId),
             time: 600_000,
         });
 
@@ -123,6 +125,8 @@ export function openPanel(interaction, client, guildId) {
                         return await ticketDashboard.execute(btnInteraction, guildConfig, client, onBack);
                     case 'panel_leveling':
                         return await levelingDashboard.execute(btnInteraction, guildConfig, client, onBack);
+                    case 'panel_serverstats':
+                        return await serverstatsDashboard.execute(btnInteraction, {}, client, onBack);
                     case 'panel_giveaway':
                         return await giveawayDashboard.execute(btnInteraction, {}, client, onBack);
                     case 'panel_shop':
