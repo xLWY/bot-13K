@@ -86,7 +86,7 @@ async function buildDashboardEmbed(guild, counters, stats) {
             const channel = guild.channels.cache.get(counter.channelId);
             const count = await getCounterCount(guild, counter.type, stats);
             fields.push({
-                name: truncate(`${getCounterEmoji(counter.type)} ${getCounterBaseName(counter.type)}`, 256),
+                name: truncate(`📌 Compteur ${getCounterEmoji(counter.type)} ${typeLabel(counter.type)}`, 256),
                 value: `${channel ? `<#${channel.id}>` : '`Salon introuvable`'}\n\`${formatCount(count)}\` • ${counter.enabled === false ? '⏸️ Désactivé' : '✅ Actif'}`,
                 inline: true,
             });
@@ -144,7 +144,7 @@ function buildSelectRow(guild, counters) {
         const channel = guild.channels.cache.get(counter.channelId);
         select.addOptions(
             new StringSelectMenuOptionBuilder()
-                .setLabel(truncate(`${getCounterEmoji(counter.type)} ${getCounterBaseName(counter.type)}`, 100))
+                .setLabel(truncate(`${getCounterEmoji(counter.type)} ${typeLabel(counter.type)}`, 100))
                 .setDescription(truncate(channel ? `Salon : ${channel.name}` : 'Salon introuvable', 100))
                 .setValue(counter.id),
         );
@@ -593,7 +593,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
     const promptMessage = await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
-                .setTitle(`${getCounterEmoji(counter.type)} ${getCounterBaseName(counter.type)}`)
+                .setTitle(`${getCounterEmoji(counter.type)} ${typeLabel(counter.type)}`)
                 .setDescription(
                     `**Type :** ${typeLabel(counter.type)}\n**Valeur actuelle :** \`${formatCount(count)}\`\n**Statut :** ${enabled ? '✅ Actif' : '⏸️ Désactivé'}`,
                 )
