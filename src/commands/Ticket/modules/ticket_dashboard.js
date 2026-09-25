@@ -68,7 +68,7 @@ function buildDashboardEmbed(config, guild) {
             { name: '📜 Salon des transcripts', value: transcriptChannel, inline: true },
             { name: '🔘 Boutons du panneau', value: typesSummary, inline: false },
         )
-        .setFooter({ text: 'Sélectionnez une option ci-dessous • Le tableau de bord se ferme après 10 minutes d\'inactivité' })
+        .setFooter({ text: 'Sélectionnez une option ci-dessous • Le tableau de bord se ferme après 5 minutes d\'inactivité' })
         .setTimestamp();
 }
 

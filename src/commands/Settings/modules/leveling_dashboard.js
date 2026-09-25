@@ -42,7 +42,7 @@ function buildDashboardEmbed(cfg, guild) {
             { name: 'ðŸš€ Multiplicateur', value: `${cfg.xpMultiplier ?? 1}x`, inline: true },
             { name: 'ðŸŽ­ RÃ©compenses de rÃ´le', value: roleRewards, inline: false },
         )
-        .setFooter({ text: 'Le tableau de bord se ferme aprÃ¨s 10 minutes d\'inactivitÃ©' })
+        .setFooter({ text: 'Le tableau de bord se ferme après 5 minutes d\'inactivité' })
         .setTimestamp();
 }
 

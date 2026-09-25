@@ -57,7 +57,7 @@ function buildDashboardEmbed(cfg, guild) {
             { name: '👋 Message d\'arrivée (10 min)', value: arrivalPreview, inline: false },
             { name: '🚪 Salon d\'arrivée', value: arrivalChannelName, inline: true },
         )
-        .setFooter({ text: 'Le tableau de bord se ferme après 10 minutes d\'inactivité' })
+        .setFooter({ text: 'Le tableau de bord se ferme après 5 minutes d\'inactivité' })
         .setTimestamp();
 }
 

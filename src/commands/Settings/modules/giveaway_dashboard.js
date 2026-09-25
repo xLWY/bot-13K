@@ -52,7 +52,7 @@ function buildDashboardEmbed(giveaways, guild) {
             { name: '🏁 Terminés', value: `\`${ended.length}\``, inline: true },
             { name: '🕐 Actuellement en cours', value: activeList, inline: false },
         )
-        .setFooter({ text: 'Le tableau de bord se ferme après 10 minutes d\'inactivité' })
+        .setFooter({ text: 'Le tableau de bord se ferme après 5 minutes d\'inactivité' })
         .setTimestamp();
 }
 

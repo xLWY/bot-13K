@@ -403,7 +403,7 @@ async function handleDashboard(interaction, selectedPanelId) {
         filter: i =>
             i.user.id === interaction.user.id &&
             (i.customId === `rr_opts_${guildId}`),
-        time: 600_000,
+        time: 300_000,
     });
 
     const buttonCollector = interaction.channel.createMessageComponentCollector({
@@ -412,7 +412,7 @@ async function handleDashboard(interaction, selectedPanelId) {
             i.user.id === interaction.user.id &&
             (i.customId === `rr_edit_text_${guildId}` ||
                 i.customId === `rr_delete_${guildId}`),
-        time: 600_000,
+        time: 300_000,
     });
 
     collector.on('collect', async ci => {
@@ -460,7 +460,7 @@ async function handleDashboard(interaction, selectedPanelId) {
     collector.on('end', async (_, reason) => {
         buttonCollector.stop();
         if (reason === 'time') {
-            await InteractionHelper.sendErrorNotice(interaction, 'Cette session du tableau de bord a expiré après 10 minutes d\'inactivité. Relancez `/reactroles dashboard` pour continuer.');
+            await InteractionHelper.safeDeleteReply(interaction);
         }
     });
 }
@@ -535,7 +535,7 @@ async function showPanelDashboard(interaction, panelData, discordMsg, guildId, g
             { name: '\u200B', value: '\u200B', inline: true },
             { name: '🏷️ Liste des rôles', value: roleList, inline: false },
         )
-        .setFooter({ text: 'Le tableau de bord se ferme après 10 minutes d\'inactivité' })
+        .setFooter({ text: 'Le tableau de bord se ferme après 5 minutes d\'inactivité' })
         .setTimestamp();
 
     const editTextButton = new ButtonBuilder()

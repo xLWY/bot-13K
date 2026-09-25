@@ -112,7 +112,7 @@ async function buildDashboardEmbed(guild, counters, stats) {
         )
         .setColor(getColor('info'))
         .addFields(fields)
-        .setFooter({ text: `**${counters.length}** compteur(s) • le tableau de bord se ferme après 10 minutes d\'inactivité` })
+        .setFooter({ text: `**${counters.length}** compteur(s) • le tableau de bord se ferme après 5 minutes d'inactivité` })
         .setTimestamp();
 }
 
