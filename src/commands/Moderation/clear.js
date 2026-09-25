@@ -1,8 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
-import { checkRateLimit } from '../../utils/rateLimiter.js';
 import { getColor } from '../../config/bot.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -45,20 +44,6 @@ export default {
 
     try {
       
-      const rateLimitKey = `clear_${interaction.user.id}`;
-      const isAllowed = await checkRateLimit(rateLimitKey, 5, 60000);
-      if (!isAllowed) {
-        return await InteractionHelper.safeEditReply(interaction, {
-          embeds: [
-            warningEmbed(
-              "Tu supprimes des messages trop vite. Attends une minute avant de réessayer.",
-              "⏳ Limite de fréquence"
-            ),
-          ],
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-
       const fetched = await channel.messages.fetch({ limit: amount + 1 });
       const ownReply = await interaction.fetchReply().catch(() => null);
       if (!isPrefix) {
