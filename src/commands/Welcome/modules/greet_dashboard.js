@@ -205,10 +205,10 @@ export default {
                             await handleWelcomeImage(selectInteraction, interaction, cfg, guildId, client);
                             break;
                         case 'arrival_channel':
-                            await handlePingChannel(selectInteraction, interaction, cfg, guildId, client);
+                            await handleArrivalChannel(selectInteraction, interaction, cfg, guildId, client);
                             break;
                         case 'arrival_message':
-                            await handlePingMessage(selectInteraction, interaction, cfg, guildId, client);
+                            await handleArrivalMessage(selectInteraction, interaction, cfg, guildId, client);
                             break;
                     }
                 } catch (error) {
@@ -333,7 +333,7 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
         componentType: ComponentType.ChannelSelect,
         filter: i =>
             i.user.id === selectInteraction.user.id && i.customId === 'greet_cfg_welcome_channel',
-        time: 60_000,
+        time: 300_000,
         max: 1,
     });
 
@@ -776,7 +776,7 @@ async function handleAutoRole(selectInteraction, rootInteraction, cfg, guildId, 
 
 // ─── Salon d'arrivée (channel) ────────────────────────────────────────────────
 
-async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildId, client) {
+async function handleArrivalChannel(selectInteraction, rootInteraction, cfg, guildId, client) {
     try {
         await selectInteraction.deferUpdate();
     } catch {
@@ -789,16 +789,25 @@ async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildI
         .addChannelTypes(ChannelType.GuildText)
         .setMaxValues(1);
 
+    const cancelButton = new ButtonBuilder()
+        .setCustomId('greet_cfg_arrival_channel_cancel')
+        .setLabel('Annuler')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('❌');
+
     await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
                 .setTitle('🚪 Salon d\'arrivée')
                 .setDescription(
-                    `**Actuel :** ${cfg.arrivalChannelId ? `<#${cfg.arrivalChannelId}>` : '`Non défini`'}\n\nSélectionne le salon où le message « X vient d\'arriver » sera posté. Il reste affiché 10 minutes puis disparaît.`,
+                    `**Actuel :** ${cfg.arrivalChannelId ? `<#${cfg.arrivalChannelId}>` : '`Non défini`'}\n\nSélectionne le salon où le message « X vient d'arriver » sera posté. Il reste affiché 10 minutes puis disparaît.`,
                 )
                 .setColor(getColor('info')),
         ],
-        components: [new ActionRowBuilder().addComponents(channelSelect)],
+        components: [
+            new ActionRowBuilder().addComponents(channelSelect),
+            new ActionRowBuilder().addComponents(cancelButton),
+        ],
         flags: MessageFlags.Ephemeral,
     });
 
@@ -806,12 +815,27 @@ async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildI
         componentType: ComponentType.ChannelSelect,
         filter: i =>
             i.user.id === selectInteraction.user.id && i.customId === 'greet_cfg_arrival_channel',
-        time: 60_000,
+        time: 300_000,
         max: 1,
+    });
+
+    const cancelCollector = rootInteraction.channel.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: i =>
+            i.user.id === selectInteraction.user.id && i.customId === 'greet_cfg_arrival_channel_cancel',
+        time: 300_000,
+        max: 1,
+    });
+
+    cancelCollector.on('collect', async cancelInteraction => {
+        await cancelInteraction.deferUpdate().catch(() => {});
+        chanCollector.stop('cancelled');
+        await InteractionHelper.sendErrorNotice(cancelInteraction, 'Sélection annulée. Le paramètre n\'a pas été modifié.');
     });
 
     chanCollector.on('collect', async chanInteraction => {
         await chanInteraction.deferUpdate();
+        cancelCollector.stop('selected');
         const channel = chanInteraction.channels.first();
 
         if (!botHasPermission(channel, ['ViewChannel', 'SendMessages'])) {
@@ -823,7 +847,7 @@ async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildI
         await saveWelcomeConfig(client, guildId, cfg);
 
         await chanInteraction.followUp({
-            embeds: [successEmbed('✅ Salon d\'arrivée mis à jour', `Les messages « X vient d\'arriver » seront postés dans ${channel} pendant 10 minutes.`)],
+            embeds: [successEmbed('✅ Salon d\'arrivée mis à jour', `Les messages « X vient d'arriver » seront postés dans ${channel} pendant 10 minutes.`)],
             flags: MessageFlags.Ephemeral,
         });
 
@@ -831,8 +855,9 @@ async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildI
     });
 
     chanCollector.on('end', (collected, reason) => {
+        cancelCollector.stop(reason);
         if (reason === 'time' && collected.size === 0) {
-            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun canal n\'a été sélectionné. Le paramètre n\'a pas été modifié.')
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun salon n\'a été sélectionné. Le paramètre n\'a pas été modifié.')
                 .catch(() => {});
         }
     });
@@ -840,7 +865,7 @@ async function handlePingChannel(selectInteraction, rootInteraction, cfg, guildI
 
 // ─── Message d'arrivée (texte) ────────────────────────────────────────────────
 
-async function handlePingMessage(selectInteraction, rootInteraction, cfg, guildId, client) {
+async function handleArrivalMessage(selectInteraction, rootInteraction, cfg, guildId, client) {
     const modal = new ModalBuilder()
         .setCustomId('greet_cfg_arrival_message')
         .setTitle('Modifier le message d\'arrivée')
