@@ -134,7 +134,8 @@ export function openPanel(interaction, client, guildId) {
                 }
             } catch (error) {
                 logger.debug(`Panel module open failed (${btnInteraction.customId}):`, error.message);
-                await InteractionHelper.sendErrorNotice(btnInteraction, 'Impossible d\'ouvrir ce module. Vérifie qu\'il est configuré, puis réessaie.').catch(() => {});
+                const message = error?.userMessage || 'Impossible d\'ouvrir ce module. Vérifie qu\'il est configuré, puis réessaie.';
+                await InteractionHelper.sendErrorNotice(btnInteraction, message).catch(() => {});
             }
         });
 

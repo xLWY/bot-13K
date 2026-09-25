@@ -51,7 +51,10 @@ function buildDashboardEmbed(config, guild) {
 
     return new EmbedBuilder()
         .setTitle('🎫 Tableau de bord Tickets')
-        .setDescription(`Gérez les paramètres du système de tickets de **${guild.name}**.\nSélectionnez une option ci-dessous pour modifier un réglage.`)
+        .setDescription(
+            `Gérez les paramètres du système de tickets de **${guild.name}**.\nSélectionnez une option ci-dessous pour modifier un réglage.` +
+            (config.ticketPanelChannelId ? '' : '\n\n⚠️ **Système non configuré** : commence par « Définir le salon du panneau ».'),
+        )
         .setColor(getColor('info'))
         .addFields(
             { name: '📢 Salon du panneau', value: panelChannel, inline: true },
@@ -77,6 +80,11 @@ function buildSelectMenu(guildId) {
         .setCustomId(`ticket_config_${guildId}`)
         .setPlaceholder('Sélectionnez un réglage à configurer…')
         .addOptions(
+            new StringSelectMenuOptionBuilder()
+                .setLabel('Définir le salon du panneau')
+                .setDescription('Salon où le panneau de création de tickets sera envoyé')
+                .setValue('panel_channel')
+                .setEmoji('📢'),
             new StringSelectMenuOptionBuilder()
                 .setLabel('Modifier le message du panneau')
                 .setDescription('Changez le message affiché sur le panneau de création de tickets')
@@ -216,14 +224,6 @@ export default {
             const guildId = interaction.guild.id;
             const guildConfig = await getGuildConfig(client, guildId);
 
-            if (!guildConfig.ticketPanelChannelId) {
-                throw new TitanBotError(
-                    'Système de tickets non configuré',
-                    ErrorTypes.CONFIGURATION,
-                    'Le système de tickets n\'a pas encore été configuré. Lancez `/ticket setup` pour le configurer.',
-                );
-            }
-
             const selectMenu = buildSelectMenu(guildId);
             const selectRow = new ActionRowBuilder().addComponents(selectMenu);
             const buttonRow = buildButtonRow(guildConfig, guildId);
@@ -264,6 +264,9 @@ export default {
                 const selectedOption = selectInteraction.values[0];
                 try {
                     switch (selectedOption) {
+                        case 'panel_channel':
+                            await handlePanelChannel(selectInteraction, interaction, guildConfig, guildId, client);
+                            break;
                         case 'panel_message':
                             await handlePanelMessage(selectInteraction, interaction, guildConfig, guildId, client);
                             break;
@@ -361,6 +364,83 @@ export default {
     },
 };
 
+// ─── Panel Channel ─────────────────────────────────────────────────────────────
+
+async function handlePanelChannel(selectInteraction, rootInteraction, guildConfig, guildId, client) {
+    await selectInteraction.deferUpdate();
+
+    const channelSelect = new ChannelSelectMenuBuilder()
+        .setCustomId('ticket_cfg_panel_channel')
+        .setPlaceholder('Sélectionnez le salon du panneau…')
+        .addChannelTypes(ChannelType.GuildText)
+        .setMaxValues(1);
+
+    await selectInteraction.followUp({
+        embeds: [
+            new EmbedBuilder()
+                .setTitle('📢 Sélectionner le salon du panneau')
+                .setDescription('Le panneau de création de tickets sera envoyé dans ce salon. Tu pourras ensuite personnaliser le message, les catégories et les boutons.')
+                .setColor(getColor('info')),
+        ],
+        components: [new ActionRowBuilder().addComponents(channelSelect)],
+        flags: MessageFlags.Ephemeral,
+    });
+
+    const collector = rootInteraction.channel.createMessageComponentCollector({
+        componentType: ComponentType.ChannelSelect,
+        filter: i => i.user.id === selectInteraction.user.id && i.customId === 'ticket_cfg_panel_channel',
+        time: 120_000,
+        max: 1,
+    });
+
+    collector.on('collect', async channelInteraction => {
+        await channelInteraction.deferUpdate();
+        const channel = channelInteraction.channels.first();
+
+        guildConfig.ticketPanelChannelId = channel.id;
+        if (!guildConfig.ticketPanelMessage) {
+            guildConfig.ticketPanelMessage = DEFAULT_PANEL_MESSAGE;
+        }
+        if (!guildConfig.ticketButtonLabel) {
+            guildConfig.ticketButtonLabel = DEFAULT_BUTTON_LABEL;
+        }
+        await client.db.set(getGuildConfigKey(guildId), guildConfig);
+
+        const panelEmbed = new EmbedBuilder()
+            .setTitle('🎫 Centre d\'aide')
+            .setDescription(guildConfig.ticketPanelMessage)
+            .setColor(getColor('info'))
+            .setFooter({ text: 'Cliquez sur le bouton ci-dessous pour ouvrir un ticket' });
+
+        const posted = await channel
+            .send({
+                embeds: [panelEmbed],
+                components: buildTicketTypeButtons(guildConfig.ticketButtonLabel),
+            })
+            .catch(() => null);
+
+        await channelInteraction.followUp({
+            embeds: [
+                successEmbed(
+                    '✅ Panneau de tickets configuré',
+                    posted
+                        ? `Le panneau a été envoyé dans ${channel}. Les autres options du tableau de bord permettent de le personnaliser.`
+                        : `Le salon a été enregistré, mais je n'ai pas pu envoyer le panneau dans ${channel}. Vérifie mes permissions dans ce salon.`,
+                ),
+            ],
+            flags: MessageFlags.Ephemeral,
+        });
+
+        await refreshDashboard(rootInteraction, guildConfig, guildId);
+    });
+
+    collector.on('end', (collected, reason) => {
+        if (reason === 'time' && collected.size === 0) {
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun salon sélectionné. Le système de tickets reste non configuré.');
+        }
+    });
+}
+
 // ─── Panel Message ────────────────────────────────────────────────────────────
 
 async function handlePanelMessage(selectInteraction, rootInteraction, guildConfig, guildId, client) {
@@ -406,7 +486,7 @@ async function handlePanelMessage(selectInteraction, rootInteraction, guildConfi
                 `Le message du panneau a été mis à jour.${
                     panelUpdated
                         ? '\nLe panneau de tickets en direct a également été actualisé.'
-                        : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Le nouveau message s\'appliquera à la prochaine exécution de `/ticket setup`.'
+                        : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Utilise « Définir le salon du panneau » pour le renvoyer.'
                 }`,
             ),
         ],
@@ -461,7 +541,7 @@ async function handleButtonLabel(selectInteraction, rootInteraction, guildConfig
                 `Libellé du bouton modifié en \`${newLabel}\`.${
                     panelUpdated
                         ? '\nLe bouton du panneau en direct a également été actualisé.'
-                        : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Le nouveau libellé s\'appliquera à la prochaine exécution de `/ticket setup`.'
+                        : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Utilise « Définir le salon du panneau » pour le renvoyer.'
                 }`,
             ),
         ],
@@ -803,7 +883,7 @@ async function handleAddType(selectInteraction, rootInteraction, guildConfig, gu
                 `Le bouton **${emoji} ${label}** a été ajouté au panneau.${
                     panelUpdated
                         ? '\nLe panneau de tickets en direct a été actualisé.'
-                        : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Le bouton apparaîtra à la prochaine exécution de `/ticket setup`.'
+                        : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Utilise « Définir le salon du panneau » pour le renvoyer.'
                 }`,
             ),
         ],
