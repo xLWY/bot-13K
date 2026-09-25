@@ -122,6 +122,12 @@ function buildButtonRow(cfg, guildId, disabled = false) {
         ),
         new ActionRowBuilder().addComponents(
             new ButtonBuilder()
+                .setCustomId(`greet_cfg_adopt_${guildId}`)
+                .setLabel('Reprendre l\'ancien message')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('♻️')
+                .setDisabled(disabled || !cfg.channelId),
+            new ButtonBuilder()
                 .setCustomId(`greet_cfg_back`)
                 .setLabel('Retour au panel')
                 .setEmoji('⬅️')
@@ -156,14 +162,6 @@ export default {
         try {
             const guildId = interaction.guild.id;
             const cfg = await getWelcomeConfig(client, guildId);
-
-            if (!cfg.channelId) {
-                throw new TitanBotError(
-                    'Greet system not configured',
-                    ErrorTypes.CONFIGURATION,
-                    'La bienvenue n\'a pas encore été configurée. Exécute `/welcome setup` d\'abord.',
-                );
-            }
 
             await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
 
@@ -236,6 +234,7 @@ export default {
                     i.user.id === interaction.user.id &&
                     (i.customId === `greet_cfg_toggle_welcome_${guildId}` ||
                         i.customId === `greet_cfg_ping_welcome_${guildId}` ||
+                        i.customId === `greet_cfg_adopt_${guildId}` ||
                         i.customId === `greet_cfg_back`),
                 time: 300_000,
             });
@@ -273,6 +272,8 @@ export default {
                         ],
                         flags: MessageFlags.Ephemeral,
                     });
+                } else if (customId === `greet_cfg_adopt_${guildId}`) {
+                    await handleAdoptExistingMessage(btnInteraction, cfg, guildId, client, interaction.guild);
                 } else if (customId === `greet_cfg_back`) {
                     if (typeof onBack === 'function') {
                         await onBack(btnInteraction);
@@ -409,6 +410,92 @@ async function handleWelcomeMessage(selectInteraction, rootInteraction, cfg, gui
     });
 
     await refreshDashboard(rootInteraction, cfg, guildId);
+}
+
+// ─── Adopt Existing Message ───────────────────────────────────────────────────
+
+async function handleAdoptExistingMessage(btnInteraction, cfg, guildId, client, guild) {
+    if (!cfg.channelId) {
+        await InteractionHelper.sendErrorNotice(btnInteraction, 'Aucun salon de bienvenue défini. Commence par « Définir le salon de bienvenue ».');
+        return;
+    }
+
+    const channel =
+        guild.channels.cache.get(cfg.channelId) ||
+        (await guild.channels.fetch(cfg.channelId).catch(() => null));
+
+    if (!channel) {
+        await InteractionHelper.sendErrorNotice(btnInteraction, 'Le salon de bienvenue est introuvable. Choisis-en un autre.');
+        return;
+    }
+
+    const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+    const candidates = messages
+        ? [...messages.values()].filter((m) => m.author.id === client.user.id && m.embeds.length > 0)
+        : [];
+
+    if (candidates.length === 0) {
+        await InteractionHelper.sendErrorNotice(btnInteraction, `Je n'ai trouvé aucun ancien message de bienvenue dans ${channel} (50 derniers messages).`);
+        return;
+    }
+
+    const welcomeLike = candidates.find((m) =>
+        /bienvenue|arriv/i.test(`${m.embeds[0]?.title || ''} ${m.embeds[0]?.description || ''}`),
+    );
+    const source = welcomeLike || candidates[0];
+    const embed = source.embeds[0];
+
+    let title = embed.title || '';
+    let description = embed.description || '';
+
+    const avatarMatch = (embed.thumbnail?.url || '').match(/(?:avatars|users)\/(\d+)\//);
+    const member = avatarMatch
+        ? guild.members.cache.get(avatarMatch[1]) ||
+          (await guild.members.fetch(avatarMatch[1]).catch(() => null))
+        : null;
+
+    const identities = member
+        ? [member.user.username, member.displayName, member.user.globalName].filter(
+              (value) => typeof value === 'string' && value.length >= 2,
+          )
+        : [];
+
+    for (const value of identities) {
+        title = title.split(value).join('{user}');
+        description = description.split(value).join('{user}');
+    }
+
+    if (guild.name) {
+        title = title.split(guild.name).join('{server}');
+        description = description.split(guild.name).join('{server}');
+    }
+
+    if (!description.trim()) {
+        await InteractionHelper.sendErrorNotice(btnInteraction, 'Le message trouvé ne contient pas de texte réutilisable.');
+        return;
+    }
+
+    cfg.welcomeMessage = description.trim();
+    if (title.trim() && title.trim() !== '🎉 Bienvenue !') {
+        cfg.welcomeEmbed = { ...(cfg.welcomeEmbed || {}), title: title.trim() };
+    }
+    if (embed.image?.url) {
+        cfg.welcomeImage = embed.image.url;
+    }
+
+    await saveWelcomeConfig(client, guildId, cfg);
+
+    const preview = cfg.welcomeMessage.length > 300 ? `${cfg.welcomeMessage.slice(0, 300)}…` : cfg.welcomeMessage;
+
+    await btnInteraction.followUp({
+        embeds: [
+            successEmbed(
+                '♻️ Ancien message repris',
+                `J'ai récupéré le contenu de mon message dans ${channel} :\n\n> ${preview.replace(/\n/g, '\n> ')}\n\nLes nouveaux membres recevront ce message. Tu peux encore le modifier via « Modifier le message de bienvenue ».`,
+            ),
+        ],
+        flags: MessageFlags.Ephemeral,
+    });
 }
 
 // ─── Welcome Image ────────────────────────────────────────────────────────────
