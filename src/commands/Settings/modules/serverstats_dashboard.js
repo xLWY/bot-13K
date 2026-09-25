@@ -258,13 +258,15 @@ export default {
             const counters = await getServerCounters(client, guildId);
             const stats = await getGuildCounterStats(interaction.guild);
 
-            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDeferOrUpdate(interaction, {});
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [await buildDashboardEmbed(interaction.guild, counters, stats)],
                 components: await buildComponents(interaction.guild, counters),
                 flags: MessageFlags.Ephemeral,
             });
+
+            InteractionHelper.armDashboardSession(interaction);
 
             const buttonCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.Button,
@@ -275,6 +277,7 @@ export default {
             });
 
             buttonCollector.on('collect', async btnInteraction => {
+                InteractionHelper.armDashboardSession(interaction);
                 try {
                     if (btnInteraction.customId === 'ss_dash_back') {
                         await btnInteraction.deferUpdate().catch(() => {});
@@ -310,6 +313,7 @@ export default {
             });
 
             selectCollector.on('collect', async selectInteraction => {
+                InteractionHelper.armDashboardSession(interaction);
                 try {
                     await handleCounterSelection(selectInteraction, interaction, client);
                 } catch (error) {
@@ -318,13 +322,6 @@ export default {
                         await selectInteraction.deferUpdate().catch(() => {});
                     }
                     await InteractionHelper.sendErrorNotice(selectInteraction, 'Impossible de gérer ce compteur. Réessaie.').catch(() => {});
-                }
-            });
-
-            buttonCollector.on('end', async (collected, reason) => {
-                if (reason === 'time') {
-                    selectCollector.stop();
-                    await InteractionHelper.safeDeleteReply(interaction);
                 }
             });
 

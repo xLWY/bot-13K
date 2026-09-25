@@ -228,7 +228,7 @@ export default {
             const selectRow = new ActionRowBuilder().addComponents(selectMenu);
             const buttonRow = buildButtonRow(guildConfig, guildId);
 
-            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDeferOrUpdate(interaction, {});
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [buildDashboardEmbed(guildConfig, interaction.guild)],
@@ -237,6 +237,8 @@ export default {
 
             const replyMessage = await interaction.fetchReply().catch(() => null);
             const replyMessageId = replyMessage?.id;
+
+            InteractionHelper.armDashboardSession(interaction);
 
             const collector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
@@ -261,6 +263,7 @@ export default {
             });
 
             collector.on('collect', async (selectInteraction) => {
+                InteractionHelper.armDashboardSession(interaction);
                 const selectedOption = selectInteraction.values[0];
                 try {
                     switch (selectedOption) {
@@ -316,6 +319,7 @@ export default {
             });
 
             buttonCollector.on('collect', async (btnInteraction) => {
+                InteractionHelper.armDashboardSession(interaction);
                 try {
                     if (btnInteraction.customId === `ticket_cfg_dm_toggle_${guildId}`) {
                         await handleDmOnClose(btnInteraction, interaction, guildConfig, guildId, client);
@@ -346,12 +350,6 @@ export default {
                 }
             });
 
-            collector.on('end', async (collected, reason) => {
-                buttonCollector.stop();
-                if (reason === 'time') {
-                    await InteractionHelper.safeDeleteReply(interaction);
-                }
-            });
         } catch (error) {
             if (error instanceof TitanBotError) throw error;
             logger.error('Unexpected error in ticket_config:', error);

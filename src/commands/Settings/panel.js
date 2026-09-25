@@ -19,7 +19,7 @@ export function openPanel(interaction, client, guildId) {
     const guild = interaction.guild || client.guilds.cache.get(guildId);
 
     return (async () => {
-        await InteractionHelper.safeDeferOrUpdate(interaction);
+        await InteractionHelper.safeDeferOrUpdate(interaction, {});
         const welcomeConfig = await getWelcomeConfig(client, guildId);
         const guildConfig = await getGuildConfig(client, guildId).catch(() => ({}));
 
@@ -107,6 +107,8 @@ export function openPanel(interaction, client, guildId) {
             flags: MessageFlags.Ephemeral,
         });
 
+        InteractionHelper.armDashboardSession(interaction);
+
         const collector = interaction.channel.createMessageComponentCollector({
             componentType: ComponentType.Button,
             filter: i =>
@@ -118,6 +120,7 @@ export function openPanel(interaction, client, guildId) {
         const onBack = (backInteraction) => openPanel(backInteraction, client, guildId);
 
         collector.on('collect', async btnInteraction => {
+            InteractionHelper.armDashboardSession(interaction);
             try {
                 switch (btnInteraction.customId) {
                     case 'panel_welcome':
@@ -140,11 +143,6 @@ export function openPanel(interaction, client, guildId) {
             }
         });
 
-        collector.on('end', async (collected, reason) => {
-            if (reason === 'time') {
-                await InteractionHelper.safeDeleteReply(interaction);
-            }
-        });
     })();
 }
 

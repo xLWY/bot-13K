@@ -124,7 +124,7 @@ export default {
             const currency = shopService.getCurrencyInfo();
             const economy = await getEconomyData(client, guildId, userId);
 
-            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDeferOrUpdate(interaction, {});
 
             let currentCategory = 'all';
             let currentCategoryName = 'Tous les articles';
@@ -136,6 +136,8 @@ export default {
                 renderInteraction(interaction, allItems, currentCategoryName, economy.wallet, currency.namePlural, page),
             );
 
+            InteractionHelper.armDashboardSession(interaction);
+
             const render = () =>
                 renderInteraction(interaction, allItems, currentCategoryName, economy.wallet, currency.namePlural, page);
 
@@ -146,6 +148,7 @@ export default {
             });
 
             backCollector.on('collect', async btnInteraction => {
+                InteractionHelper.armDashboardSession(interaction);
                 try {
                     await btnInteraction.deferUpdate().catch(() => {});
                     if (typeof onBack === 'function') {
@@ -156,12 +159,6 @@ export default {
                 }
             });
 
-            backCollector.on('end', async (collected, reason) => {
-                if (reason === 'time') {
-                    await InteractionHelper.safeDeleteReply(interaction);
-                }
-            });
-
             const catCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
                 filter: i => i.user.id === interaction.user.id && i.customId === 'shop_cfg_category',
@@ -169,6 +166,7 @@ export default {
             });
 
             catCollector.on('collect', async selectInteraction => {
+                InteractionHelper.armDashboardSession(interaction);
                 try {
                     await selectInteraction.deferUpdate();
                     const catId = selectInteraction.values[0];
@@ -192,6 +190,7 @@ export default {
             });
 
             itemCollector.on('collect', async selectInteraction => {
+                InteractionHelper.armDashboardSession(interaction);
                 try {
                     await selectInteraction.deferUpdate();
                     const itemId = selectInteraction.values[0];
@@ -211,6 +210,7 @@ export default {
             });
 
             navCollector.on('collect', async navInteraction => {
+                InteractionHelper.armDashboardSession(interaction);
                 try {
                     await navInteraction.deferUpdate();
                     const totalPages = Math.max(1, Math.ceil(allItems.length / ITEMS_PER_PAGE));

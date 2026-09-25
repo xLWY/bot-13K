@@ -349,7 +349,7 @@ async function handleSetup(interaction) {
 // ─── Dashboard Subcommand ─────────────────────────────────────────────────────
 
 async function handleDashboard(interaction, selectedPanelId) {
-    const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: ['Ephemeral'] });
+    const deferSuccess = await InteractionHelper.safeDefer(interaction, {});
     if (!deferSuccess) return;
 
     const guildId = interaction.guild.id;
@@ -398,6 +398,8 @@ async function handleDashboard(interaction, selectedPanelId) {
     const discordMsg = await fetchPanelDiscordMessage(guild, activePanelData);
     await showPanelDashboard(interaction, activePanelData, discordMsg, guildId, guild);
 
+    InteractionHelper.armDashboardSession(interaction);
+
     let rootInteraction = interaction;
     const collector = interaction.channel.createMessageComponentCollector({
         filter: i =>
@@ -416,6 +418,7 @@ async function handleDashboard(interaction, selectedPanelId) {
     });
 
     collector.on('collect', async ci => {
+        InteractionHelper.armDashboardSession(interaction);
         try {
             if (ci.customId === `rr_opts_${guildId}`) {
                 const option = ci.values[0];
@@ -440,6 +443,7 @@ async function handleDashboard(interaction, selectedPanelId) {
     });
 
     buttonCollector.on('collect', async btnInteraction => {
+        InteractionHelper.armDashboardSession(interaction);
         try {
             if (btnInteraction.customId === `rr_edit_text_${guildId}`) {
                 await handleEditText(btnInteraction, rootInteraction, activePanelData, guildId, guild, client);
@@ -458,9 +462,8 @@ async function handleDashboard(interaction, selectedPanelId) {
     });
 
     collector.on('end', async (_, reason) => {
-        buttonCollector.stop();
-        if (reason === 'time') {
-            await InteractionHelper.safeDeleteReply(interaction);
+        if (reason !== 'manual') {
+            buttonCollector.stop();
         }
     });
 }

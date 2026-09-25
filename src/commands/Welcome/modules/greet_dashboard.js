@@ -164,7 +164,7 @@ export default {
             const guildId = interaction.guild.id;
             const cfg = await getWelcomeConfig(client, guildId);
 
-            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDeferOrUpdate(interaction, {});
 
             const selectMenu = buildSelectMenu(guildId);
 
@@ -177,6 +177,8 @@ export default {
                 flags: MessageFlags.Ephemeral,
             });
 
+            InteractionHelper.armDashboardSession(interaction);
+
             // ── Select collector ──────────────────────────────────────────────
             const collector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
@@ -186,6 +188,7 @@ export default {
             });
 
             collector.on('collect', async selectInteraction => {
+                InteractionHelper.armDashboardSession(interaction);
                 const selectedOption = selectInteraction.values[0];
                 try {
                     switch (selectedOption) {
@@ -241,6 +244,7 @@ export default {
             });
 
             btnCollector.on('collect', async btnInteraction => {
+                InteractionHelper.armDashboardSession(interaction);
                 try {
                     await btnInteraction.deferUpdate().catch(() => null);
                 } catch (err) {
@@ -285,12 +289,6 @@ export default {
                 await refreshDashboard(interaction, cfg, guildId);
             });
 
-            collector.on('end', async (collected, reason) => {
-                if (reason === 'time') {
-                    btnCollector.stop();
-                    await InteractionHelper.safeDeleteReply(interaction);
-                }
-            });
         } catch (error) {
             if (error instanceof TitanBotError) throw error;
             logger.error('Unexpected error in greet_dashboard:', error);

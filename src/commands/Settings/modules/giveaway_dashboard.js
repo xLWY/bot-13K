@@ -103,13 +103,15 @@ export default {
             const guildId = interaction.guild.id;
             const giveaways = await getGuildGiveaways(client, guildId);
 
-            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDeferOrUpdate(interaction, {});
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [buildDashboardEmbed(giveaways, interaction.guild)],
                 components: buildButtonRows(),
                 flags: MessageFlags.Ephemeral,
             });
+
+            InteractionHelper.armDashboardSession(interaction);
 
             const collector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.Button,
@@ -120,6 +122,7 @@ export default {
             });
 
             collector.on('collect', async btnInteraction => {
+                InteractionHelper.armDashboardSession(interaction);
                 const id = btnInteraction.customId;
                 try {
                     switch (id) {
@@ -145,11 +148,6 @@ export default {
                 }
             });
 
-            collector.on('end', async (collected, reason) => {
-                if (reason === 'time') {
-                    await InteractionHelper.safeDeleteReply(interaction);
-                }
-            });
         } catch (error) {
             logger.error('Giveaway dashboard failed to open:', error);
             await InteractionHelper.sendErrorNotice(interaction, 'Impossible d\'ouvrir le tableau de bord des giveaways.').catch(() => {});

@@ -5,6 +5,8 @@ import { handleInteractionError } from './errorHandler.js';
 
 const INTERACTION_TIMEOUT_MS = 15 * 60 * 1000; 
 const DEFAULT_DEFER_OPTIONS = { flags: MessageFlags.Ephemeral };
+const DASHBOARD_SESSION_MS = 5 * 60 * 1000;
+const dashboardSessions = new Map();
 
 function sanitizeEditReplyOptions(options = {}) {
     if (!options || typeof options !== 'object') {
@@ -247,6 +249,46 @@ if (error.code === 40060) {
         }
 
         return false;
+    }
+
+    static async deleteDashboardMessage(interaction) {
+        try {
+            if (interaction.message?.deletable) {
+                await interaction.message.delete();
+                return true;
+            }
+
+            const fetched = await interaction.fetchReply?.().catch(() => null);
+            if (fetched?.deletable) {
+                await fetched.delete();
+                return true;
+            }
+        } catch (error) {
+            logger.debug('Failed to delete dashboard message:', error.message);
+        }
+
+        return false;
+    }
+
+    static armDashboardSession(interaction, timeoutMs = DASHBOARD_SESSION_MS) {
+        if (!interaction || !interaction.channelId || !interaction.user?.id) {
+            return;
+        }
+
+        const key = `${interaction.guildId}:${interaction.channelId}:${interaction.user.id}`;
+        const previous = dashboardSessions.get(key);
+
+        if (previous?.timer) {
+            clearTimeout(previous.timer);
+        }
+
+        const timer = setTimeout(async () => {
+            dashboardSessions.delete(key);
+            await this.deleteDashboardMessage(interaction);
+        }, timeoutMs);
+
+        timer.unref?.();
+        dashboardSessions.set(key, { timer, message: interaction.message || null });
     }
 
     static async sendErrorNotice(interaction, text) {
