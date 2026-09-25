@@ -36,6 +36,9 @@ const TYPE_LABELS = {
 
 const MAX_LISTED_COUNTERS = 10;
 const MAX_SELECT_OPTIONS = 25;
+const STEP_TIMEOUT_MS = 90_000;
+
+const activeCreateFlows = new Set();
 
 function typeLabel(type) {
     return TYPE_LABELS[type] || type;
@@ -144,6 +147,16 @@ function buildComponents(guild, counters) {
     return rows;
 }
 
+function buildCancelRow(flowId) {
+    return new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`ss_flow_cancel_${flowId}`)
+            .setLabel('Annuler la création')
+            .setEmoji('❌')
+            .setStyle(ButtonStyle.Secondary),
+    );
+}
+
 async function refreshDashboard(rootInteraction, client) {
     try {
         const counters = await getServerCounters(client, rootInteraction.guild.id);
@@ -158,40 +171,64 @@ async function refreshDashboard(rootInteraction, client) {
     }
 }
 
-function waitForSelect(channel, customId, userId, timeout) {
+function waitForStep({ channel, message, componentType, customId, cancelId, userId, timeout = STEP_TIMEOUT_MS }) {
     return new Promise((resolve) => {
-        const collector = channel.createMessageComponentCollector({
-            componentType: ComponentType.StringSelect,
-            filter: i => i.user.id === userId && i.customId === customId,
+        let settled = false;
+
+        const selectCollector = channel.createMessageComponentCollector({
+            componentType,
+            filter: i =>
+                i.user.id === userId &&
+                i.message?.id === message.id &&
+                i.customId === customId,
             time: timeout,
-            max: 1,
         });
 
-        collector.once('collect', interaction => {
-            collector.stop();
-            resolve(interaction);
+        const cancelCollector = channel.createMessageComponentCollector({
+            componentType: ComponentType.Button,
+            filter: i =>
+                i.user.id === userId &&
+                i.message?.id === message.id &&
+                i.customId === cancelId,
+            time: timeout,
         });
 
-        collector.once('end', () => resolve(null));
+        const finish = result => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            selectCollector.stop();
+            cancelCollector.stop();
+            resolve(result);
+        };
+
+        selectCollector.once('collect', interaction =>
+            finish({ kind: componentType === ComponentType.ChannelSelect ? 'channel' : 'select', interaction }),
+        );
+        cancelCollector.once('collect', interaction => finish({ kind: 'cancel', interaction }));
+        selectCollector.once('end', () => finish(null));
+        cancelCollector.once('end', () => finish(null));
     });
 }
 
-function waitForChannelSelect(channel, customId, userId, timeout) {
-    return new Promise((resolve) => {
-        const collector = channel.createMessageComponentCollector({
-            componentType: ComponentType.ChannelSelect,
-            filter: i => i.user.id === userId && i.customId === customId,
-            time: timeout,
-            max: 1,
-        });
+async function stopStep(step, stepNumber, fallbackInteraction) {
+    if (step && step.kind === 'cancel') {
+        await step.interaction.deferUpdate().catch(() => {});
+        await step.interaction
+            .followUp({
+                content: '↩️ Création annulée. Aucun compteur n\'a été créé.',
+                flags: MessageFlags.Ephemeral,
+            })
+            .catch(() => null);
+        return;
+    }
 
-        collector.once('collect', interaction => {
-            collector.stop();
-            resolve(interaction);
-        });
-
-        collector.once('end', () => resolve(null));
-    });
+    logger.debug(`Serverstats create flow timed out at step ${stepNumber}/3`);
+    await InteractionHelper.sendErrorNotice(
+        fallbackInteraction,
+        `⏱️ **Étape ${stepNumber}/3** expirée : aucune sélection effectuée. Aucun compteur n'a été créé. Clique de nouveau sur **➕ Créer**.`,
+    ).catch(() => null);
 }
 
 export default {
@@ -209,10 +246,13 @@ export default {
                 flags: MessageFlags.Ephemeral,
             });
 
+            const rootMessageId = interaction.message?.id;
+
             const buttonCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.Button,
                 filter: i =>
                     i.user.id === interaction.user.id &&
+                    i.message?.id === rootMessageId &&
                     ['ss_dash_create', 'ss_dash_refresh', 'ss_dash_back'].includes(i.customId),
                 time: 600_000,
             });
@@ -248,7 +288,10 @@ export default {
 
             const selectCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
-                filter: i => i.user.id === interaction.user.id && i.customId === 'ss_dash_select',
+                filter: i =>
+                    i.user.id === interaction.user.id &&
+                    i.message?.id === rootMessageId &&
+                    i.customId === 'ss_dash_select',
                 time: 600_000,
             });
 
@@ -305,9 +348,18 @@ async function runRefresh(btnInteraction, client) {
 async function handleCreate(btnInteraction, rootInteraction, client) {
     const guild = btnInteraction.guild;
 
+    if (activeCreateFlows.has(guild.id)) {
+        await btnInteraction.deferUpdate().catch(() => {});
+        await InteractionHelper.sendErrorNotice(
+            btnInteraction,
+            'Une création de compteur est déjà en cours. Termine-la avec le bouton **❌ Annuler la création**, ou clique sur **➕ Créer** dans une minute.',
+        ).catch(() => null);
+        return;
+    }
+
     if (!btnInteraction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
         await btnInteraction.deferUpdate().catch(() => {});
-        await InteractionHelper.sendErrorNotice(btnInteraction, 'Tu as besoin de la permission **Gérer les salons** pour créer un compteur.').catch(() => {});
+        await InteractionHelper.sendErrorNotice(btnInteraction, 'Tu as besoin de la permission **Gérer les salons** pour créer un compteur.').catch(() => null);
         return;
     }
 
@@ -316,158 +368,198 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
 
     if (availableTypes.length === 0) {
         await btnInteraction.deferUpdate().catch(() => {});
-        await InteractionHelper.sendErrorNotice(btnInteraction, 'Tous les types de compteurs existent déjà. Supprime-en un avant d\'en créer un autre.').catch(() => {});
+        await InteractionHelper.sendErrorNotice(btnInteraction, 'Tous les types de compteurs existent déjà. Supprime-en un avant d\'en créer un autre.').catch(() => null);
         return;
     }
 
     await btnInteraction.deferUpdate().catch(() => {});
 
-    const typeSelect = new StringSelectMenuBuilder()
-        .setCustomId('ss_dash_new_type')
-        .setPlaceholder('Choisis le type de compteur...');
+    const flowId = Date.now().toString(36);
+    const cancelId = `ss_flow_cancel_${flowId}`;
+    activeCreateFlows.add(guild.id);
 
-    for (const type of availableTypes) {
-        typeSelect.addOptions(
-            new StringSelectMenuOptionBuilder()
-                .setLabel(truncate(typeLabel(type), 100))
-                .setDescription(truncate(`Compteur : ${typeLabel(type)}`, 100))
-                .setValue(type)
-                .setEmoji(getCounterEmoji(type)),
+    try {
+        const typeSelect = new StringSelectMenuBuilder()
+            .setCustomId(`ss_new_type_${flowId}`)
+            .setPlaceholder('Choisis le type de compteur...');
+
+        for (const type of availableTypes) {
+            typeSelect.addOptions(
+                new StringSelectMenuOptionBuilder()
+                    .setLabel(truncate(typeLabel(type), 100))
+                    .setDescription(truncate(`Compteur : ${typeLabel(type)}`, 100))
+                    .setValue(type)
+                    .setEmoji(getCounterEmoji(type)),
+            );
+        }
+
+        const typeMessage = await btnInteraction.followUp({
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle('➕ Nouveau compteur — Étape 1/3')
+                    .setDescription('Choisis le **type de compteur** à créer.')
+                    .setColor(getColor('info')),
+            ],
+            components: [new ActionRowBuilder().addComponents(typeSelect), buildCancelRow(flowId)],
+            flags: MessageFlags.Ephemeral,
+        });
+
+        const typeStep = await waitForStep({
+            channel: rootInteraction.channel,
+            message: typeMessage,
+            componentType: ComponentType.StringSelect,
+            customId: `ss_new_type_${flowId}`,
+            cancelId,
+            userId: btnInteraction.user.id,
+        });
+
+        if (!typeStep || typeStep.kind === 'cancel') {
+            await stopStep(typeStep, 1, btnInteraction);
+            return;
+        }
+
+        const type = typeStep.interaction.values[0];
+        await typeStep.interaction.deferUpdate().catch(() => {});
+
+        const kindSelect = new StringSelectMenuBuilder()
+            .setCustomId(`ss_new_kind_${flowId}`)
+            .setPlaceholder('Choisis le type de salon...')
+            .addOptions(
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('Salon vocal (recommandé)')
+                    .setDescription('Non rejoignable, seul le nom change')
+                    .setValue('voice')
+                    .setEmoji('🔊'),
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('Salon texte')
+                    .setDescription('Le nom du salon texte affiche le compteur')
+                    .setValue('text')
+                    .setEmoji('💬'),
+            );
+
+        const kindMessage = await typeStep.interaction.followUp({
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle('➕ Nouveau compteur — Étape 2/3')
+                    .setDescription(
+                        `Type choisi : **${typeLabel(type)}**\nChoisis maintenant le **type de salon** à créer.`,
+                    )
+                    .setColor(getColor('info')),
+            ],
+            components: [new ActionRowBuilder().addComponents(kindSelect), buildCancelRow(flowId)],
+            flags: MessageFlags.Ephemeral,
+        });
+
+        const kindStep = await waitForStep({
+            channel: rootInteraction.channel,
+            message: kindMessage,
+            componentType: ComponentType.StringSelect,
+            customId: `ss_new_kind_${flowId}`,
+            cancelId,
+            userId: btnInteraction.user.id,
+        });
+
+        if (!kindStep || kindStep.kind === 'cancel') {
+            await stopStep(kindStep, 2, btnInteraction);
+            return;
+        }
+
+        const kind = kindStep.interaction.values[0];
+        await kindStep.interaction.deferUpdate().catch(() => {});
+
+        const categories = guild.channels.cache.filter(
+            channel => channel.type === ChannelType.GuildCategory && channel.viewable !== false,
         );
+
+        let category = null;
+        let categoryStep = null;
+        let lastInteraction = kindStep.interaction;
+
+        if (categories.size > 0) {
+            const categorySelect = new ChannelSelectMenuBuilder()
+                .setCustomId(`ss_new_category_${flowId}`)
+                .setPlaceholder('Choisis la catégorie du salon...')
+                .addChannelTypes(ChannelType.GuildCategory)
+                .setMaxValues(1);
+
+            const categoryMessage = await kindStep.interaction.followUp({
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle('➕ Nouveau compteur — Étape 3/3')
+                        .setDescription('Choisis la **catégorie** où le salon du compteur sera créé.')
+                        .setColor(getColor('info')),
+                ],
+                components: [new ActionRowBuilder().addComponents(categorySelect), buildCancelRow(flowId)],
+                flags: MessageFlags.Ephemeral,
+            });
+
+            categoryStep = await waitForStep({
+                channel: rootInteraction.channel,
+                message: categoryMessage,
+                componentType: ComponentType.ChannelSelect,
+                customId: `ss_new_category_${flowId}`,
+                cancelId,
+                userId: btnInteraction.user.id,
+            });
+
+            if (!categoryStep || categoryStep.kind === 'cancel') {
+                await stopStep(categoryStep, 3, btnInteraction);
+                return;
+            }
+
+            lastInteraction = categoryStep.interaction;
+            await categoryStep.interaction.deferUpdate().catch(() => {});
+            category = categoryStep.interaction.channels.first() || null;
+        }
+
+        const targetChannelType = kind === 'voice' ? ChannelType.GuildVoice : ChannelType.GuildText;
+
+        const channel = await guild.channels.create({
+            name: `${getCounterEmoji(type)}・${getCounterBaseName(type)}`,
+            type: targetChannelType,
+            ...(category ? { parent: category.id } : {}),
+            reason: `Salon de compteur créé par ${btnInteraction.user.tag}`,
+        });
+
+        if (targetChannelType === ChannelType.GuildVoice) {
+            await channel.permissionOverwrites
+                .edit(guild.id, { ViewChannel: true, Connect: false, Speak: null, Stream: null })
+                .catch(error => logger.debug('Could not lock voice counter channel:', error.message));
+        }
+
+        const newCounter = {
+            id: Date.now().toString(),
+            type,
+            channelId: channel.id,
+            guildId: guild.id,
+            createdAt: new Date().toISOString(),
+            enabled: true,
+        };
+
+        const saved = await saveServerCounters(client, guild.id, [...counters, newCounter]);
+        if (!saved) {
+            await channel.delete('Échec de l\'enregistrement du compteur').catch(() => null);
+            await InteractionHelper.sendErrorNotice(lastInteraction, 'Échec de l\'enregistrement du compteur. Réessaie.').catch(() => null);
+            return;
+        }
+
+        const updated = await updateCounter(client, guild, newCounter);
+        const finalChannel = guild.channels.cache.get(channel.id) || channel;
+
+        await lastInteraction.followUp({
+            embeds: [
+                successEmbed(
+                    `**Type :** ${typeLabel(type)}\n**Catégorie :** ${category || '_racine du serveur_'}\n**Salon :** ${finalChannel}\n**Nom actuel :** ${finalChannel.name}${updated ? '' : '\n\n⚠️ Le nom sera corrigé au prochain passage automatique.'}`,
+                    '✅ Compteur créé',
+                ),
+            ],
+            flags: MessageFlags.Ephemeral,
+        });
+
+        await refreshDashboard(rootInteraction, client);
+    } finally {
+        activeCreateFlows.delete(guild.id);
     }
-
-    await btnInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('➕ Nouveau compteur')
-                .setDescription('**Étape 1/3** — Choisis le type de compteur à créer.')
-                .setColor(getColor('info')),
-        ],
-        components: [new ActionRowBuilder().addComponents(typeSelect)],
-        flags: MessageFlags.Ephemeral,
-    });
-
-    const typeInteraction = await waitForSelect(rootInteraction.channel, 'ss_dash_new_type', btnInteraction.user.id, 120_000);
-    if (!typeInteraction) {
-        await InteractionHelper.sendErrorNotice(btnInteraction, 'Aucune sélection. Le compteur n\'a pas été créé.').catch(() => {});
-        return;
-    }
-
-    const type = typeInteraction.values[0];
-    await typeInteraction.deferUpdate().catch(() => {});
-
-    const kindSelect = new StringSelectMenuBuilder()
-        .setCustomId('ss_dash_new_kind')
-        .setPlaceholder('Choisis le type de salon...')
-        .addOptions(
-            new StringSelectMenuOptionBuilder()
-                .setLabel('Salon vocal (recommandé)')
-                .setDescription('Non rejoignable, seul le nom change')
-                .setValue('voice')
-                .setEmoji('🔊'),
-            new StringSelectMenuOptionBuilder()
-                .setLabel('Salon texte')
-                .setDescription('Le nom du salon texte affiche le compteur')
-                .setValue('text')
-                .setEmoji('💬'),
-        );
-
-    await typeInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('➕ Nouveau compteur')
-                .setDescription(`**Étape 2/3** — Type choisi : **${typeLabel(type)}**.\nChoisis maintenant le type de salon à créer.`)
-                .setColor(getColor('info')),
-        ],
-        components: [new ActionRowBuilder().addComponents(kindSelect)],
-        flags: MessageFlags.Ephemeral,
-    });
-
-    const kindInteraction = await waitForSelect(rootInteraction.channel, 'ss_dash_new_kind', btnInteraction.user.id, 120_000);
-    if (!kindInteraction) {
-        await InteractionHelper.sendErrorNotice(btnInteraction, 'Aucune sélection. Le compteur n\'a pas été créé.').catch(() => {});
-        return;
-    }
-
-    const kind = kindInteraction.values[0];
-    await kindInteraction.deferUpdate().catch(() => {});
-
-    const categorySelect = new ChannelSelectMenuBuilder()
-        .setCustomId('ss_dash_new_category')
-        .setPlaceholder('Choisis la catégorie du salon...')
-        .addChannelTypes(ChannelType.GuildCategory)
-        .setMaxValues(1);
-
-    await kindInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('➕ Nouveau compteur')
-                .setDescription('**Étape 3/3** — Choisis la catégorie où le salon du compteur sera créé.')
-                .setColor(getColor('info')),
-        ],
-        components: [new ActionRowBuilder().addComponents(categorySelect)],
-        flags: MessageFlags.Ephemeral,
-    });
-
-    const categoryInteraction = await waitForChannelSelect(rootInteraction.channel, 'ss_dash_new_category', btnInteraction.user.id, 120_000);
-    if (!categoryInteraction) {
-        await InteractionHelper.sendErrorNotice(btnInteraction, 'Aucune sélection. Le compteur n\'a pas été créé.').catch(() => {});
-        return;
-    }
-
-    const category = categoryInteraction.channels.first();
-    await categoryInteraction.deferUpdate().catch(() => {});
-
-    if (!category || category.type !== ChannelType.GuildCategory) {
-        await InteractionHelper.sendErrorNotice(categoryInteraction, 'Choisis une catégorie valide.').catch(() => {});
-        return;
-    }
-
-    const targetChannelType = kind === 'voice' ? ChannelType.GuildVoice : ChannelType.GuildText;
-
-    const channel = await guild.channels.create({
-        name: `${getCounterEmoji(type)}・${getCounterBaseName(type)}`,
-        type: targetChannelType,
-        parent: category.id,
-        reason: `Salon de compteur créé par ${btnInteraction.user.tag}`,
-    });
-
-    if (targetChannelType === ChannelType.GuildVoice) {
-        await channel.permissionOverwrites
-            .edit(guild.id, { ViewChannel: true, Connect: false, Speak: null, Stream: null })
-            .catch(error => logger.debug('Could not lock voice counter channel:', error.message));
-    }
-
-    const newCounter = {
-        id: Date.now().toString(),
-        type,
-        channelId: channel.id,
-        guildId: guild.id,
-        createdAt: new Date().toISOString(),
-        enabled: true,
-    };
-
-    const saved = await saveServerCounters(client, guild.id, [...counters, newCounter]);
-    if (!saved) {
-        await channel.delete('Échec de l\'enregistrement du compteur').catch(() => null);
-        await InteractionHelper.sendErrorNotice(categoryInteraction, 'Échec de l\'enregistrement du compteur. Réessaie.').catch(() => {});
-        return;
-    }
-
-    const updated = await updateCounter(client, guild, newCounter);
-    const finalChannel = guild.channels.cache.get(channel.id) || channel;
-
-    await categoryInteraction.followUp({
-        embeds: [
-            successEmbed(
-                `**Type :** ${typeLabel(type)}\n**Catégorie :** ${category}\n**Salon :** ${finalChannel}\n**Nom actuel :** ${finalChannel.name}${updated ? '' : '\n\n⚠️ Le nom sera corrigé au prochain passage automatique.'}`,
-                '✅ Compteur créé',
-            ),
-        ],
-        flags: MessageFlags.Ephemeral,
-    });
-
-    await refreshDashboard(rootInteraction, client);
 }
 
 async function handleCounterSelection(selectInteraction, rootInteraction, client) {
@@ -478,7 +570,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
     await selectInteraction.deferUpdate().catch(() => {});
 
     if (!counter) {
-        await InteractionHelper.sendErrorNotice(selectInteraction, 'Ce compteur n\'existe plus.').catch(() => {});
+        await InteractionHelper.sendErrorNotice(selectInteraction, 'Ce compteur n\'existe plus.').catch(() => null);
         return;
     }
 
@@ -487,7 +579,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
     const count = await getCounterCount(guild, counter.type, stats);
     const enabled = counter.enabled !== false;
 
-    await selectInteraction.followUp({
+    const promptMessage = await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
                 .setTitle(`${getCounterEmoji(counter.type)} ${getCounterBaseName(counter.type)}`)
@@ -537,8 +629,11 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
 
     const itemCollector = rootInteraction.channel.createMessageComponentCollector({
         componentType: ComponentType.Button,
-        filter: i => i.user.id === selectInteraction.user.id && expectedIds.includes(i.customId),
-        time: 120_000,
+        filter: i =>
+            i.user.id === selectInteraction.user.id &&
+            i.message?.id === promptMessage.id &&
+            expectedIds.includes(i.customId),
+        time: STEP_TIMEOUT_MS,
     });
 
     itemCollector.on('collect', async itemInteraction => {
@@ -550,7 +645,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
         }
 
         if (!itemInteraction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
-            await InteractionHelper.sendErrorNotice(itemInteraction, 'Tu as besoin de la permission **Gérer les salons** pour gérer ce compteur.').catch(() => {});
+            await InteractionHelper.sendErrorNotice(itemInteraction, 'Tu as besoin de la permission **Gérer les salons** pour gérer ce compteur.').catch(() => null);
             return;
         }
 
@@ -570,13 +665,13 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
             const freshCounters = await getServerCounters(client, guild.id);
             const target = freshCounters.find(item => item.id === counter.id);
             if (!target) {
-                await InteractionHelper.sendErrorNotice(itemInteraction, 'Ce compteur n\'existe plus.').catch(() => {});
+                await InteractionHelper.sendErrorNotice(itemInteraction, 'Ce compteur n\'existe plus.').catch(() => null);
                 return;
             }
             target.enabled = target.enabled === false;
             const saved = await saveServerCounters(client, guild.id, freshCounters);
             if (!saved) {
-                await InteractionHelper.sendErrorNotice(itemInteraction, 'Échec de l\'enregistrement. Réessaie.').catch(() => {});
+                await InteractionHelper.sendErrorNotice(itemInteraction, 'Échec de l\'enregistrement. Réessaie.').catch(() => null);
                 return;
             }
             if (target.enabled) {
