@@ -80,9 +80,9 @@ export async function getGuildCounterStats(guild) {
     ? presenceBasedOnline
     : memberBasedOnline;
 
-  const voiceCount = guild.channels.cache
-    .filter((channel) => channel.isVoiceBased && channel.isVoiceBased())
-    .reduce((total, channel) => total + (channel.members?.size || 0), 0);
+const voiceCount = guild.voiceStates?.cache
+  ? guild.voiceStates.cache.filter((state) => Boolean(state.channelId)).size
+  : 0;
 
   return {
     totalCount,
