@@ -34,7 +34,7 @@ const TYPE_LABELS = {
     voice: 'Membres en vocal',
 };
 
-const MAX_LISTED_COUNTERS = 10;
+const MAX_LISTED_COUNTERS = 20;
 const MAX_SELECT_OPTIONS = 25;
 const STEP_TIMEOUT_MS = 90_000;
 
@@ -92,10 +92,14 @@ async function buildDashboardEmbed(guild, counters, stats) {
             });
         }
         if (counters.length > MAX_LISTED_COUNTERS) {
+            const hidden = counters
+                .slice(MAX_LISTED_COUNTERS)
+                .map(counter => `${getCounterEmoji(counter.type)} ${typeLabel(counter.type)}`)
+                .join(' • ');
             fields.push({
-                name: '➕ Autres',
-                value: `\`${counters.length - MAX_LISTED_COUNTERS}\` autre(s) compteur(s)`,
-                inline: true,
+                name: `➕ ${counters.length - MAX_LISTED_COUNTERS} autre(s) compteur(s)`,
+                value: truncate(hidden, 1024),
+                inline: false,
             });
         }
     }
@@ -107,7 +111,7 @@ async function buildDashboardEmbed(guild, counters, stats) {
         )
         .setColor(getColor('info'))
         .addFields(fields)
-        .setFooter({ text: 'Le tableau de bord se ferme après 10 minutes d\'inactivité' })
+        .setFooter({ text: `**${counters.length}** compteur(s) • le tableau de bord se ferme après 10 minutes d\'inactivité` })
         .setTimestamp();
 }
 
