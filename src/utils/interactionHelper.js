@@ -124,6 +124,39 @@ if (error.code === 10062) {
 
 
 
+    static async safeDeferOrUpdate(interaction, options = { flags: MessageFlags.Ephemeral }) {
+        try {
+            if (interaction.deferred || interaction.replied) {
+                return true;
+            }
+
+            if (!this.isInteractionValid(interaction)) {
+                logger.warn(`Interaction ${interaction.id} has expired before defer, ignoring`);
+                return false;
+            }
+
+            const isCommand = typeof interaction.isCommand === 'function' && interaction.isCommand();
+
+            if (!isCommand && interaction.message) {
+                await interaction.deferUpdate();
+                return true;
+            }
+
+            return await this.safeDefer(interaction, options);
+        } catch (error) {
+            if (error.code === 10062) {
+                logger.warn(`Interaction ${interaction.id} expired during defer/update:`, error.message);
+                return false;
+            }
+            if (error.name === 'InteractionAlreadyReplied' || error.code === 40060) {
+                logger.warn(`Interaction ${interaction.id} already acknowledged during defer/update:`, error.message);
+                return true;
+            }
+            logger.error('Failed to defer or update interaction:', error);
+            return false;
+        }
+    }
+
     static async safeEditReply(interaction, options) {
         try {
             if (!this.isInteractionValid(interaction)) {

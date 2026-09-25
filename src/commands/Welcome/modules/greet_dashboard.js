@@ -165,7 +165,7 @@ export default {
                 );
             }
 
-            await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
 
             const selectMenu = buildSelectMenu(guildId);
 

@@ -90,7 +90,7 @@ export default {
             const guildId = interaction.guild.id;
             const cfg = await getLevelingConfig(client, guildId);
 
-            await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [buildDashboardEmbed(cfg, interaction.guild)],

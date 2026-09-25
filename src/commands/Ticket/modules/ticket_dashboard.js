@@ -228,6 +228,8 @@ export default {
             const selectRow = new ActionRowBuilder().addComponents(selectMenu);
             const buttonRow = buildButtonRow(guildConfig, guildId);
 
+            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
+
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [buildDashboardEmbed(guildConfig, interaction.guild)],
                 components: [buttonRow, selectRow, buildBackRow()],

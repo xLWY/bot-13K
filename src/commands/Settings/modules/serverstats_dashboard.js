@@ -253,7 +253,7 @@ export default {
             const counters = await getServerCounters(client, guildId);
             const stats = await getGuildCounterStats(interaction.guild);
 
-            await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [await buildDashboardEmbed(interaction.guild, counters, stats)],

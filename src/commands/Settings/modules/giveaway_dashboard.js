@@ -103,7 +103,7 @@ export default {
             const guildId = interaction.guild.id;
             const giveaways = await getGuildGiveaways(client, guildId);
 
-            await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [buildDashboardEmbed(giveaways, interaction.guild)],

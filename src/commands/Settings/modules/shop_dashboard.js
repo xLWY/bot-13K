@@ -124,7 +124,7 @@ export default {
             const currency = shopService.getCurrencyInfo();
             const economy = await getEconomyData(client, guildId, userId);
 
-            await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
 
             let currentCategory = 'all';
             let currentCategoryName = 'Tous les articles';
