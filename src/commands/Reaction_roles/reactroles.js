@@ -389,8 +389,8 @@ async function handleSetup(interaction) {
 
 // ─── Dashboard Subcommand ─────────────────────────────────────────────────────
 
-async function handleDashboard(interaction, selectedPanelId) {
-    const deferSuccess = await InteractionHelper.safeDefer(interaction, {});
+async function handleDashboard(interaction, selectedPanelId, onBack = null) {
+    const deferSuccess = await InteractionHelper.safeDeferOrUpdate(interaction, {});
     if (!deferSuccess) return;
 
     const guildId = interaction.guild.id;
@@ -435,7 +435,7 @@ async function handleDashboard(interaction, selectedPanelId) {
     }
 
     const discordMsg = activePanelData ? await fetchPanelDiscordMessage(guild, activePanelData) : null;
-    await showPanelDashboard(interaction, activePanelData, discordMsg, guildId, guild);
+    await showPanelDashboard(interaction, activePanelData, discordMsg, guildId, guild, onBack);
 
     InteractionHelper.armDashboardSession(interaction);
 
@@ -453,7 +453,8 @@ async function handleDashboard(interaction, selectedPanelId) {
             i.user.id === interaction.user.id &&
             (i.customId === `rr_edit_text_${guildId}` ||
                 i.customId === `rr_delete_${guildId}` ||
-                i.customId === `rr_import_${guildId}`),
+                i.customId === `rr_import_${guildId}` ||
+                (onBack && i.customId === `rr_back_${guildId}`)),
         time: 300_000,
     });
 
@@ -498,8 +499,14 @@ async function handleDashboard(interaction, selectedPanelId) {
                         validPanels.push(imported);
                     }
                     const importedMsg = await fetchPanelDiscordMessage(guild, imported);
-                    await showPanelDashboard(rootInteraction, imported, importedMsg, guildId, guild);
+                    await showPanelDashboard(rootInteraction, imported, importedMsg, guildId, guild, onBack);
                 }
+                return;
+            }
+
+            if (onBack && btnInteraction.customId === `rr_back_${guildId}`) {
+                await btnInteraction.deferUpdate().catch(() => {});
+                await onBack(btnInteraction);
                 return;
             }
 
@@ -567,12 +574,20 @@ async function rebuildLivePanelMessage(guild, panelData) {
 
 // ─── View Builders ────────────────────────────────────────────────────────────
 
-async function showPanelDashboard(interaction, panelData, discordMsg, guildId, guild) {
+async function showPanelDashboard(interaction, panelData, discordMsg, guildId, guild, onBack = null) {
     const importButton = new ButtonBuilder()
         .setCustomId(`rr_import_${guildId}`)
         .setLabel('Importer un message')
         .setStyle(ButtonStyle.Success)
         .setEmoji('♻️');
+
+    const backButton = typeof onBack === 'function'
+        ? new ButtonBuilder()
+            .setCustomId(`rr_back_${guildId}`)
+            .setLabel('Retour au panel')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('↩️')
+        : null;
 
     if (!panelData) {
         const emptyEmbed = new EmbedBuilder()
@@ -590,7 +605,11 @@ async function showPanelDashboard(interaction, panelData, discordMsg, guildId, g
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [emptyEmbed],
-            components: [new ActionRowBuilder().addComponents(importButton)],
+            components: [
+                new ActionRowBuilder().addComponents(
+                    ...(backButton ? [importButton, backButton] : [importButton])
+                ),
+            ],
         });
         return;
     }
@@ -650,10 +669,16 @@ async function showPanelDashboard(interaction, panelData, discordMsg, guildId, g
     await InteractionHelper.safeEditReply(interaction, {
         embeds: [embed],
         components: [
-            new ActionRowBuilder().addComponents(editTextButton, importButton, deleteButton),
+            new ActionRowBuilder().addComponents(
+                ...(backButton ? [editTextButton, importButton, deleteButton, backButton] : [editTextButton, importButton, deleteButton])
+            ),
             new ActionRowBuilder().addComponents(optionsSelect),
         ],
     });
+}
+
+export async function openReactionRolesPanel(interaction, onBack) {
+    return await handleDashboard(interaction, null, onBack);
 }
 
 // ─── Panel Notices ────────────────────────────────────────────────────────────

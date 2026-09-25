@@ -15,6 +15,7 @@ import giveawayDashboard from './modules/giveaway_dashboard.js';
 import shopDashboard from './modules/shop_dashboard.js';
 import serverstatsDashboard from './modules/serverstats_dashboard.js';
 import jtcDashboard from './modules/jtc_dashboard.js';
+import { openReactionRolesPanel } from '../Reaction_roles/reactroles.js';
 
 export function openPanel(interaction, client, guildId) {
     const guild = interaction.guild || client.guilds.cache.get(guildId);
@@ -92,6 +93,7 @@ export function openPanel(interaction, client, guildId) {
             { id: 'panel_serverstats', label: 'Compteurs', emoji: '📊' },
             { id: 'panel_giveaway', label: 'Giveaways', emoji: '🎁' },
             { id: 'panel_shop', label: 'Boutique', emoji: '🏪' },
+            { id: 'panel_reactionroles', label: 'Rôles réaction', emoji: '🎭' },
         ];
         const rows = [];
         for (let i = 0; i < modules.length; i += 5) {
@@ -120,7 +122,7 @@ export function openPanel(interaction, client, guildId) {
             componentType: ComponentType.Button,
             filter: i =>
                 i.user.id === interaction.user.id &&
-                ['panel_welcome', 'panel_ticket', 'panel_leveling', 'panel_jtc', 'panel_serverstats', 'panel_giveaway', 'panel_shop'].includes(i.customId),
+                ['panel_welcome', 'panel_ticket', 'panel_leveling', 'panel_jtc', 'panel_serverstats', 'panel_giveaway', 'panel_shop', 'panel_reactionroles'].includes(i.customId),
                 time: 300_000,
         });
 
@@ -144,6 +146,8 @@ export function openPanel(interaction, client, guildId) {
                         return await giveawayDashboard.execute(btnInteraction, {}, client, onBack);
                     case 'panel_shop':
                         return await shopDashboard.execute(btnInteraction, {}, client, onBack);
+                    case 'panel_reactionroles':
+                        return await openReactionRolesPanel(btnInteraction, onBack);
                 }
             } catch (error) {
                 logger.debug(`Panel module open failed (${btnInteraction.customId}):`, error.message);
