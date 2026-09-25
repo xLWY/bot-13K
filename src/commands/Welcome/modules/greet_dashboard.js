@@ -221,7 +221,7 @@ export default {
                     const errorMessage =
                         error instanceof TitanBotError
                             ? error.userMessage || 'Une erreur est survenue lors du traitement de ta sélection.'
-                            : 'Une erreur inattendue est survenue lors de la mise à jour de la configuration.';
+                            : `Une erreur inattendue est survenue lors de la mise à jour de la configuration. (${error.message})`;
 
                     if (!selectInteraction.replied && !selectInteraction.deferred) {
                         await selectInteraction.deferUpdate().catch(() => {});
@@ -304,12 +304,6 @@ export default {
 // ─── Welcome Channel ──────────────────────────────────────────────────────────
 
 async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, guildId, client) {
-    try {
-        await selectInteraction.deferUpdate();
-    } catch {
-        return;
-    }
-
     const channelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('greet_cfg_welcome_channel')
         .setPlaceholder('Clique ici pour choisir le salon de bienvenue...')
@@ -326,39 +320,34 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
         .setStyle(ButtonStyle.Danger)
         .setEmoji('❌');
 
-    const pickerShown = await InteractionHelper.safeEditReply(rootInteraction, {
-        embeds: [buildDashboardEmbed(cfg, rootInteraction.guild)],
-        components: [
-            ...buildButtonRow(cfg, guildId),
-            new ActionRowBuilder().addComponents(channelSelect),
-            new ActionRowBuilder().addComponents(cancelButton),
-        ],
-    }).catch(() => false);
+    const pickerShown = await selectInteraction
+        .deferReply({ flags: MessageFlags.Ephemeral })
+        .then(() => selectInteraction.editReply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle('🟢 Canal de bienvenue')
+                        .setDescription(
+                            `**Actuel :** ${cfg.channelId ? `<#${cfg.channelId}>` : '`Non défini`'}\n\nSélectionne le salon où les messages de bienvenue seront envoyés.`,
+                        )
+                        .setColor(getColor('info')),
+                ],
+                components: [
+                    new ActionRowBuilder().addComponents(channelSelect),
+                    new ActionRowBuilder().addComponents(cancelButton),
+                ],
+            }))
+        .then(() => true)
+        .catch(error => {
+            logger.error('Welcome channel picker could not be displayed:', error);
+            return false;
+        });
 
     if (!pickerShown) {
-        const fallbackShown = await selectInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('🟢 Canal de bienvenue')
-                .setDescription(
-                    `**Actuel :** ${cfg.channelId ? `<#${cfg.channelId}>` : '`Non défini`'}\n\nSélectionne le canal où les messages de bienvenue seront envoyés.`,
-                )
-                .setColor(getColor('info')),
-        ],
-        components: [
-            new ActionRowBuilder().addComponents(channelSelect),
-            new ActionRowBuilder().addComponents(cancelButton),
-        ],
-        flags: MessageFlags.Ephemeral,
-        }).then(() => true).catch(() => false);
-
-        if (!fallbackShown) {
-            await InteractionHelper.sendErrorNotice(
-                selectInteraction,
-                'Impossible d\'afficher le sélecteur de salon. Réouvre le dashboard et réessaie.',
-            ).catch(() => {});
-            return;
-        }
+        await InteractionHelper.sendErrorNotice(
+            selectInteraction,
+            'Impossible d\'afficher le sélecteur de salon. Réouvre le dashboard et réessaie.',
+        ).catch(() => {});
+        return;
     }
 
     const chanCollector = rootInteraction.channel.createMessageComponentCollector({
@@ -372,6 +361,7 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
     chanCollector.on('collect', async chanInteraction => {
         const acknowledged = await chanInteraction.deferUpdate().then(() => true).catch(() => false);
         if (!acknowledged) return;
+        await chanInteraction.deleteReply().catch(() => {});
         InteractionHelper.armDashboardSession(rootInteraction);
         cancelCollector.stop('selected');
         const channel = chanInteraction.channels.first();
@@ -412,6 +402,7 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
 
     cancelCollector.on('collect', async cancelInteraction => {
         await cancelInteraction.deferUpdate().catch(() => {});
+        await cancelInteraction.deleteReply().catch(() => {});
         InteractionHelper.armDashboardSession(rootInteraction);
         chanCollector.stop('cancelled');
         await InteractionHelper.sendErrorNotice(cancelInteraction, 'Sélection annulée. Le paramètre n\'a pas été modifié.').catch(() => {});
@@ -840,15 +831,6 @@ async function handleAutoRole(selectInteraction, rootInteraction, cfg, guildId, 
 // ─── Salon d'arrivée (channel) ────────────────────────────────────────────────
 
 async function handleArrivalChannel(selectInteraction, rootInteraction, cfg, guildId, client) {
-    const acknowledged = await selectInteraction.deferUpdate().then(() => true).catch(() => false);
-    if (!acknowledged) {
-        logger.warn('Arrival channel selection could not be acknowledged.', {
-            userId: selectInteraction.user.id,
-            guildId,
-        });
-        return;
-    }
-
     const channelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('greet_cfg_arrival_channel')
         .setPlaceholder('Clique ici pour choisir le salon d\'arrivée...')
@@ -865,39 +847,34 @@ async function handleArrivalChannel(selectInteraction, rootInteraction, cfg, gui
         .setStyle(ButtonStyle.Danger)
         .setEmoji('❌');
 
-    const pickerShown = await InteractionHelper.safeEditReply(rootInteraction, {
-        embeds: [buildDashboardEmbed(cfg, rootInteraction.guild)],
-        components: [
-            ...buildButtonRow(cfg, guildId),
-            new ActionRowBuilder().addComponents(channelSelect),
-            new ActionRowBuilder().addComponents(cancelButton),
-        ],
-    }).catch(() => false);
+    const pickerShown = await selectInteraction
+        .deferReply({ flags: MessageFlags.Ephemeral })
+        .then(() => selectInteraction.editReply({
+                embeds: [
+                    new EmbedBuilder()
+                        .setTitle('🚪 Salon d\'arrivée')
+                        .setDescription(
+                            `**Actuel :** ${cfg.arrivalChannelId ? `<#${cfg.arrivalChannelId}>` : '`Non défini`'}\n\nSélectionne le salon où le message « X vient d'arriver » sera posté. Il reste affiché 10 minutes puis disparaît.`,
+                        )
+                        .setColor(getColor('info')),
+                ],
+                components: [
+                    new ActionRowBuilder().addComponents(channelSelect),
+                    new ActionRowBuilder().addComponents(cancelButton),
+                ],
+            }))
+        .then(() => true)
+        .catch(error => {
+            logger.error('Arrival channel picker could not be displayed:', error);
+            return false;
+        });
 
     if (!pickerShown) {
-        const fallbackShown = await selectInteraction.followUp({
-            embeds: [
-                new EmbedBuilder()
-                    .setTitle('🚪 Salon d\'arrivée')
-                    .setDescription(
-                        `**Actuel :** ${cfg.arrivalChannelId ? `<#${cfg.arrivalChannelId}>` : '`Non défini`'}\n\nSélectionne le salon où le message « X vient d'arriver » sera posté. Il reste affiché 10 minutes puis disparaît.`,
-                    )
-                    .setColor(getColor('info')),
-            ],
-            components: [
-                new ActionRowBuilder().addComponents(channelSelect),
-                new ActionRowBuilder().addComponents(cancelButton),
-            ],
-            flags: MessageFlags.Ephemeral,
-        }).then(() => true).catch(() => false);
-
-        if (!fallbackShown) {
-            await InteractionHelper.sendErrorNotice(
-                selectInteraction,
-                'Impossible d\'afficher le sélecteur de salon. Réouvre le dashboard et réessaie.',
-            ).catch(() => {});
-            return;
-        }
+        await InteractionHelper.sendErrorNotice(
+            selectInteraction,
+            'Impossible d\'afficher le sélecteur de salon. Réouvre le dashboard et réessaie.',
+        ).catch(() => {});
+        return;
     }
 
     const chanCollector = rootInteraction.channel.createMessageComponentCollector({
@@ -918,6 +895,7 @@ async function handleArrivalChannel(selectInteraction, rootInteraction, cfg, gui
 
     cancelCollector.on('collect', async cancelInteraction => {
         await cancelInteraction.deferUpdate().catch(() => {});
+        await cancelInteraction.deleteReply().catch(() => {});
         InteractionHelper.armDashboardSession(rootInteraction);
         chanCollector.stop('cancelled');
         await InteractionHelper.sendErrorNotice(cancelInteraction, 'Sélection annulée. Le paramètre n\'a pas été modifié.').catch(() => {});
@@ -927,6 +905,7 @@ async function handleArrivalChannel(selectInteraction, rootInteraction, cfg, gui
     chanCollector.on('collect', async chanInteraction => {
         const acknowledged = await chanInteraction.deferUpdate().then(() => true).catch(() => false);
         if (!acknowledged) return;
+        await chanInteraction.deleteReply().catch(() => {});
         InteractionHelper.armDashboardSession(rootInteraction);
         cancelCollector.stop('selected');
         const channel = chanInteraction.channels.first();
