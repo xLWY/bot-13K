@@ -19,6 +19,7 @@ export function openPanel(interaction, client, guildId) {
     const guild = interaction.guild || client.guilds.cache.get(guildId);
 
     return (async () => {
+        await InteractionHelper.safeDeferOrUpdate(interaction);
         const welcomeConfig = await getWelcomeConfig(client, guildId);
         const guildConfig = await getGuildConfig(client, guildId).catch(() => ({}));
 
