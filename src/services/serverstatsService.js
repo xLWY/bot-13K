@@ -160,6 +160,24 @@ function sanitizeCounters(counters, guildId) {
 
 
 
+export async function resolveCounterChannel(guild, channelId) {
+  if (!guild || !channelId) {
+    return null;
+  }
+
+  const cached = guild.channels.cache.get(channelId);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    return await guild.channels.fetch(channelId);
+  } catch (error) {
+    logger.debug(`Could not fetch channel ${channelId}:`, error.message);
+    return null;
+  }
+}
+
 export async function updateCounter(client, guild, counter, stats) {
   try {
     if (!counter || !counter.type || !counter.channelId) {
@@ -168,10 +186,10 @@ export async function updateCounter(client, guild, counter, stats) {
     }
     
     const { type, channelId } = counter;
-    const channel = guild.channels.cache.get(channelId);
+    const channel = await resolveCounterChannel(guild, channelId);
     if (!channel) {
-      logger.error('Channel not found for counter:', channelId);
-      return false;
+        logger.error('Channel not found for counter:', channelId);
+        return false;
     }
 
     const count = await getCounterCount(guild, type, stats);

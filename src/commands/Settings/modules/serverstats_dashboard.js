@@ -21,6 +21,7 @@ import {
     getCounterEmoji,
     getGuildCounterStats,
     getServerCounters,
+    resolveCounterChannel,
     saveServerCounters,
     updateCounter,
 } from '../../../services/serverstatsService.js';
@@ -83,7 +84,7 @@ async function buildDashboardEmbed(guild, counters, stats) {
         });
     } else {
         for (const counter of counters.slice(0, MAX_LISTED_COUNTERS)) {
-            const channel = guild.channels.cache.get(counter.channelId);
+            const channel = await resolveCounterChannel(guild, counter.channelId);
             const count = await getCounterCount(guild, counter.type, stats);
             fields.push({
                 name: truncate(`📌 Compteur ${getCounterEmoji(counter.type)} ${typeLabel(counter.type)}`, 256),
@@ -135,7 +136,7 @@ function buildButtonRow() {
     );
 }
 
-function buildSelectRow(guild, counters) {
+async function buildSelectRow(guild, counters) {
     if (counters.length === 0) {
         return null;
     }
@@ -145,7 +146,7 @@ function buildSelectRow(guild, counters) {
         .setPlaceholder('Gère un compteur...');
 
     for (const counter of counters.slice(0, MAX_SELECT_OPTIONS)) {
-        const channel = guild.channels.cache.get(counter.channelId);
+        const channel = await resolveCounterChannel(guild, counter.channelId);
         select.addOptions(
             new StringSelectMenuOptionBuilder()
                 .setLabel(truncate(`${getCounterEmoji(counter.type)} ${typeLabel(counter.type)}`, 100))
@@ -157,9 +158,9 @@ function buildSelectRow(guild, counters) {
     return new ActionRowBuilder().addComponents(select);
 }
 
-function buildComponents(guild, counters) {
+async function buildComponents(guild, counters) {
     const rows = [buildButtonRow()];
-    const selectRow = buildSelectRow(guild, counters);
+    const selectRow = await buildSelectRow(guild, counters);
     if (selectRow) {
         rows.push(selectRow);
     }
@@ -182,7 +183,7 @@ async function refreshDashboard(rootInteraction, client) {
         const stats = await getGuildCounterStats(rootInteraction.guild);
         await InteractionHelper.safeEditReply(rootInteraction, {
             embeds: [await buildDashboardEmbed(rootInteraction.guild, counters, stats)],
-            components: buildComponents(rootInteraction.guild, counters),
+            components: await buildComponents(rootInteraction.guild, counters),
             flags: MessageFlags.Ephemeral,
         });
     } catch (error) {
@@ -261,7 +262,7 @@ export default {
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [await buildDashboardEmbed(interaction.guild, counters, stats)],
-                components: buildComponents(interaction.guild, counters),
+                components: await buildComponents(interaction.guild, counters),
                 flags: MessageFlags.Ephemeral,
             });
 
@@ -270,7 +271,7 @@ export default {
                 filter: i =>
                     i.user.id === interaction.user.id &&
                     ['ss_dash_create', 'ss_dash_refresh', 'ss_dash_back'].includes(i.customId),
-                time: 600_000,
+                time: 300_000,
             });
 
             buttonCollector.on('collect', async btnInteraction => {
@@ -305,7 +306,7 @@ export default {
             const selectCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
                 filter: i => i.user.id === interaction.user.id && i.customId === 'ss_dash_select',
-                time: 600_000,
+                time: 300_000,
             });
 
             selectCollector.on('collect', async selectInteraction => {
@@ -317,6 +318,13 @@ export default {
                         await selectInteraction.deferUpdate().catch(() => {});
                     }
                     await InteractionHelper.sendErrorNotice(selectInteraction, 'Impossible de gérer ce compteur. Réessaie.').catch(() => {});
+                }
+            });
+
+            buttonCollector.on('end', async (collected, reason) => {
+                if (reason === 'time') {
+                    selectCollector.stop();
+                    await InteractionHelper.safeDeleteReply(interaction);
                 }
             });
 
@@ -340,7 +348,7 @@ async function runRefresh(btnInteraction, client) {
         if (counter.enabled === false) {
             continue;
         }
-        if (!guild.channels.cache.get(counter.channelId)) {
+        if (!(await resolveCounterChannel(guild, counter.channelId))) {
             missing++;
             continue;
         }
@@ -589,7 +597,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
         return;
     }
 
-    const channel = guild.channels.cache.get(counter.channelId);
+    const channel = await resolveCounterChannel(guild, counter.channelId);
     const stats = await getGuildCounterStats(guild);
     const count = await getCounterCount(guild, counter.type, stats);
     const enabled = counter.enabled !== false;
@@ -667,7 +675,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
         if (itemInteraction.customId === `ss_dash_item_refresh:${counter.id}`) {
             const stats = await getGuildCounterStats(guild);
             const refreshed = await updateCounter(client, guild, counter, stats);
-            const updatedChannel = guild.channels.cache.get(counter.channelId);
+            const updatedChannel = await resolveCounterChannel(guild, counter.channelId);
             await itemInteraction.followUp({
                 embeds: [refreshed
                     ? successEmbed(`\`${formatCount(await getCounterCount(guild, counter.type, stats))}\`\n**Salon :** ${updatedChannel || 'introuvable'}${updatedChannel ? `\n**Nom :** ${updatedChannel.name}` : ''}`, '🔄 Compteur actualisé')

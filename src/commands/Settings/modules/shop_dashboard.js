@@ -142,7 +142,7 @@ export default {
             const backCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.Button,
                 filter: i => i.user.id === interaction.user.id && i.customId === 'shop_cfg_back',
-                time: 600_000,
+                time: 300_000,
             });
 
             backCollector.on('collect', async btnInteraction => {
@@ -156,10 +156,16 @@ export default {
                 }
             });
 
+            backCollector.on('end', async (collected, reason) => {
+                if (reason === 'time') {
+                    await InteractionHelper.safeDeleteReply(interaction);
+                }
+            });
+
             const catCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
                 filter: i => i.user.id === interaction.user.id && i.customId === 'shop_cfg_category',
-                time: 600_000,
+                time: 300_000,
             });
 
             catCollector.on('collect', async selectInteraction => {
@@ -182,7 +188,7 @@ export default {
             const itemCollector = interaction.channel.createMessageComponentCollector({
                 componentType: ComponentType.StringSelect,
                 filter: i => i.user.id === interaction.user.id && i.customId === 'shop_cfg_item',
-                time: 600_000,
+                time: 300_000,
             });
 
             itemCollector.on('collect', async selectInteraction => {
@@ -201,7 +207,7 @@ export default {
                 filter: i =>
                     i.user.id === interaction.user.id &&
                     ['shop_cfg_prev', 'shop_cfg_next'].includes(i.customId),
-                time: 600_000,
+                time: 300_000,
             });
 
             navCollector.on('collect', async navInteraction => {

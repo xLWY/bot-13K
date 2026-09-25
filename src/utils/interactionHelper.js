@@ -228,6 +228,27 @@ if (error.code === 40060) {
         }
     }
 
+    static async safeDeleteReply(interaction) {
+        try {
+            if (interaction.message?.deletable) {
+                await interaction.message.delete();
+                return true;
+            }
+
+            if (interaction.replied || interaction.deferred) {
+                const message = await interaction.fetchReply().catch(() => null);
+                if (message?.deletable) {
+                    await message.delete();
+                    return true;
+                }
+            }
+        } catch (error) {
+            logger.debug('Failed to delete panel message:', error.message);
+        }
+
+        return false;
+    }
+
     static async sendErrorNotice(interaction, text) {
         if (!this.isInteractionValid(interaction)) {
             logger.warn(`Interaction ${interaction.id} is invalid for sendErrorNotice, ignoring`);

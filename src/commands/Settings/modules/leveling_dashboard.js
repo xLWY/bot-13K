@@ -103,7 +103,7 @@ export default {
                 filter: i =>
                     i.user.id === interaction.user.id &&
                     ['lvl_cfg_enable', 'lvl_cfg_channel', 'lvl_cfg_xp', 'lvl_cfg_cooldown', 'lvl_cfg_announce', 'lvl_cfg_back'].includes(i.customId),
-                time: 600_000,
+                time: 300_000,
             });
 
             collector.on('collect', async btnInteraction => {
@@ -148,6 +148,12 @@ export default {
                         await btnInteraction.deferUpdate().catch(() => {});
                     }
                     await InteractionHelper.sendErrorNotice(btnInteraction, errorMessage).catch(() => {});
+                }
+            });
+
+            collector.on('end', async (collected, reason) => {
+                if (reason === 'time') {
+                    await InteractionHelper.safeDeleteReply(interaction);
                 }
             });
         } catch (error) {

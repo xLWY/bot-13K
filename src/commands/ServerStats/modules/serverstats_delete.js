@@ -1,7 +1,7 @@
 import { getColor } from '../../../config/bot.js';
 import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { createEmbed } from '../../../utils/embeds.js';
-import { getServerCounters, saveServerCounters, getCounterEmoji, getCounterTypeLabel } from '../../../services/serverstatsService.js';
+import { getServerCounters, saveServerCounters, getCounterEmoji, getCounterTypeLabel, resolveCounterChannel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
 
@@ -42,7 +42,7 @@ export async function handleDelete(interaction, client) {
             return;
         }
 
-        const channel = guild.channels.cache.get(counterToDelete.channelId);
+        const channel = await resolveCounterChannel(guild, counterToDelete.channelId);
 
         const embed = createEmbed({
             title: "⚠️ Supprimer le compteur et le salon",
@@ -97,7 +97,7 @@ export async function performDeletionByCounterId(client, guild, counterId) {
             };
         }
 
-        const channel = guild.channels.cache.get(counter.channelId);
+        const channel = await resolveCounterChannel(guild, counter.channelId);
         let channelDeleted = false;
 
         if (channel) {

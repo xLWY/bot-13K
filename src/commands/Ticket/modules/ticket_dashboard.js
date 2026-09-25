@@ -244,7 +244,7 @@ export default {
                     i.user.id === interaction.user.id &&
                     i.customId === `ticket_config_${guildId}` &&
                     (!replyMessageId || i.message.id === replyMessageId),
-                time: 600_000,
+                time: 300_000,
             });
 
             const buttonCollector = interaction.channel.createMessageComponentCollector({
@@ -257,7 +257,7 @@ export default {
                         i.customId === `ticket_cfg_delete_${guildId}` ||
                         i.customId === `ticket_cfg_back`),
 
-                time: 600_000,
+                time: 300_000,
             });
 
             collector.on('collect', async (selectInteraction) => {
@@ -346,7 +346,7 @@ export default {
             collector.on('end', async (collected, reason) => {
                 buttonCollector.stop();
                 if (reason === 'time') {
-                    await InteractionHelper.sendErrorNotice(interaction, 'Ce tableau de bord a été fermé pour inactivité. Relancez la commande pour continuer.');
+                    await InteractionHelper.safeDeleteReply(interaction);
                 }
             });
         } catch (error) {

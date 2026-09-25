@@ -183,7 +183,7 @@ export default {
                 componentType: ComponentType.StringSelect,
                 filter: i =>
                     i.user.id === interaction.user.id && i.customId === `greet_cfg_${guildId}`,
-                time: 600_000,
+                time: 300_000,
             });
 
             collector.on('collect', async selectInteraction => {
@@ -237,7 +237,7 @@ export default {
                     (i.customId === `greet_cfg_toggle_welcome_${guildId}` ||
                         i.customId === `greet_cfg_ping_welcome_${guildId}` ||
                         i.customId === `greet_cfg_back`),
-                time: 600_000,
+                time: 300_000,
             });
 
             btnCollector.on('collect', async btnInteraction => {
@@ -286,20 +286,7 @@ export default {
             collector.on('end', async (collected, reason) => {
                 if (reason === 'time') {
                     btnCollector.stop();
-                    try {
-                        await InteractionHelper.safeEditReply(interaction, {
-                            embeds: [
-                                new EmbedBuilder()
-                                    .setTitle('⏰ Tableau de bord expiré')
-                                    .setDescription('Ce tableau de bord a été fermé en raison d\'une inactivité. Relance la commande pour continuer.')
-                                    .setColor(getColor('error'))
-                            ],
-                            components: [],
-                            flags: MessageFlags.Ephemeral,
-                        });
-                    } catch (error) {
-                        logger.debug('Could not update dashboard on timeout:', error.message);
-                    }
+                    await InteractionHelper.safeDeleteReply(interaction);
                 }
             });
         } catch (error) {

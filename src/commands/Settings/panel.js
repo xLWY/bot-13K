@@ -111,7 +111,7 @@ export function openPanel(interaction, client, guildId) {
             filter: i =>
                 i.user.id === interaction.user.id &&
                 ['panel_welcome', 'panel_ticket', 'panel_leveling', 'panel_serverstats', 'panel_giveaway', 'panel_shop'].includes(i.customId),
-            time: 600_000,
+                time: 300_000,
         });
 
         const onBack = (backInteraction) => openPanel(backInteraction, client, guildId);
@@ -140,18 +140,7 @@ export function openPanel(interaction, client, guildId) {
 
         collector.on('end', async (collected, reason) => {
             if (reason === 'time') {
-                try {
-                    await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [new EmbedBuilder()
-                            .setTitle('⏰ Panneau expiré')
-                            .setDescription('Ce panneau a été fermé après 10 minutes d\'inactivité. Relance `/panel` pour continuer.')
-                            .setColor(getColor('error'))],
-                        components: [],
-                        flags: MessageFlags.Ephemeral,
-                    });
-                } catch (error) {
-                    logger.debug('Could not update panel on timeout:', error.message);
-                }
+                await InteractionHelper.safeDeleteReply(interaction);
             }
         });
     })();

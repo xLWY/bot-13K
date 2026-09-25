@@ -1,7 +1,7 @@
 import { getColor } from '../../../config/bot.js';
 import { PermissionFlagsBits } from 'discord.js';
 import { createEmbed } from '../../../utils/embeds.js';
-import { getServerCounters, saveServerCounters, getCounterEmoji as getCounterTypeEmoji, getCounterTypeLabel, getGuildCounterStats } from '../../../services/serverstatsService.js';
+import { getServerCounters, saveServerCounters, getCounterEmoji as getCounterTypeEmoji, getCounterTypeLabel, getGuildCounterStats, resolveCounterChannel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
 
@@ -34,11 +34,13 @@ export async function handleList(interaction, client) {
         // Clean up counters with deleted channels
         const validCounters = [];
         const orphanedCounters = [];
-        
+        const channelById = new Map();
+
         for (const counter of counters) {
-            const channel = guild.channels.cache.get(counter.channelId);
+            const channel = await resolveCounterChannel(guild, counter.channelId);
             if (channel) {
                 validCounters.push(counter);
+                channelById.set(counter.channelId, channel);
             } else {
                 orphanedCounters.push(counter);
                 logger.info(`Removing orphaned counter ${counter.id} (type: ${counter.type}, deleted channel: ${counter.channelId}) from guild ${guild.id}`);
@@ -86,7 +88,7 @@ export async function handleList(interaction, client) {
 
         for (let i = 0; i < validCounters.length; i++) {
             const counter = validCounters[i];
-            const channel = guild.channels.cache.get(counter.channelId);
+            const channel = channelById.get(counter.channelId);
             
             if (!channel) {
                 // This should not happen since we filtered above, but keep as safety check
@@ -107,7 +109,7 @@ export async function handleList(interaction, client) {
         embed.addFields({
             name: "📊 **Statistiques**",
             value: `**Total de compteurs :** ${validCounters.length}\n**Compteurs actifs :** ${validCounters.filter(c => {
-                const channel = guild.channels.cache.get(c.channelId);
+                const channel = channelById.get(c.channelId);
                 return channel && channel.name.includes(':');
             }).length}\n**Prochaine actualisation :** <t:${Math.floor(Date.now() / 1000) + 900}:R>`,
             inline: false

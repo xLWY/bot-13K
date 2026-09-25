@@ -116,7 +116,7 @@ export default {
                 filter: i =>
                     i.user.id === interaction.user.id &&
                     ['gw_cfg_create', 'gw_cfg_end', 'gw_cfg_delete', 'gw_cfg_back'].includes(i.customId),
-                time: 600_000,
+                time: 300_000,
             });
 
             collector.on('collect', async btnInteraction => {
@@ -142,6 +142,12 @@ export default {
                 } catch (error) {
                     logger.debug(`Giveaway dashboard action failed (${id}):`, error.message);
                     await InteractionHelper.sendErrorNotice(btnInteraction, 'Une erreur est survenue lors de cette action. Réessaie.').catch(() => {});
+                }
+            });
+
+            collector.on('end', async (collected, reason) => {
+                if (reason === 'time') {
+                    await InteractionHelper.safeDeleteReply(interaction);
                 }
             });
         } catch (error) {

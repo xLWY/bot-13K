@@ -1,6 +1,6 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { successEmbed } from '../../../utils/embeds.js';
-import { getServerCounters, saveServerCounters, updateCounter, getCounterEmoji, getCounterTypeLabel } from '../../../services/serverstatsService.js';
+import { getServerCounters, saveServerCounters, updateCounter, getCounterEmoji, getCounterTypeLabel, resolveCounterChannel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
 
@@ -43,7 +43,7 @@ export async function handleUpdate(interaction, client) {
         }
 
         const counter = counters[counterIndex];
-        const oldChannel = guild.channels.cache.get(counter.channelId);
+        const oldChannel = await resolveCounterChannel(guild, counter.channelId);
 
         if (!oldChannel) {
             await InteractionHelper.sendErrorNotice(interaction, "Le salon de ce compteur n'existe plus. Tu ne peux pas mettre à jour un compteur dont le salon a été supprimé.").catch(logger.error);
@@ -53,7 +53,7 @@ export async function handleUpdate(interaction, client) {
         if (newType !== counter.type) {
             const existingTypeCounter = counters.find(c => c.type === newType && c.id !== counter.id);
             if (existingTypeCounter) {
-                const existingChannel = guild.channels.cache.get(existingTypeCounter.channelId);
+                const existingChannel = await resolveCounterChannel(guild, existingTypeCounter.channelId);
                 await InteractionHelper.sendErrorNotice(interaction, `Un compteur **${getCounterTypeLabel(newType)}** existe déjà pour ce serveur${existingChannel ? ` dans ${existingChannel}` : ''}. Supprime-le d'abord avant de réutiliser ce type.`).catch(logger.error);
                 return;
             }
