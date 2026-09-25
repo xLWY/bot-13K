@@ -43,7 +43,12 @@ export function openPanel(interaction, client, guildId) {
             ? (guild.channels.cache.get(guildConfig.ticketPanelChannelId) ? `<#${guildConfig.ticketPanelChannelId}>` : '`⚠️ Introuvable`')
             : '`Non configuré`';
         const levelingStatus = leveling?.enabled ? '✅ Activé' : '❌ Désactivé';
-        const jtcStatus = jtc?.enabled && jtc?.triggerChannels?.length ? `✅ ${jtc.triggerChannels.length} salon(s)` : '❌ Désactivé';
+        const jtcTriggerList = Array.isArray(jtc?.triggerChannels)
+            ? jtc.triggerChannels
+            : (jtc?.triggerChannels ? [jtc.triggerChannels] : []);
+        const jtcStatus = (jtc?.enabled === true || jtc?.enabled === 'true') && jtcTriggerList.length
+            ? `✅ ${jtcTriggerList.length} salon(s)`
+            : '❌ Désactivé';
         const counterStatus = counterList.length ? `✅ ${counterList.length} compteur(s)` : '❌ Aucun';
         const rrStatus = rrList.length ? `✅ ${rrList.length} message(s)` : '❌ Aucun';
 

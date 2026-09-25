@@ -34,10 +34,23 @@ const TRIGGER_CHANNEL_NAME = '➕ Créer votre salon';
 const PICKER_TIME = 300_000;
 const MODAL_TIME = 120_000;
 
+function normalizeTriggerList(cfg) {
+    const raw = cfg?.triggerChannels;
+    if (Array.isArray(raw)) return raw.filter(Boolean);
+    if (typeof raw === 'string' && raw.trim()) return [raw.trim()];
+    if (raw && typeof raw === 'object') {
+        return Object.values(raw).filter(value => typeof value === 'string' && value);
+    }
+    return [];
+}
+
 function getTriggerId(cfg) {
-    return Array.isArray(cfg?.triggerChannels) && cfg.triggerChannels.length > 0
-        ? cfg.triggerChannels[0]
-        : null;
+    const triggers = normalizeTriggerList(cfg);
+    return triggers.length > 0 ? triggers[0] : null;
+}
+
+function isFeatureEnabled(cfg) {
+    return cfg?.enabled === true || cfg?.enabled === 'true';
 }
 
 function resolveTriggerOptions(cfg, triggerId) {
@@ -85,31 +98,47 @@ async function sendNotice(interaction, text) {
 
 async function syncTriggers(guild, client, guildId) {
     const cfg = await getConfiguration(client, guildId);
-    const triggers = Array.isArray(cfg.triggerChannels) ? cfg.triggerChannels : [];
+    const triggers = normalizeTriggerList(cfg);
     if (triggers.length === 0) return cfg;
 
     const alive = [];
     for (const triggerId of triggers) {
-        const channel = guild.channels.cache.get(triggerId)
-            || await guild.channels.fetch(triggerId).catch(() => null);
-        if (channel) alive.push(triggerId);
+        const cached = guild.channels.cache.get(triggerId);
+        if (cached) {
+            alive.push(triggerId);
+            continue;
+        }
+
+        const fetched = await guild.channels.fetch(triggerId).then(channel => ({ channel })).catch(error => ({ error }));
+        if (fetched.channel) {
+            alive.push(triggerId);
+            continue;
+        }
+
+        if (fetched.error?.code === 10003) {
+            logger.info(`Removing stale Join to Create trigger ${triggerId} from guild ${guildId}`);
+            await removeTriggerChannel(client, guildId, triggerId).catch(() => {});
+        } else {
+            alive.push(triggerId);
+        }
     }
 
     if (alive.length === triggers.length) return cfg;
 
-    for (const triggerId of triggers) {
-        if (!alive.includes(triggerId)) {
-            await removeTriggerChannel(client, guildId, triggerId).catch(() => {});
-        }
-    }
-
     return getConfiguration(client, guildId);
 }
 
-function buildDashboardEmbed(cfg, guild) {
+async function resolveTriggerChannel(guild, triggerId) {
+    if (!triggerId) return null;
+    const cached = guild.channels.cache.get(triggerId);
+    if (cached) return cached;
+    return await guild.channels.fetch(triggerId).catch(() => null);
+}
+
+async function buildDashboardEmbed(cfg, guild) {
     const triggerId = getTriggerId(cfg);
     const options = resolveTriggerOptions(cfg, triggerId);
-    const triggerChannel = triggerId ? guild.channels.cache.get(triggerId) : null;
+    const triggerChannel = await resolveTriggerChannel(guild, triggerId);
     const category = triggerChannel?.parentId ? `<#${triggerChannel.parentId}>` : '`Aucune`';
     const temporaryCount = Object.keys(cfg?.temporaryChannels || {}).length;
 
@@ -117,15 +146,17 @@ function buildDashboardEmbed(cfg, guild) {
         .setTitle('🔊 Tableau de bord des salons vocaux temporaires')
         .setDescription(
             triggerId
-                ? `Quand un membre rejoint **${triggerChannel || 'le salon déclencheur'}**, le bot lui crée un salon vocal personnel qu\'il peut.rename, verrouiller ou supprimer.`
+                ? `Quand un membre rejoint **<#${triggerId}>**, le bot lui crée un salon vocal personnel qu\'il peut renommer, verrouiller ou supprimer.`
                 : 'Aucun salon déclencheur pour l\'instant. Crée-le pour activer la création automatique de salons vocaux personnels.',
         )
         .setColor(triggerId ? getColor('info') : getColor('warning'))
         .addFields(
-            { name: '⚙️ Statut', value: cfg.enabled ? '✅ Activé' : '❌ Désactivé', inline: true },
+            { name: '⚙️ Statut', value: isFeatureEnabled(cfg) ? '✅ Activé' : '❌ Désactivé', inline: true },
             {
                 name: '🚪 Salon déclencheur',
-                value: triggerId ? `${triggerChannel || `⚠️ Introuvable (${triggerId})`}` : '`Non créé`',
+                value: triggerId
+                    ? (triggerChannel ? `<#${triggerId}>` : `⚠️ Configuré mais introuvable (\`${triggerId}\`)`)
+                    : '`Non créé`',
                 inline: true,
             },
             { name: '📁 Catégorie', value: category, inline: true },
@@ -145,14 +176,15 @@ function buildDashboardEmbed(cfg, guild) {
 
 function buildButtonRows(cfg) {
     const triggerId = getTriggerId(cfg);
+    const enabled = isFeatureEnabled(cfg);
     const rows = [];
 
     const stateRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('jtc_dash_toggle')
-            .setLabel(cfg.enabled ? 'Désactiver' : 'Activer')
+            .setLabel(enabled ? 'Désactiver' : 'Activer')
             .setEmoji('⚙️')
-            .setStyle(cfg.enabled ? ButtonStyle.Danger : ButtonStyle.Success)
+            .setStyle(enabled ? ButtonStyle.Danger : ButtonStyle.Success)
             .setDisabled(!triggerId),
     );
 
@@ -178,6 +210,14 @@ function buildButtonRows(cfg) {
                 .setStyle(ButtonStyle.Success),
         );
     }
+
+    stateRow.addComponents(
+        new ButtonBuilder()
+            .setCustomId('jtc_dash_refresh')
+            .setLabel('Actualiser')
+            .setEmoji('🔄')
+            .setStyle(ButtonStyle.Primary),
+    );
     rows.push(stateRow);
 
     rows.push(
@@ -249,7 +289,7 @@ async function refreshDashboard(rootInteraction, client, guildId) {
     try {
         const cfg = await getConfiguration(client, guildId);
         await InteractionHelper.safeEditReply(rootInteraction, {
-            embeds: [buildDashboardEmbed(cfg, rootInteraction.guild)],
+            embeds: [await buildDashboardEmbed(cfg, rootInteraction.guild)],
             components: buildButtonRows(cfg),
         });
     } catch (error) {
@@ -431,7 +471,7 @@ async function openCategoryPicker(btnInteraction, rootInteraction, client, guild
                 embeds: [
                     successEmbed(
                         '✅ Salon déclencheur créé',
-                        `${triggerChannel} a été créé. Chaque membre qui le rejoint obtient son propre salon vocal.`,
+                        `<#${triggerChannel.id}> a été créé. Chaque membre qui le rejoint obtient son propre salon vocal.`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,
@@ -477,11 +517,12 @@ async function handleToggle(btnInteraction, client, guildId) {
         );
     }
 
-    await updateJoinToCreateConfig(client, guildId, { enabled: !cfg.enabled });
+    const isEnabled = cfg.enabled === true || cfg.enabled === 'true';
+    await updateJoinToCreateConfig(client, guildId, { enabled: !isEnabled });
 
     await sendNotice(
         btnInteraction,
-        `Les salons vocaux temporaires sont **${cfg.enabled ? 'désactivés' : 'activés'}**.`,
+        `Les salons vocaux temporaires sont **${isEnabled ? 'désactivés' : 'activés'}**.`,
     ).catch(() => {});
 }
 
@@ -879,7 +920,7 @@ async function handleDelete(btnInteraction, rootInteraction, client, guildId) {
                     new EmbedBuilder()
                         .setTitle('🗑️ Supprimer le salon déclencheur ?')
                         .setDescription(
-                            `Le salon **${triggerChannel || triggerId}** ne créera plus de salon vocal.\n\nLe salon lui-même **n'est pas supprimé**, seul le lien avec le bot est coupé.`,
+                            `Le salon **${triggerChannel ? `<#${triggerChannel.id}>` : `\`${triggerId}\``}** ne créera plus de salon vocal.\n\nLe salon lui-même **n'est pas supprimé**, seul le lien avec le bot est coupé.`,
                         )
                         .setColor(getColor('warning')),
                 ],
@@ -971,7 +1012,7 @@ export default {
             const cfg = await syncTriggers(interaction.guild, client, guildId);
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [buildDashboardEmbed(cfg, interaction.guild)],
+                embeds: [await buildDashboardEmbed(cfg, interaction.guild)],
                 components: buildButtonRows(cfg),
             });
 
@@ -998,6 +1039,9 @@ export default {
                     switch (btnInteraction.customId) {
                         case 'jtc_dash_toggle':
                             await handleToggle(btnInteraction, client, guildId);
+                            break;
+                        case 'jtc_dash_refresh':
+                            await sendNotice(btnInteraction, 'Configuration rechargée depuis la base de données.').catch(() => {});
                             break;
                         case 'jtc_dash_create':
                             await handleCreate(btnInteraction, interaction, client, guildId);
