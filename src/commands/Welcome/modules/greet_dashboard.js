@@ -312,11 +312,31 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
 
     const channelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('greet_cfg_welcome_channel')
-        .setPlaceholder('Sélectionne un canal texte...')
+        .setPlaceholder('Clique ici pour choisir le salon de bienvenue...')
         .addChannelTypes(ChannelType.GuildText)
         .setMaxValues(1);
 
-    await selectInteraction.followUp({
+    if (cfg.channelId) {
+        channelSelect.setDefaultValues([cfg.channelId]);
+    }
+
+    const cancelButton = new ButtonBuilder()
+        .setCustomId('greet_cfg_welcome_channel_cancel')
+        .setLabel('Annuler')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('❌');
+
+    const pickerShown = await InteractionHelper.safeEditReply(rootInteraction, {
+        embeds: [buildDashboardEmbed(cfg, rootInteraction.guild)],
+        components: [
+            ...buildButtonRow(cfg, guildId),
+            new ActionRowBuilder().addComponents(channelSelect),
+            new ActionRowBuilder().addComponents(cancelButton),
+        ],
+    }).catch(() => false);
+
+    if (!pickerShown) {
+        const fallbackShown = await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
                 .setTitle('🟢 Canal de bienvenue')
@@ -325,9 +345,21 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
                 )
                 .setColor(getColor('info')),
         ],
-        components: [new ActionRowBuilder().addComponents(channelSelect)],
+        components: [
+            new ActionRowBuilder().addComponents(channelSelect),
+            new ActionRowBuilder().addComponents(cancelButton),
+        ],
         flags: MessageFlags.Ephemeral,
-    });
+        }).then(() => true).catch(() => false);
+
+        if (!fallbackShown) {
+            await InteractionHelper.sendErrorNotice(
+                selectInteraction,
+                'Impossible d\'afficher le sélecteur de salon. Réouvre le dashboard et réessaie.',
+            ).catch(() => {});
+            return;
+        }
+    }
 
     const chanCollector = rootInteraction.channel.createMessageComponentCollector({
         componentType: ComponentType.ChannelSelect,
@@ -338,16 +370,29 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
     });
 
     chanCollector.on('collect', async chanInteraction => {
-        await chanInteraction.deferUpdate();
+        const acknowledged = await chanInteraction.deferUpdate().then(() => true).catch(() => false);
+        if (!acknowledged) return;
+        InteractionHelper.armDashboardSession(rootInteraction);
+        cancelCollector.stop('selected');
         const channel = chanInteraction.channels.first();
 
+        if (!channel) {
+            await InteractionHelper.sendErrorNotice(chanInteraction, 'Salon introuvable. Choisis un salon texte accessible.').catch(() => {});
+            return;
+        }
+
         if (!botHasPermission(channel, ['ViewChannel', 'SendMessages', 'EmbedLinks'])) {
-            await InteractionHelper.sendErrorNotice(chanInteraction, `J\'ai besoin des permissions **Voir le canal**, **Envoyer des messages** et **Intégrer des liens** dans ${channel}.`);
+            await InteractionHelper.sendErrorNotice(chanInteraction, `J\'ai besoin des permissions **Voir le canal**, **Envoyer des messages** et **Intégrer des liens** dans ${channel}.`).catch(() => {});
             return;
         }
 
         cfg.channelId = channel.id;
-        await saveWelcomeConfig(client, guildId, cfg);
+        const saved = await saveWelcomeConfig(client, guildId, cfg);
+
+        if (!saved) {
+            await InteractionHelper.sendErrorNotice(chanInteraction, 'La configuration n\'a pas pu être enregistrée. Réessaie dans un instant.').catch(() => {});
+            return;
+        }
 
         await chanInteraction.followUp({
             embeds: [successEmbed('✅ Canal mis à jour', `Les messages de bienvenue seront désormais envoyés dans ${channel}.`)],
@@ -357,10 +402,28 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
         await refreshDashboard(rootInteraction, cfg, guildId);
     });
 
+    const cancelCollector = rootInteraction.channel.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: i =>
+            i.user.id === selectInteraction.user.id && i.customId === 'greet_cfg_welcome_channel_cancel',
+        time: 300_000,
+        max: 1,
+    });
+
+    cancelCollector.on('collect', async cancelInteraction => {
+        await cancelInteraction.deferUpdate().catch(() => {});
+        InteractionHelper.armDashboardSession(rootInteraction);
+        chanCollector.stop('cancelled');
+        await InteractionHelper.sendErrorNotice(cancelInteraction, 'Sélection annulée. Le paramètre n\'a pas été modifié.').catch(() => {});
+        await refreshDashboard(rootInteraction, cfg, guildId);
+    });
+
     chanCollector.on('end', (collected, reason) => {
+        cancelCollector.stop(reason);
         if (reason === 'time' && collected.size === 0) {
-            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun canal n\'a été sélectionné. Le paramètre n\'a pas été modifié.')
+            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun salon n\'a été sélectionné. Le paramètre n\'a pas été modifié.')
                 .catch(() => {});
+            refreshDashboard(rootInteraction, cfg, guildId).catch(() => {});
         }
     });
 }
@@ -777,17 +840,24 @@ async function handleAutoRole(selectInteraction, rootInteraction, cfg, guildId, 
 // ─── Salon d'arrivée (channel) ────────────────────────────────────────────────
 
 async function handleArrivalChannel(selectInteraction, rootInteraction, cfg, guildId, client) {
-    try {
-        await selectInteraction.deferUpdate();
-    } catch {
+    const acknowledged = await selectInteraction.deferUpdate().then(() => true).catch(() => false);
+    if (!acknowledged) {
+        logger.warn('Arrival channel selection could not be acknowledged.', {
+            userId: selectInteraction.user.id,
+            guildId,
+        });
         return;
     }
 
     const channelSelect = new ChannelSelectMenuBuilder()
         .setCustomId('greet_cfg_arrival_channel')
-        .setPlaceholder('Sélectionne un canal texte...')
+        .setPlaceholder('Clique ici pour choisir le salon d\'arrivée...')
         .addChannelTypes(ChannelType.GuildText)
         .setMaxValues(1);
+
+    if (cfg.arrivalChannelId) {
+        channelSelect.setDefaultValues([cfg.arrivalChannelId]);
+    }
 
     const cancelButton = new ButtonBuilder()
         .setCustomId('greet_cfg_arrival_channel_cancel')
@@ -795,21 +865,40 @@ async function handleArrivalChannel(selectInteraction, rootInteraction, cfg, gui
         .setStyle(ButtonStyle.Danger)
         .setEmoji('❌');
 
-    await selectInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('🚪 Salon d\'arrivée')
-                .setDescription(
-                    `**Actuel :** ${cfg.arrivalChannelId ? `<#${cfg.arrivalChannelId}>` : '`Non défini`'}\n\nSélectionne le salon où le message « X vient d'arriver » sera posté. Il reste affiché 10 minutes puis disparaît.`,
-                )
-                .setColor(getColor('info')),
-        ],
+    const pickerShown = await InteractionHelper.safeEditReply(rootInteraction, {
+        embeds: [buildDashboardEmbed(cfg, rootInteraction.guild)],
         components: [
+            ...buildButtonRow(cfg, guildId),
             new ActionRowBuilder().addComponents(channelSelect),
             new ActionRowBuilder().addComponents(cancelButton),
         ],
-        flags: MessageFlags.Ephemeral,
-    });
+    }).catch(() => false);
+
+    if (!pickerShown) {
+        const fallbackShown = await selectInteraction.followUp({
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle('🚪 Salon d\'arrivée')
+                    .setDescription(
+                        `**Actuel :** ${cfg.arrivalChannelId ? `<#${cfg.arrivalChannelId}>` : '`Non défini`'}\n\nSélectionne le salon où le message « X vient d'arriver » sera posté. Il reste affiché 10 minutes puis disparaît.`,
+                    )
+                    .setColor(getColor('info')),
+            ],
+            components: [
+                new ActionRowBuilder().addComponents(channelSelect),
+                new ActionRowBuilder().addComponents(cancelButton),
+            ],
+            flags: MessageFlags.Ephemeral,
+        }).then(() => true).catch(() => false);
+
+        if (!fallbackShown) {
+            await InteractionHelper.sendErrorNotice(
+                selectInteraction,
+                'Impossible d\'afficher le sélecteur de salon. Réouvre le dashboard et réessaie.',
+            ).catch(() => {});
+            return;
+        }
+    }
 
     const chanCollector = rootInteraction.channel.createMessageComponentCollector({
         componentType: ComponentType.ChannelSelect,
@@ -829,22 +918,36 @@ async function handleArrivalChannel(selectInteraction, rootInteraction, cfg, gui
 
     cancelCollector.on('collect', async cancelInteraction => {
         await cancelInteraction.deferUpdate().catch(() => {});
+        InteractionHelper.armDashboardSession(rootInteraction);
         chanCollector.stop('cancelled');
-        await InteractionHelper.sendErrorNotice(cancelInteraction, 'Sélection annulée. Le paramètre n\'a pas été modifié.');
+        await InteractionHelper.sendErrorNotice(cancelInteraction, 'Sélection annulée. Le paramètre n\'a pas été modifié.').catch(() => {});
+        await refreshDashboard(rootInteraction, cfg, guildId);
     });
 
     chanCollector.on('collect', async chanInteraction => {
-        await chanInteraction.deferUpdate();
+        const acknowledged = await chanInteraction.deferUpdate().then(() => true).catch(() => false);
+        if (!acknowledged) return;
+        InteractionHelper.armDashboardSession(rootInteraction);
         cancelCollector.stop('selected');
         const channel = chanInteraction.channels.first();
 
+        if (!channel) {
+            await InteractionHelper.sendErrorNotice(chanInteraction, 'Salon introuvable. Choisis un salon texte accessible.').catch(() => {});
+            return;
+        }
+
         if (!botHasPermission(channel, ['ViewChannel', 'SendMessages'])) {
-            await InteractionHelper.sendErrorNotice(chanInteraction, `J\'ai besoin des permissions **Voir le canal** et **Envoyer des messages** dans ${channel}.`);
+            await InteractionHelper.sendErrorNotice(chanInteraction, `J\'ai besoin des permissions **Voir le canal** et **Envoyer des messages** dans ${channel}.`).catch(() => {});
             return;
         }
 
         cfg.arrivalChannelId = channel.id;
-        await saveWelcomeConfig(client, guildId, cfg);
+        const saved = await saveWelcomeConfig(client, guildId, cfg);
+
+        if (!saved) {
+            await InteractionHelper.sendErrorNotice(chanInteraction, 'La configuration n\'a pas pu être enregistrée. Réessaie dans un instant.').catch(() => {});
+            return;
+        }
 
         await chanInteraction.followUp({
             embeds: [successEmbed('✅ Salon d\'arrivée mis à jour', `Les messages « X vient d'arriver » seront postés dans ${channel} pendant 10 minutes.`)],
@@ -859,6 +962,7 @@ async function handleArrivalChannel(selectInteraction, rootInteraction, cfg, gui
         if (reason === 'time' && collected.size === 0) {
             InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun salon n\'a été sélectionné. Le paramètre n\'a pas été modifié.')
                 .catch(() => {});
+            refreshDashboard(rootInteraction, cfg, guildId).catch(() => {});
         }
     });
 }
