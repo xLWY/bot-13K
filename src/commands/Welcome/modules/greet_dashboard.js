@@ -24,6 +24,7 @@ import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getWelcomeConfig, saveWelcomeConfig } from '../../../utils/database.js';
 import { botHasPermission } from '../../../utils/permissionGuard.js';
+import { formatWelcomeMessage } from '../../../utils/welcome.js';
 
 // ─── Embed & Menu Builders ────────────────────────────────────────────────────
 
@@ -404,12 +405,103 @@ async function handleWelcomeMessage(selectInteraction, rootInteraction, cfg, gui
     cfg.welcomeMessage = submitted.fields.getTextInputValue('message_input').trim();
     await saveWelcomeConfig(client, guildId, cfg);
 
+    const liveUpdated = await updateLiveWelcomeMessage(client, rootInteraction.guild, cfg);
+
     await submitted.reply({
-        embeds: [successEmbed('✅ Message de bienvenue mis à jour', 'Le message de bienvenue a été enregistré.')],
+        embeds: [
+            successEmbed(
+                '✅ Message de bienvenue mis à jour',
+                liveUpdated
+                    ? 'Le message a été enregistré et le message déjà envoyé dans le salon a été modifié sur place.'
+                    : 'Le message a été enregistré. Aucun message envoyé précédemment n\'a été trouvé à modifier.',
+            ),
+        ],
         flags: MessageFlags.Ephemeral,
     });
 
     await refreshDashboard(rootInteraction, cfg, guildId);
+}
+
+// ─── Live Welcome Message ─────────────────────────────────────────────────────
+
+async function findLiveWelcomeMessage(client, guild, channelId) {
+    if (!channelId) {
+        return null;
+    }
+
+    const channel =
+        guild.channels.cache.get(channelId) ||
+        (await guild.channels.fetch(channelId).catch(() => null));
+
+    if (!channel) {
+        return null;
+    }
+
+    const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+    if (!messages) {
+        return null;
+    }
+
+    const candidates = [...messages.values()].filter(
+        (m) => m.author.id === client.user.id && m.embeds.length > 0,
+    );
+
+    if (candidates.length === 0) {
+        return null;
+    }
+
+    const welcomeLike = candidates.find((m) =>
+        /bienvenue|arriv/i.test(`${m.embeds[0]?.title || ''} ${m.embeds[0]?.description || ''}`),
+    );
+
+    if (welcomeLike) {
+        return welcomeLike;
+    }
+
+    return candidates.find((m) => m.embeds[0]?.thumbnail?.url) || null;
+}
+
+async function updateLiveWelcomeMessage(client, guild, cfg) {
+    if (!cfg.channelId) {
+        return false;
+    }
+
+    const source = await findLiveWelcomeMessage(client, guild, cfg.channelId);
+    if (!source) {
+        return false;
+    }
+
+    const previous = source.embeds[0];
+    const formatData = { user: source.member?.user || guild.client.user, guild, member: source.member };
+
+    const embed = new EmbedBuilder()
+        .setColor(cfg.welcomeEmbed?.color || getColor('success'))
+        .setTitle(formatWelcomeMessage(cfg.welcomeEmbed?.title || '🎉 Bienvenue !', formatData))
+        .setDescription(
+            formatWelcomeMessage(
+                cfg.welcomeMessage || 'Bienvenue {user} sur **{server}** ! 🎉',
+                formatData,
+            ),
+        )
+        .setTimestamp();
+
+    if (previous?.thumbnail?.url) {
+        embed.setThumbnail(previous.thumbnail.url);
+    }
+    if (typeof cfg.welcomeImage === 'string' && cfg.welcomeImage) {
+        embed.setImage(cfg.welcomeImage);
+    }
+
+    try {
+        await source.edit({
+            content: cfg.welcomePing && source.member ? source.member.toString() : null,
+            embeds: [embed],
+        });
+        return true;
+    } catch (error) {
+        logger.debug('Could not edit live welcome message:', error.message);
+        return false;
+    }
 }
 
 // ─── Adopt Existing Message ───────────────────────────────────────────────────
@@ -429,20 +521,13 @@ async function handleAdoptExistingMessage(btnInteraction, cfg, guildId, client, 
         return;
     }
 
-    const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
-    const candidates = messages
-        ? [...messages.values()].filter((m) => m.author.id === client.user.id && m.embeds.length > 0)
-        : [];
+    const source = await findLiveWelcomeMessage(client, guild, cfg.channelId);
 
-    if (candidates.length === 0) {
+    if (!source) {
         await InteractionHelper.sendErrorNotice(btnInteraction, `Je n'ai trouvé aucun ancien message de bienvenue dans ${channel} (50 derniers messages).`);
         return;
     }
 
-    const welcomeLike = candidates.find((m) =>
-        /bienvenue|arriv/i.test(`${m.embeds[0]?.title || ''} ${m.embeds[0]?.description || ''}`),
-    );
-    const source = welcomeLike || candidates[0];
     const embed = source.embeds[0];
 
     let title = embed.title || '';
@@ -485,13 +570,18 @@ async function handleAdoptExistingMessage(btnInteraction, cfg, guildId, client, 
 
     await saveWelcomeConfig(client, guildId, cfg);
 
+    const liveUpdated = await updateLiveWelcomeMessage(client, guild, cfg);
     const preview = cfg.welcomeMessage.length > 300 ? `${cfg.welcomeMessage.slice(0, 300)}…` : cfg.welcomeMessage;
 
     await btnInteraction.followUp({
         embeds: [
             successEmbed(
                 '♻️ Ancien message repris',
-                `J'ai récupéré le contenu de mon message dans ${channel} :\n\n> ${preview.replace(/\n/g, '\n> ')}\n\nLes nouveaux membres recevront ce message. Tu peux encore le modifier via « Modifier le message de bienvenue ».`,
+                `J'ai récupéré le contenu de mon message dans ${channel} :\n\n> ${preview.replace(/\n/g, '\n> ')}\n\n${
+                    liveUpdated
+                        ? 'Le message déjà présent dans le salon a été modifié sur place : aucun nouveau message n\'a été créé. '
+                        : ''
+                }Les nouveaux membres recevront ce message. Tu peux encore le modifier via « Modifier le message de bienvenue ».`,
             ),
         ],
         flags: MessageFlags.Ephemeral,
@@ -568,8 +658,19 @@ async function handleWelcomeImage(selectInteraction, rootInteraction, cfg, guild
     cfg.welcomeImage = imageUrl || null;
     await saveWelcomeConfig(client, guildId, cfg);
 
+    const liveUpdated = await updateLiveWelcomeMessage(client, rootInteraction.guild, cfg);
+
     await submitted.reply({
-        embeds: [successEmbed('✅ Image de bienvenue mise à jour', `Image ${imageUrl ? 'mise à jour' : 'supprimée'} avec succès.`)],
+        embeds: [
+            successEmbed(
+                '✅ Image de bienvenue mise à jour',
+                `Image ${imageUrl ? 'mise à jour' : 'supprimée'} avec succès.${
+                    liveUpdated
+                        ? '\nLe message déjà envoyé dans le salon a été modifié sur place.'
+                        : '\nAucun message envoyé précédemment n\'a été trouvé à modifier.'
+                }`,
+            ),
+        ],
         flags: MessageFlags.Ephemeral,
     });
 

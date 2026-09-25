@@ -406,28 +406,34 @@ async function handlePanelChannel(selectInteraction, rootInteraction, guildConfi
         }
         await client.db.set(getGuildConfigKey(guildId), guildConfig);
 
-        const panelEmbed = new EmbedBuilder()
-            .setTitle('🎫 Centre d\'aide')
-            .setDescription(guildConfig.ticketPanelMessage)
-            .setColor(getColor('info'))
-            .setFooter({ text: 'Cliquez sur le bouton ci-dessous pour ouvrir un ticket' });
+        const panelUpdated = await updateLivePanel(client, rootInteraction.guild, guildConfig);
 
-        const posted = await channel
-            .send({
-                embeds: [panelEmbed],
-                components: buildTicketTypeButtons(guildConfig.ticketButtonLabel),
-            })
-            .catch(() => null);
+        let sent = panelUpdated;
+        if (!panelUpdated) {
+            const panelEmbed = new EmbedBuilder()
+                .setTitle('🎫 Centre d\'aide')
+                .setDescription(guildConfig.ticketPanelMessage)
+                .setColor(getColor('info'))
+                .setFooter({ text: 'Cliquez sur le bouton ci-dessous pour ouvrir un ticket' });
+
+            sent = Boolean(
+                await channel
+                    .send({
+                        embeds: [panelEmbed],
+                        components: buildTicketTypeButtons(guildConfig.ticketButtonLabel),
+                    })
+                    .catch(() => null),
+            );
+        }
+
+        const detail = panelUpdated
+            ? `Le panneau déjà présent dans ${channel} a été modifié sur place : aucun doublon n'a été créé.`
+            : sent
+                ? `Le panneau a été envoyé dans ${channel}. Les autres options du tableau de bord permettent de le personnaliser.`
+                : `Le salon a été enregistré, mais je n'ai pas pu envoyer le panneau dans ${channel}. Vérifie mes permissions dans ce salon.`;
 
         await channelInteraction.followUp({
-            embeds: [
-                successEmbed(
-                    '✅ Panneau de tickets configuré',
-                    posted
-                        ? `Le panneau a été envoyé dans ${channel}. Les autres options du tableau de bord permettent de le personnaliser.`
-                        : `Le salon a été enregistré, mais je n'ai pas pu envoyer le panneau dans ${channel}. Vérifie mes permissions dans ce salon.`,
-                ),
-            ],
+            embeds: [successEmbed('✅ Panneau de tickets configuré', detail)],
             flags: MessageFlags.Ephemeral,
         });
 
