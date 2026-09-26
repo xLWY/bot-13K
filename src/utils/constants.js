@@ -47,6 +47,19 @@ export const DEFAULT_GUILD_CONFIG = {
     logging: {
         enabled: false,
         enabledEvents: {}
+    },
+    leveling: {
+        enabled: false,
+        xpPerMessage: { min: 15, max: 25 },
+        xpCooldown: 20,
+        levelUpMessage: '{user} est passé au niveau {level} !',
+        levelUpChannel: null,
+        ignoredChannels: [],
+        ignoredRoles: [],
+        blacklistedUsers: [],
+        roleRewards: {},
+        announceLevelUp: true,
+        xpMultiplier: 1
     }
 };
 

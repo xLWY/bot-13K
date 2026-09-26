@@ -350,8 +350,16 @@ export async function saveLevelingConfig(client, guildId, config) {
     }
 
     guildConfig.leveling = config;
-    await setGuildConfig(client, guildId, guildConfig);
-    
+    const persisted = await setGuildConfig(client, guildId, guildConfig);
+
+    if (persisted === false) {
+      throw new TitanBotError(
+        `Failed to persist leveling config for guild ${guildId}`,
+        ErrorTypes.DATABASE,
+        'Impossible d\'enregistrer la configuration. Vérifie la base de données, puis réessaie.'
+      );
+    }
+
     logger.info(`Leveling config updated for guild ${guildId}`);
   } catch (error) {
     logger.error(`Error saving leveling config for guild ${guildId}:`, error);

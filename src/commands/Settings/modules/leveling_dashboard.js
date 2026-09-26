@@ -216,8 +216,16 @@ export default {
 async function handleEnable(btnInteraction, client, guildId) {
     await btnInteraction.deferUpdate();
     const cfg = await getLevelingConfig(client, guildId);
-    cfg.enabled = !cfg.enabled;
-    await saveLevelingConfig(client, guildId, cfg);
+    const nextState = !cfg.enabled;
+    cfg.enabled = nextState;
+
+    try {
+        await saveLevelingConfig(client, guildId, cfg);
+    } catch (error) {
+        cfg.enabled = !nextState;
+        await sendNotice(btnInteraction, error?.userMessage || 'Impossible d\'enregistrer le changement.');
+        return;
+    }
 
     await btnInteraction.followUp({
         embeds: [successEmbed(`Le système de leveling est désormais **${cfg.enabled ? 'activé' : 'désactivé'}**.`, '📈 Leveling')],
