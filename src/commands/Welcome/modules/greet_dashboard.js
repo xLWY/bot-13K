@@ -132,12 +132,6 @@ function buildButtonRow(cfg, guildId, disabled = false) {
         ),
         new ActionRowBuilder().addComponents(
             new ButtonBuilder()
-                .setCustomId(`greet_cfg_adopt_${guildId}`)
-                .setLabel('Reprendre l\'ancien message')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('♻️')
-                .setDisabled(disabled || !cfg.channelId),
-            new ButtonBuilder()
                 .setCustomId(`greet_cfg_preview_${guildId}`)
                 .setLabel('Aperçu')
                 .setStyle(ButtonStyle.Primary)
@@ -256,7 +250,6 @@ export default {
                     i.user.id === interaction.user.id &&
                     (i.customId === `greet_cfg_toggle_welcome_${guildId}` ||
                         i.customId === `greet_cfg_ping_welcome_${guildId}` ||
-                        i.customId === `greet_cfg_adopt_${guildId}` ||
                         i.customId === `greet_cfg_preview_${guildId}` ||
                         i.customId === `greet_cfg_back`),
                 time: 300_000,
@@ -311,8 +304,6 @@ export default {
                             ],
                             flags: MessageFlags.Ephemeral,
                         });
-                    } else if (customId === `greet_cfg_adopt_${guildId}`) {
-                        await handleAdoptExistingMessage(btnInteraction, cfg, guildId, client, interaction.guild);
                     } else if (customId === `greet_cfg_preview_${guildId}`) {
                         await handlePreview(btnInteraction, cfg, interaction.guild);
                     } else if (customId === `greet_cfg_back`) {
