@@ -5,6 +5,7 @@ import { handleCreate } from './modules/serverstats_create.js';
 import { handleList } from './modules/serverstats_list.js';
 import { handleUpdate } from './modules/serverstats_update.js';
 import { handleDelete } from './modules/serverstats_delete.js';
+import { handleDebug } from './modules/serverstats_debug.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -86,6 +87,11 @@ export default {
                         .setDescription("L'identifiant du compteur à supprimer")
                         .setRequired(true)
                 )
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("debug")
+                .setDescription("Diagnostiquer pourquoi les compteurs disparaissent (lecture seule)")
         ),
 
     async execute(interaction, guildConfig, client) {
@@ -104,6 +110,9 @@ export default {
                     break;
                 case "delete":
                     await handleDelete(interaction, client);
+                    break;
+                case "debug":
+                    await handleDebug(interaction, client);
                     break;
                 default:
                     await InteractionHelper.sendErrorNotice(interaction, "Sous-commande inconnue.");
