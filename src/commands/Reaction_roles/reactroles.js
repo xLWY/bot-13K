@@ -24,6 +24,7 @@ export default {
                 .addStringOption(option =>
                     option.setName('description')
                         .setDescription('Description du panneau de rôles par réaction')
+                        .setMaxLength(2000)
                         .setRequired(true)
                 )
                 .addRoleOption(option =>
@@ -167,8 +168,22 @@ export default {
 
 // ─── Panel Content Builder ────────────────────────────────────────────────────
 
+const MAX_PANEL_TITLE = 256;
+const MAX_PANEL_DESCRIPTION = 2000;
+
+function normalizePanelTitle(title) {
+    return String(title || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, MAX_PANEL_TITLE);
+}
+
+function normalizePanelDescription(description) {
+    return String(description || '').slice(0, MAX_PANEL_DESCRIPTION);
+}
+
 function buildPanelContent(title, description, roleObjects) {
-    return (description || '').substring(0, 2000);
+    return normalizePanelDescription(description);
 }
 
 function buildReactionRoleSelect(roleObjects) {
@@ -1026,13 +1041,24 @@ async function sendPanelNotice(interaction, text) {
 // ─── Edit Panel Text ──────────────────────────────────────────────────────────
 
 async function handleEditText(buttonInteraction, rootInteraction, panelData, guildId, guild, client, onBack = null, allPanels = []) {
+    const MAX_TITLE = MAX_PANEL_TITLE;
+    const MAX_DESC = MAX_PANEL_DESCRIPTION;
+
     const channel = guild.channels.cache.get(panelData.channelId);
     const discordMsg = channel
         ? await channel.messages.fetch(panelData.messageId).catch(() => null)
         : null;
 
-    const currentTitle = panelData.title || discordMsg?.embeds?.[0]?.title || '';
-    const currentDesc = panelData.description || discordMsg?.embeds?.[0]?.description || '';
+    const fallbackTitle = discordMsg?.embeds?.[0]?.title || '';
+    const fallbackDesc = discordMsg?.embeds?.[0]?.description || discordMsg?.content || '';
+
+    // Discord rejette la modal si une valeur dépasse maxLength ou contient des sauts de ligne
+    const currentTitle = String(panelData.title || fallbackTitle || 'Panneau de rôles')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, MAX_TITLE);
+    const currentDesc = String(panelData.description || fallbackDesc || 'Choisis tes rôles ci-dessous 👇')
+        .slice(0, MAX_DESC);
 
     const modal = new ModalBuilder()
         .setCustomId('rr_edit_text')
@@ -1044,7 +1070,7 @@ async function handleEditText(buttonInteraction, rootInteraction, panelData, gui
                     .setLabel('Titre')
                     .setStyle(TextInputStyle.Short)
                     .setValue(currentTitle)
-                    .setMaxLength(256)
+                    .setMaxLength(MAX_TITLE)
                     .setMinLength(1)
                     .setRequired(true),
             ),
@@ -1054,7 +1080,7 @@ async function handleEditText(buttonInteraction, rootInteraction, panelData, gui
                     .setLabel('Description')
                     .setStyle(TextInputStyle.Paragraph)
                     .setValue(currentDesc)
-                    .setMaxLength(2048)
+                    .setMaxLength(MAX_DESC)
                     .setMinLength(1)
                     .setRequired(true),
             ),
@@ -1063,8 +1089,13 @@ async function handleEditText(buttonInteraction, rootInteraction, panelData, gui
     try {
         await buttonInteraction.showModal(modal);
     } catch (error) {
-        logger.error('Error showing edit text modal:', error);
-        await InteractionHelper.sendErrorNotice(buttonInteraction, 'Impossible d\'afficher la modale d\'édition du texte du panneau. Veuillez réessayer.');
+        logger.error('Error showing edit text modal:', {
+            code: error?.code,
+            message: error?.message,
+            titleLength: currentTitle.length,
+            descLength: currentDesc.length,
+        });
+        await fallbackEditTextPrompt(buttonInteraction, rootInteraction, panelData, guildId, guild, client, onBack, allPanels);
         return;
     }
 
@@ -1111,6 +1142,44 @@ async function handleEditText(buttonInteraction, rootInteraction, panelData, gui
 }
 
 // ─── Add Role ─────────────────────────────────────────────────────────────────
+
+async function fallbackEditTextPrompt(buttonInteraction, rootInteraction, panelData, guildId, guild, client, onBack, allPanels) {
+    await buttonInteraction.deferUpdate().catch(() => {});
+
+    const retryButton = new ButtonBuilder()
+        .setCustomId('rr_edit_text')
+        .setLabel('📝 Modifier le texte')
+        .setStyle(ButtonStyle.Primary);
+
+    await buttonInteraction.followUp({
+        embeds: [
+            warningEmbed(
+                'Édition du texte indisponible',
+                'Clique sur le bouton ci-dessous pour rouvrir l\'éditeur.',
+            ),
+        ],
+        components: [new ActionRowBuilder().addComponents(retryButton)],
+        flags: MessageFlags.Ephemeral,
+    }).catch(() => {});
+
+    const collector = rootInteraction.channel.createMessageComponentCollector({
+        componentType: ComponentType.Button,
+        filter: i => i.user.id === buttonInteraction.user.id && i.customId === 'rr_edit_text',
+        time: 120_000,
+        max: 1,
+    });
+
+    collector.on('collect', async retryInteraction => {
+        collector.stop('retried');
+        await handleEditText(retryInteraction, rootInteraction, panelData, guildId, guild, client, onBack, allPanels);
+    });
+
+    collector.on('end', c => {
+        if (c.size === 0) {
+            sendPanelNotice(buttonInteraction, '⏱️ Édition annulée. Le panneau n\'a pas été modifié.');
+        }
+    });
+}
 
 async function handleAddRole(selectInteraction, rootInteraction, panelData, guildId, guild, client, onBack = null, allPanels = []) {
     await selectInteraction.deferUpdate();
