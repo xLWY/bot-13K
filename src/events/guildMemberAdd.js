@@ -2,7 +2,7 @@ import { Events, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
 import { getColor } from '../config/bot.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { getWelcomeConfig } from '../utils/database.js';
-import { formatWelcomeMessage } from '../utils/welcome.js';
+import { formatWelcomeMessageAsync } from '../utils/welcome.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { getServerCounters, updateCounter } from '../services/serverstatsService.js';
 import { setBirthday as dbSetBirthday } from '../utils/database.js';
@@ -42,15 +42,15 @@ export default {
                     return;
                 }
 
-                const formatData = { user, guild, member };
-                const welcomeMessage = formatWelcomeMessage(
+                const formatData = { user, guild, member, config: welcomeConfig };
+                const welcomeMessage = await formatWelcomeMessageAsync(
                     welcomeConfig.welcomeMessage || welcomeConfig.welcomeEmbed?.description || 'Welcome {user} to {server}!',
                     formatData
                 );
 
                 const messageContent = welcomeConfig.welcomePing ? user.toString() : null;
 
-                const embedTitle = formatWelcomeMessage(
+                const embedTitle = await formatWelcomeMessageAsync(
                     welcomeConfig.welcomeEmbed?.title || '🎉 Bienvenue !',
                     formatData
                 );
@@ -119,9 +119,9 @@ export default {
                 if (arrivalPerms?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
                     try {
                         const arrivalMsg = await arrivalChannel.send(
-                            formatWelcomeMessage(
+                            await formatWelcomeMessageAsync(
                                 welcomeConfig.arrivalMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋",
-                                { user, guild, member }
+                                { user, guild, member, config: welcomeConfig }
                             )
                         );
                         setTimeout(async () => {

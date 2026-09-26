@@ -1,7 +1,7 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } from 'discord.js';
 import { getWelcomeConfig, updateWelcomeConfig, removeWelcomeConfig } from '../../utils/database.js';
-import { formatWelcomeMessage } from '../../utils/welcome.js';
+import { formatWelcomeMessageAsync } from '../../utils/welcome.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
@@ -136,11 +136,11 @@ export default {
 
                 logger.info(`[Welcome] Setup configured by ${interaction.user.tag} for guild ${guild.name} (${guild.id})`);
 
-                const previewMessage = formatWelcomeMessage(message, {
+                const previewMessage = await formatWelcomeMessageAsync(message, {
                     user: interaction.user,
                     guild
                 });
-                const previewTitle = title ? formatWelcomeMessage(title, { user: interaction.user, guild }) : null;
+                const previewTitle = title ? await formatWelcomeMessageAsync(title, { user: interaction.user, guild }) : null;
 
                 const embed = new EmbedBuilder()
                     .setColor(getColor('success'))
@@ -152,7 +152,7 @@ export default {
                         { name: 'Mentionner l\'utilisateur', value: ping ? '✅ Oui' : '❌ Non', inline: true },
                         { name: 'Salon de ping auto-supprimé', value: pingChannel ? `${pingChannel} (le ping disparaît tout seul)` : '❌ Non configuré', inline: false },
                         { name: 'Salon d\'arrivée (10 min)', value: arrivalChannel ? `${arrivalChannel}` : '❌ Non configuré', inline: false },
-                        { name: 'Message d\'arrivée', value: arrivalMessage ? formatWelcomeMessage(arrivalMessage, { user: interaction.user, guild }) : '`Défaut : {user} vient d\'arriver, dites-lui bonjour !`', inline: false },
+                        { name: 'Message d\'arrivée', value: arrivalMessage ? await formatWelcomeMessageAsync(arrivalMessage, { user: interaction.user, guild }) : '`Défaut : {user} vient d\'arriver, dites-lui bonjour !`', inline: false },
                         { name: 'Statut', value: '✅ Activé', inline: true }
                     )
                     .setFooter({ text: 'Astuce : utilise /welcome remove pour supprimer le système de bienvenue' });

@@ -24,7 +24,7 @@ import { logger } from '../../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getWelcomeConfig, saveWelcomeConfig } from '../../../utils/database.js';
 import { botHasPermission } from '../../../utils/permissionGuard.js';
-import { formatWelcomeMessage } from '../../../utils/welcome.js';
+import { formatWelcomeMessageAsync } from '../../../utils/welcome.js';
 
 // ─── Embed & Menu Builders ────────────────────────────────────────────────────
 
@@ -429,7 +429,7 @@ async function handleWelcomeMessage(selectInteraction, rootInteraction, cfg, gui
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                     .setCustomId('message_input')
-                    .setLabel('Message (variables : {user}, {server}, etc.)')
+                    .setLabel('Message ({user}, {server}, #salon, @membre)')
                     .setStyle(TextInputStyle.Paragraph)
                     .setValue(cfg.welcomeMessage || 'Bienvenue {user} sur {server} !')
                     .setMaxLength(2000)
@@ -524,13 +524,18 @@ async function updateLiveWelcomeMessage(client, guild, cfg) {
     }
 
     const previous = source.embeds[0];
-    const formatData = { user: source.member?.user || guild.client.user, guild, member: source.member };
+    const formatData = {
+        user: source.member?.user || guild.client.user,
+        guild,
+        member: source.member,
+        config: cfg,
+    };
 
     const embed = new EmbedBuilder()
         .setColor(cfg.welcomeEmbed?.color || getColor('success'))
-        .setTitle(formatWelcomeMessage(cfg.welcomeEmbed?.title || '🎉 Bienvenue !', formatData))
+        .setTitle(await formatWelcomeMessageAsync(cfg.welcomeEmbed?.title || '🎉 Bienvenue !', formatData))
         .setDescription(
-            formatWelcomeMessage(
+            await formatWelcomeMessageAsync(
                 cfg.welcomeMessage || 'Bienvenue {user} sur **{server}** ! 🎉',
                 formatData,
             ),
@@ -956,7 +961,7 @@ async function handleArrivalMessage(selectInteraction, rootInteraction, cfg, gui
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                     .setCustomId('message_input')
-                    .setLabel('Message (variables : {user}, {username}, {server})')
+                    .setLabel('Message ({user}, #salon, @membre)')
                     .setStyle(TextInputStyle.Paragraph)
                     .setValue(cfg.arrivalMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋")
                     .setMaxLength(2000)

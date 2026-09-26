@@ -19,7 +19,7 @@
 
 import { logger } from '../utils/logger.js';
 import { getWelcomeConfig, updateWelcomeConfig } from '../utils/database.js';
-import { formatWelcomeMessage } from '../utils/welcome.js';
+import { formatWelcomeMessageAsync } from '../utils/welcome.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 
 
@@ -463,11 +463,11 @@ class WelcomeService {
 
 
 
-    static previewWelcomeMessage(messageTemplate, data) {
+    static async previewWelcomeMessage(messageTemplate, data) {
         logger.debug(`[WELCOME_SERVICE] Generating message preview`);
 
         try {
-            return formatWelcomeMessage(messageTemplate, data);
+            return await formatWelcomeMessageAsync(messageTemplate, data);
         } catch (error) {
             logger.error(`[WELCOME_SERVICE] Error formatting preview message`, error);
             throw createError(
