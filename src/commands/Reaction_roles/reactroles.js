@@ -432,6 +432,7 @@ async function handleDashboard(interaction, selectedPanelId, onBack = null) {
             (i.customId === `rr_edit_text_${guildId}` ||
                 i.customId === `rr_delete_${guildId}` ||
                 i.customId === `rr_create_${guildId}` ||
+                i.customId === `rr_list_${guildId}` ||
                 (onBack && i.customId === `rr_back_${guildId}`)),
         time: 300_000,
     });
@@ -491,6 +492,12 @@ async function handleDashboard(interaction, selectedPanelId, onBack = null) {
     buttonCollector.on('collect', async btnInteraction => {
         InteractionHelper.armDashboardSession(interaction);
         try {
+            if (btnInteraction.customId === `rr_list_${guildId}`) {
+                await btnInteraction.deferUpdate().catch(() => {});
+                await showPanelList(rootInteraction, guildId, guild, validPanels);
+                return;
+            }
+
             if (onBack && btnInteraction.customId === `rr_back_${guildId}`) {
                 await btnInteraction.deferUpdate().catch(() => {});
                 await onBack(btnInteraction);
@@ -523,6 +530,7 @@ async function handleDashboard(interaction, selectedPanelId, onBack = null) {
                     guildId,
                     guild,
                     client,
+                    onBack,
                 );
 
                 if (Array.isArray(remaining)) {
@@ -940,10 +948,16 @@ function buildPanelDashboardComponents(panelData, guildId, guild, onBack, allPan
         .setStyle(ButtonStyle.Success)
         .setEmoji('➕');
 
+    const listButton = new ButtonBuilder()
+        .setCustomId(`rr_list_${guildId}`)
+        .setLabel('Voir les panneaux')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('📋');
+
     if (!panelData) {
         return [
             new ActionRowBuilder().addComponents(
-                ...(backButton ? [createButton, backButton] : [createButton]),
+                ...(backButton ? [createButton, listButton, backButton] : [createButton, listButton]),
             ),
         ];
     }
@@ -961,8 +975,9 @@ function buildPanelDashboardComponents(panelData, guildId, guild, onBack, allPan
         .setEmoji('🗑️');
 
     const rows = [
+        new ActionRowBuilder().addComponents(editTextButton, deleteButton),
         new ActionRowBuilder().addComponents(
-            ...(backButton ? [editTextButton, deleteButton, backButton] : [editTextButton, deleteButton])
+            ...(backButton ? [createButton, listButton, backButton] : [createButton, listButton])
         ),
     ];
 
@@ -1016,6 +1031,81 @@ async function showPanelDashboard(interaction, panelData, discordMsg, guildId, g
 
 export async function openReactionRolesPanel(interaction, onBack) {
     return await handleDashboard(interaction, null, onBack);
+}
+
+// ─── Panel List View ──────────────────────────────────────────────────────────
+
+function buildPanelListEmbed(guild, allPanels) {
+    if (!allPanels.length) {
+        return new EmbedBuilder()
+            .setTitle('📋 Panneaux de rôles par réaction')
+            .setDescription('Aucun panneau actif pour le moment.\n\nClique sur **➕ Créer un panneau** pour en ajouter un.')
+            .setColor(getColor('info'))
+            .setTimestamp();
+    }
+
+    const lines = allPanels.slice(0, 20).map((panel, index) => {
+        const channel = guild.channels.cache.get(panel.channelId);
+        const title = panel.title || 'Panneau sans titre';
+        const roleCount = Array.isArray(panel.roles) ? panel.roles.length : 0;
+        const channelLabel = channel ? `<#${channel.id}>` : '`salon introuvable`';
+        return `**${index + 1}.** ${title}\n↪ Salon : ${channelLabel} • Rôles : \`${roleCount}\`\n↪ [Voir le message](https://discord.com/channels/${guild.id}/${panel.channelId}/${panel.messageId})`;
+    });
+
+    if (allPanels.length > 20) {
+        lines.push(`\n*+${allPanels.length - 20} autre(s) panneau(x).*`);
+    }
+
+    return new EmbedBuilder()
+        .setTitle('📋 Panneaux de rôles par réaction')
+        .setDescription(lines.join('\n\n'))
+        .setColor(getColor('info'))
+        .setFooter({ text: `${allPanels.length} panneau(x) actif(s) • Sélectionne un panneau pour le gérer` })
+        .setTimestamp();
+}
+
+function buildPanelListComponents(guildId, guild, allPanels) {
+    const rows = [];
+
+    if (allPanels.length > 0) {
+        rows.push(new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId(`rr_switch_${guildId}`)
+                .setPlaceholder('Gérer un panneau…')
+                .addOptions(
+                    allPanels.slice(0, 25).map(p => {
+                        const ch = guild.channels.cache.get(p.channelId);
+                        const roleCount = Array.isArray(p.roles) ? p.roles.length : 0;
+                        return new StringSelectMenuOptionBuilder()
+                            .setLabel((p.title || (ch ? ch.name : 'Panneau sans titre')).substring(0, 90))
+                            .setDescription(`${roleCount} rôle(s) • ${ch ? ch.name : 'introuvable'}`.substring(0, 100))
+                            .setValue(p.messageId);
+                    })
+                )
+        ));
+    }
+
+    rows.push(new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`rr_create_${guildId}`)
+            .setLabel('Créer un panneau')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('➕'),
+        new ButtonBuilder()
+            .setCustomId(`rr_list_${guildId}`)
+            .setLabel('Actualiser la liste')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🔄')
+    ));
+
+    return rows;
+}
+
+async function showPanelList(interaction, guildId, guild, allPanels) {
+    await InteractionHelper.safeEditReply(interaction, {
+        embeds: [buildPanelListEmbed(guild, allPanels)],
+        components: buildPanelListComponents(guildId, guild, allPanels),
+    });
 }
 
 // ─── Panel Notices ────────────────────────────────────────────────────────────
@@ -1396,7 +1486,7 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
 
 // ─── Delete Panel ─────────────────────────────────────────────────────────────
 
-async function handleDeletePanel(btnInteraction, rootInteraction, panelData, panels, guildId, guild, client) {
+async function handleDeletePanel(btnInteraction, rootInteraction, panelData, panels, guildId, guild, client, onBack = null) {
     const channel = guild.channels.cache.get(panelData.channelId);
     const discordMsg = channel
         ? await channel.messages.fetch(panelData.messageId).catch(() => null)
