@@ -36,6 +36,9 @@ function buildDashboardEmbed(cfg, guild) {
     const welcomePreview = `\`${rawWelcome.length > 55 ? rawWelcome.substring(0, 55) + '…' : rawWelcome}\``;
     const arrivalPreview = `\`${rawArrival.length > 55 ? rawArrival.substring(0, 55) + '…' : rawArrival}\``;
 
+    const rawTitle = cfg.welcomeEmbed?.title || '🎉 Bienvenue !';
+    const titlePreview = rawTitle.length > 55 ? `${rawTitle.substring(0, 55)}…` : rawTitle;
+
     const autoRoleIds = Array.isArray(cfg.roleIds) ? cfg.roleIds : [];
     const autoRolePreview = autoRoleIds.length
         ? autoRoleIds.map(id => `<@&${id}>`).join(', ')
@@ -54,6 +57,7 @@ function buildDashboardEmbed(cfg, guild) {
             { name: '⚙️ Statut de bienvenue', value: cfg.enabled ? '✅ Activé' : '❌ Désactivé', inline: true },
             { name: '🔔 Mention de bienvenue', value: cfg.welcomePing ? '✅ Activée' : '❌ Désactivée', inline: true },
             { name: '🎭 Rôle(s) auto', value: autoRolePreview, inline: true },
+            { name: '🏷️ Titre du message', value: titlePreview, inline: false },
             { name: '💬 Message de bienvenue', value: welcomePreview, inline: false },
             { name: '👋 Message d\'arrivée (10 min)', value: arrivalPreview, inline: false },
             { name: '🚪 Salon d\'arrivée', value: arrivalChannelName, inline: true },
@@ -72,6 +76,11 @@ function buildSelectMenu(guildId) {
                 .setDescription('Définir le canal où les messages de bienvenue sont envoyés')
                 .setValue('welcome_channel')
                 .setEmoji('🟢'),
+            new StringSelectMenuOptionBuilder()
+                .setLabel('Titre du message')
+                .setDescription('Modifier le titre affiché au-dessus du message de bienvenue')
+                .setValue('welcome_title')
+                .setEmoji('🏷️'),
             new StringSelectMenuOptionBuilder()
                 .setLabel('Message de bienvenue')
                 .setDescription('Modifier le texte affiché à l\'arrivée d\'un membre')
@@ -200,6 +209,9 @@ export default {
                     switch (selectedOption) {
                         case 'welcome_channel':
                             await handleWelcomeChannel(selectInteraction, interaction, cfg, guildId, client);
+                            break;
+                        case 'welcome_title':
+                            await handleWelcomeTitle(selectInteraction, interaction, cfg, guildId, client);
                             break;
                         case 'welcome_message':
                             await handleWelcomeMessage(selectInteraction, interaction, cfg, guildId, client);
@@ -475,6 +487,62 @@ async function handleWelcomeMessage(selectInteraction, rootInteraction, cfg, gui
                 liveUpdated
                     ? 'Le message a été enregistré et le message déjà envoyé dans le salon a été modifié sur place.'
                     : 'Le message a été enregistré. Aucun message envoyé précédemment n\'a été trouvé à modifier.',
+            ),
+        ],
+        flags: MessageFlags.Ephemeral,
+    });
+
+    await refreshDashboard(rootInteraction, cfg, guildId);
+}
+
+// ─── Welcome Title ────────────────────────────────────────────────────────────
+
+async function handleWelcomeTitle(selectInteraction, rootInteraction, cfg, guildId, client) {
+    const modal = new ModalBuilder()
+        .setCustomId('greet_cfg_welcome_title')
+        .setTitle('Modifier le titre de bienvenue')
+        .addComponents(
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('title_input')
+                    .setLabel('Titre ({user}, {server}, max 256)')
+                    .setStyle(TextInputStyle.Short)
+                    .setValue(cfg.welcomeEmbed?.title || '🎉 Bienvenue !')
+                    .setMaxLength(256)
+                    .setMinLength(1)
+                    .setRequired(true),
+            ),
+        );
+
+    try {
+        await selectInteraction.showModal(modal);
+    } catch {
+        return;
+    }
+
+    const submitted = await selectInteraction
+        .awaitModalSubmit({
+            filter: i =>
+                i.customId === 'greet_cfg_welcome_title' && i.user.id === selectInteraction.user.id,
+            time: 120_000,
+        })
+        .catch(() => null);
+
+    if (!submitted) return;
+
+    cfg.welcomeEmbed = { ...(cfg.welcomeEmbed || {}) };
+    cfg.welcomeEmbed.title = submitted.fields.getTextInputValue('title_input').trim();
+    await saveWelcomeConfig(client, guildId, cfg);
+
+    const liveUpdated = await updateLiveWelcomeMessage(client, rootInteraction.guild, cfg);
+
+    await submitted.reply({
+        embeds: [
+            successEmbed(
+                '✅ Titre de bienvenue mis à jour',
+                liveUpdated
+                    ? 'Le titre a été enregistré et le message déjà envoyé dans le salon a été modifié sur place.'
+                    : 'Le titre a été enregistré. Aucun message envoyé précédemment n\'a été trouvé à modifier.',
             ),
         ],
         flags: MessageFlags.Ephemeral,

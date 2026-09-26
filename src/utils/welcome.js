@@ -76,8 +76,11 @@ export function formatWelcomeMessage(message, data) {
 
 const RESERVED_MENTIONS = new Set(['everyone', 'here', 'this', 'channel']);
 
-function stripDecorations(value) {
+const ZERO_WIDTH = /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/g;
+
+function normalizeKey(value) {
     return String(value)
+        .replace(ZERO_WIDTH, '')
         .replace(/^[^\p{L}\p{N}]+/u, '')
         .replace(/[^\p{L}\p{N}]+$/u, '')
         .trim()
@@ -87,14 +90,14 @@ function stripDecorations(value) {
 function buildChannelLookup(guild) {
     const lookup = new Map();
 
+    const register = (name, id) => {
+        const key = normalizeKey(name);
+        if (key && !lookup.has(key)) lookup.set(key, id);
+    };
+
     for (const channel of guild?.channels?.cache?.values?.() || []) {
-        if (!channel?.name || !channel?.id) continue;
-
-        const full = channel.name.toLowerCase();
-        if (!lookup.has(full)) lookup.set(full, channel.id);
-
-        const stripped = stripDecorations(channel.name);
-        if (stripped && !lookup.has(stripped)) lookup.set(stripped, channel.id);
+        if (!channel?.id) continue;
+        register(channel.name, channel.id);
     }
 
     return lookup;
@@ -104,9 +107,9 @@ function buildMemberLookup(guild) {
     const lookup = new Map();
 
     const register = (name, userId) => {
-        if (!name || !userId) return;
-        const key = String(name).toLowerCase();
-        if (!lookup.has(key)) lookup.set(key, userId);
+        if (!userId) return;
+        const key = normalizeKey(name);
+        if (key && !lookup.has(key)) lookup.set(key, userId);
     };
 
     for (const member of guild?.members?.cache?.values?.() || []) {
@@ -137,34 +140,68 @@ export async function resolveMentions(message, guild) {
         .split('<#').join('\u0001')
         .split('<@').join('\u0002');
 
-    const restored = escaped.replace(/[#@]([^\s@#]{1,40}(?:\s[^\s@#]{1,40}){0,4})/g, (match, rawName) => {
-        const prefix = match[0];
-        const words = rawName.trim().split(/\s+/);
+    const words = [];
+    const re = /[^\s]+/g;
+    let m;
+    while ((m = re.exec(escaped)) !== null) {
+        words.push({ start: m.index, end: m.index + m[0].length, text: m[0] });
+    }
 
-        for (let count = words.length; count >= 1; count--) {
-            const candidate = words.slice(0, count).join(' ');
-            const keys = [candidate.toLowerCase()];
-            const stripped = stripDecorations(candidate);
-            if (stripped && stripped !== keys[0]) keys.push(stripped);
+    let out = '';
+    let cursor = 0;
 
-            if (prefix === '#') {
-                for (const key of keys) {
-                    const channelId = channelLookup.get(key);
-                    if (channelId) return `\u0001${channelId}\u0004`;
-                }
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        const raw = word.text;
+
+        if (raw[0] !== '#' && raw[0] !== '@') continue;
+
+        const sigilAt = raw.search(/[#@]/);
+        if (sigilAt <= 0) continue;
+
+        const prefix = raw[sigilAt];
+        const lookup = prefix === '#' ? channelLookup : memberLookup;
+        if (lookup.size === 0) continue;
+
+        let last = normalizeKey(raw.slice(sigilAt + 1));
+        if (!last) continue;
+        if (prefix === '@' && RESERVED_MENTIONS.has(last)) continue;
+
+        let resolved = lookup.get(last) || null;
+        let used = 1;
+
+        for (let j = i + 1; j < words.length && j <= i + 5; j++) {
+            const next = words[j].text;
+            if (/[#@<]/.test(next)) break;
+            if (words[j].start !== words[j - 1].end) break;
+
+            const combined = normalizeKey(`${last} ${next}`);
+            if (!combined) break;
+
+            if (lookup.get(combined)) {
+                resolved = lookup.get(combined);
+                used = j - i + 1;
+                last = combined;
             } else {
-                for (const key of keys) {
-                    if (RESERVED_MENTIONS.has(key)) return match;
-                    const userId = memberLookup.get(key);
-                    if (userId) return `\u0002${userId}\u0004`;
-                }
+                break;
             }
         }
 
-        return match;
-    });
+        if (!resolved) continue;
 
-    return restored
+        out += escaped.slice(cursor, word.start);
+        out += prefix === '#' ? '\u0001' : '\u0002';
+        out += `${resolved}\u0004`;
+
+        for (let k = i; k < i + used; k++) {
+            cursor = words[k].end;
+        }
+        i += used - 1;
+    }
+
+    out += escaped.slice(cursor);
+
+    return out
         .split('\u0001').join('<#')
         .split('\u0002').join('<@')
         .split('\u0004').join('>');
