@@ -461,14 +461,23 @@ export function validateConfig(config) {
 
   
   if (process.env.NODE_ENV === 'production') {
-    if (!process.env.POSTGRES_HOST) {
-      errors.push("PostgreSQL host is required in production (POSTGRES_HOST environment variable)");
-    }
-    if (!process.env.POSTGRES_USER) {
-      errors.push("PostgreSQL user is required in production (POSTGRES_USER environment variable)");
-    }
-    if (!process.env.POSTGRES_PASSWORD) {
-      errors.push("PostgreSQL password is required in production (POSTGRES_PASSWORD environment variable)");
+    const hasConnectionUrl = Boolean(
+      process.env.DATABASE_URL ||
+      process.env.POSTGRES_URL ||
+      process.env.POSTGRES_CONNECTION_URL ||
+      process.env.PGURL
+    );
+
+    if (!hasConnectionUrl) {
+      if (!process.env.POSTGRES_HOST) {
+        errors.push("PostgreSQL host is required in production (set DATABASE_URL or POSTGRES_HOST)");
+      }
+      if (!process.env.POSTGRES_USER) {
+        errors.push("PostgreSQL user is required in production (set DATABASE_URL or POSTGRES_USER)");
+      }
+      if (!process.env.POSTGRES_PASSWORD) {
+        errors.push("PostgreSQL password is required in production (set DATABASE_URL or POSTGRES_PASSWORD)");
+      }
     }
   }
 
@@ -478,8 +487,12 @@ export function validateConfig(config) {
 
 const configErrors = validateConfig(botConfig);
 if (configErrors.length > 0) {
-  logger.error("Bot configuration errors:", configErrors.join("\n"));
+  logger.error(`BOT_CONFIG_INVALID count=${configErrors.length} details=${configErrors.map(e => `[${e}]`).join(' ~ ')}`);
+  logger.error(
+    `BOT_CONFIG_PRESENCE token=${process.env.DISCORD_TOKEN || process.env.TOKEN ? 'SET' : 'MISSING'} clientId=${process.env.CLIENT_ID ? 'SET' : 'MISSING'} pgHost=${process.env.POSTGRES_HOST ? 'SET' : 'MISSING'} pgUser=${process.env.POSTGRES_USER ? 'SET' : 'MISSING'} pgPassword=${process.env.POSTGRES_PASSWORD ? 'SET' : 'MISSING'} pgDb=${process.env.POSTGRES_DB ? 'SET' : 'MISSING'}`
+  );
   if (process.env.NODE_ENV === "production") {
+    logger.error('BOT_ABORT Cannot start in production with an invalid configuration.');
     process.exit(1);
   }
 }
