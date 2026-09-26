@@ -5,6 +5,17 @@ import { BotConfig } from '../config/bot.js';
 import { normalizeGuildConfig, validateGuildConfigOrThrow } from './schemas.js';
 import { DEFAULT_GUILD_CONFIG } from './constants.js';
 
+const PERSISTENT_KEY_PREFIXES = [
+    'counters:',
+    'guild:',
+    'reaction_roles:',
+    'welcome:',
+    'leveling:',
+    'economy:',
+    'ticket:',
+    'afk:',
+];
+
 class DatabaseWrapper {
     constructor() {
         this.initialized = false;
@@ -53,10 +64,18 @@ class DatabaseWrapper {
         this.useFallback = true;
         this.connectionType = 'memory';
         this.degradedReason = 'POSTGRES_UNAVAILABLE';
-        logger.warn('⚠️  DATABASE DEGRADED MODE ENABLED - Using in-memory storage (data will be lost on restart)');
-        logger.warn('⚠️  Please check PostgreSQL connection and restart the bot when fixed');
+        logger.error('============================================================');
+        logger.error('DATABASE DEGRADED MODE ENABLED');
+        logger.error('PostgreSQL is unreachable - the bot is running on in-memory storage.');
+        logger.error('ALL DATA (counters, panels, welcome, leveling, economy) WILL BE LOST ON RESTART.');
+        logger.error('Check DATABASE_URL / PostgreSQL availability, then restart the bot.');
+        logger.error('============================================================');
         this.initialized = true;
         this.degradedModeWarningShown = true;
+    }
+
+    isDegraded() {
+        return this.useFallback === true;
     }
 
     async set(key, value, ttl = null) {
@@ -70,6 +89,13 @@ class DatabaseWrapper {
                 guildId,
                 errorCode: 'VALIDATION_FAILED'
             });
+        }
+
+        if (this.useFallback && PERSISTENT_KEY_PREFIXES.some(prefix => key.startsWith(prefix))) {
+            logger.error(
+                `Refusing to persist "${key}" in degraded memory mode: this data would be lost on restart. Fix the PostgreSQL connection.`
+            );
+            return false;
         }
 
         return this.db.set(key, value, ttl);

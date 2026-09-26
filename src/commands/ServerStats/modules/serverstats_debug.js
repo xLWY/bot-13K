@@ -49,7 +49,7 @@ export async function handleDebug(interaction, client) {
 
     const embed = new EmbedBuilder()
         .setTitle('🔍 Diagnostic des compteurs')
-        .setColor(readError || counters.length === 0 ? 0xed4245 : 0x57f287)
+        .setColor(client.db?.isDegraded?.() ? 0xed4245 : (readError || counters.length === 0 ? 0xed4245 : 0x57f287))
         .addFields(
             {
                 name: '📦 Valeur brute en base',
@@ -62,12 +62,14 @@ export async function handleDebug(interaction, client) {
                 inline: false,
             },
             {
-                name: '🔌 Connexion base',
-                value: readError
-                    ? `\`ERREUR\` — ${readError.message}`
-                    : (client.db?.isAvailable?.() === false
-                        ? '`INDISPONIBLE` — le bot tourne en mode dégradé, rien n\'est persisté.'
-                        : '`OK`'),
+                name: '🔌 État de la base',
+                value: client.db?.isDegraded?.()
+                    ? '`⚠️ MODE MÉMOIRE` — PostgreSQL indisponible. Tout est perdu au prochain redémarrage. C\'est la cause de la disparition.'
+                    : (client.db?.connectionType
+                        ? `\`${client.db.connectionType}\``
+                        : (client.db?.isAvailable?.() === false
+                            ? '`INDISPONIBLE`'
+                            : '`OK` — persistant')),
                 inline: false,
             },
         )
