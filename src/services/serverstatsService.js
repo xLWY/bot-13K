@@ -315,7 +315,13 @@ export async function saveServerCounters(client, guildId, counters) {
       logger.debug(`Saving ${sanitizedCounters.length} counters for guild ${guildId}:`, sanitizedCounters);
     }
 
-    await client.db.set(`counters:${guildId}`, sanitizedCounters);
+    const persisted = await client.db.set(`counters:${guildId}`, sanitizedCounters);
+
+    if (persisted === false) {
+      logger.error(`Database rejected counter save for guild ${guildId} (set() returned false)`);
+      return false;
+    }
+
     if (process.env.NODE_ENV !== 'production') {
       logger.debug('Counters saved successfully');
     }

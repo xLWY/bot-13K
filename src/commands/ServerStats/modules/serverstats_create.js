@@ -1,4 +1,5 @@
 import { PermissionFlagsBits, ChannelType } from 'discord.js';
+import crypto from 'node:crypto';
 import { successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter, getCounterBaseName, getCounterEmoji, getCounterTypeLabel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
@@ -71,7 +72,7 @@ export async function handleCreate(interaction, client) {
         }
 
         const newCounter = {
-            id: Date.now().toString(),
+            id: `${Date.now().toString(36)}${crypto.randomUUID().slice(0, 8)}`,
             type: type,
             channelId: targetChannel.id,
             guildId: guild.id,

@@ -7,7 +7,7 @@ import cron from 'node-cron';
 import config from './config/application.js';
 import { initializeDatabase, getJoinToCreateConfig, unregisterTemporaryChannel } from './utils/database.js';
 import { getGuildConfig } from './services/guildConfig.js';
-import { getServerCounters, saveServerCounters, updateCounter, getGuildCounterStats, resolveCounterChannel } from './services/serverstatsService.js';
+import { getServerCounters, updateCounter, getGuildCounterStats, resolveCounterChannel } from './services/serverstatsService.js';
 import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
@@ -311,27 +311,22 @@ GatewayIntentBits.Guilds,
     for (const [guildId, guild] of this.guilds.cache) {
       try {
         const counters = await getServerCounters(this, guildId);
-        const validCounters = [];
-        const orphanedCounters = [];
         const stats = await getGuildCounterStats(guild);
-        
+
         for (const counter of counters) {
-          if (counter && counter.type && counter.channelId && counter.enabled !== false) {
-            const channel = await resolveCounterChannel(guild, counter.channelId);
-            if (channel) {
-              validCounters.push(counter);
-              await updateCounter(this, guild, counter, stats);
-            } else {
-              orphanedCounters.push(counter);
-              logger.info(`Removing orphaned counter ${counter.id} (type: ${counter.type}, deleted channel: ${counter.channelId}) from guild ${guildId}`);
-            }
+          if (!counter || !counter.type || !counter.channelId || counter.enabled === false) {
+            continue;
           }
-        }
-        
-        // Save cleaned counters if any were orphaned
-        if (orphanedCounters.length > 0) {
-          await saveServerCounters(this, guildId, validCounters);
-          logger.info(`Cleaned up ${orphanedCounters.length} orphaned counter(s) from guild ${guildId} during scheduled update`);
+
+          const channel = await resolveCounterChannel(guild, counter.channelId);
+          if (!channel) {
+            logger.warn(
+              `Counter ${counter.id} (type: ${counter.type}) in guild ${guildId} points to missing channel ${counter.channelId} - kept in config, not deleted`,
+            );
+            continue;
+          }
+
+          await updateCounter(this, guild, counter, stats);
         }
       } catch (error) {
         logger.error(`Error updating counters for guild ${guildId}:`, error);

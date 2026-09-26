@@ -1,4 +1,5 @@
 import { getColor } from '../../../config/bot.js';
+import crypto from 'node:crypto';
 import {
     ActionRowBuilder,
     ButtonBuilder,
@@ -548,7 +549,7 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
         }
 
         const newCounter = {
-            id: Date.now().toString(),
+            id: `${Date.now().toString(36)}${crypto.randomUUID().slice(0, 8)}`,
             type,
             channelId: channel.id,
             guildId: guild.id,
@@ -556,7 +557,8 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
             enabled: true,
         };
 
-        const saved = await saveServerCounters(client, guild.id, [...counters, newCounter]);
+        const freshCounters = await getServerCounters(client, guild.id);
+        const saved = await saveServerCounters(client, guild.id, [...freshCounters, newCounter]);
         if (!saved) {
             await channel.delete('Échec de l\'enregistrement du compteur').catch(() => null);
             await InteractionHelper.sendErrorNotice(lastInteraction, 'Échec de l\'enregistrement du compteur. Réessaie.').catch(() => null);

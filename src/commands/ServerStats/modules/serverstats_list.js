@@ -31,10 +31,9 @@ export async function handleList(interaction, client) {
         const counters = await getServerCounters(client, guild.id);
         const stats = await getGuildCounterStats(guild);
 
-        // Clean up counters with deleted channels
         const validCounters = [];
-        const orphanedCounters = [];
         const channelById = new Map();
+        const missingChannelCounters = [];
 
         for (const counter of counters) {
             const channel = await resolveCounterChannel(guild, counter.channelId);
@@ -42,15 +41,11 @@ export async function handleList(interaction, client) {
                 validCounters.push(counter);
                 channelById.set(counter.channelId, channel);
             } else {
-                orphanedCounters.push(counter);
-                logger.info(`Removing orphaned counter ${counter.id} (type: ${counter.type}, deleted channel: ${counter.channelId}) from guild ${guild.id}`);
+                missingChannelCounters.push(counter);
+                logger.warn(
+                    `Counter ${counter.id} (type: ${counter.type}) points to missing channel ${counter.channelId} - kept in config, not deleted`,
+                );
             }
-        }
-        
-        // Save cleaned counters if any were orphaned
-        if (orphanedCounters.length > 0) {
-            await saveServerCounters(client, guild.id, validCounters);
-            logger.info(`Cleaned up ${orphanedCounters.length} orphaned counter(s) from guild ${guild.id}`);
         }
 
         if (validCounters.length === 0) {
@@ -105,6 +100,14 @@ export async function handleList(interaction, client) {
                 inline: false
             });
         }
+
+        embed.addFields({
+            name: "⚠️ **Alertes**",
+            value: missingChannelCounters.length
+                ? `${missingChannelCounters.length} compteur(s) pointent vers un salon introuvable. Leur configuration a été **conservée** : supprime-les avec \`/serverstats delete\` ou recrée le salon.`
+                : 'Aucune anomalie détectée.',
+            inline: false
+        });
 
         embed.addFields({
             name: "📊 **Statistiques**",
