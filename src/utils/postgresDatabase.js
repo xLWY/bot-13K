@@ -1098,8 +1098,14 @@ class PostgreSQLDatabase {
                     
                     logger.debug('Saving counter data to PostgreSQL', { type: typeof value, isArray: Array.isArray(value) });
 
-                    const normalizedCounters = Array.isArray(value) ? value : [];
-                    const jsonString = JSON.stringify(normalizedCounters);
+                    if (!Array.isArray(value)) {
+                        logger.error(
+                            `Refusing to write counters for guild ${parsedKey.guildId}: expected an array, received ${typeof value}. Existing counters left untouched.`,
+                        );
+                        return false;
+                    }
+
+                    const jsonString = JSON.stringify(value);
 
                     try {
                         await this.pool.query(

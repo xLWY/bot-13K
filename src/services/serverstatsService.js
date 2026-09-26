@@ -288,7 +288,19 @@ export async function getServerCounters(client, guildId) {
       return [];
     }
 
-    return sanitizeCounters(counters, guildId);
+    const sanitized = sanitizeCounters(counters, guildId);
+
+    if (counters.length > 0 && sanitized.length === 0) {
+      logger.error(
+        `All ${counters.length} counter(s) for guild ${guildId} were rejected by validation. Raw data is still in the database and was NOT deleted. Sample: ${JSON.stringify(counters[0]).substring(0, 300)}`,
+      );
+    } else if (counters.length > sanitized.length) {
+      logger.warn(
+        `Dropped ${counters.length - sanitized.length} malformed counter(s) for guild ${guildId} on read. They remain in the database but are not usable.`,
+      );
+    }
+
+    return sanitized;
   } catch (error) {
     logger.error("Error getting server counters:", error);
     return [];
@@ -310,6 +322,13 @@ export async function saveServerCounters(client, guildId, counters) {
     }
     
     const sanitizedCounters = sanitizeCounters(counters, guildId);
+
+    if (sanitizedCounters.length === 0 && Array.isArray(counters) && counters.length > 0) {
+      logger.error(
+        `Refusing to overwrite counters for guild ${guildId} with an empty list: all ${counters.length} provided counter(s) failed validation.`,
+      );
+      return false;
+    }
 
     if (process.env.NODE_ENV !== 'production') {
       logger.debug(`Saving ${sanitizedCounters.length} counters for guild ${guildId}:`, sanitizedCounters);
