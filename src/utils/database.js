@@ -329,7 +329,13 @@ export async function setGuildConfig(client, guildId, config, context = {}) {
 
         const key = getGuildConfigKey(guildId);
         const validated = validateGuildConfigOrThrow(config, { guildId, ...context });
-        await client.db.set(key, validated);
+        const persisted = await client.db.set(key, validated);
+
+        if (persisted === false) {
+            logger.error(`Guild config for guild ${guildId} was NOT persisted (backend refused the write)`);
+            return false;
+        }
+
         return true;
     } catch (error) {
         logger.error(`Error saving config for guild ${guildId}`, {

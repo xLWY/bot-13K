@@ -411,8 +411,25 @@ class PostgreSQLDatabase {
         
         logger.info('✅ Database tables created/verified');
         
+        await this.migrateGuildColumns();
         await this.createIndexes();
         await this.createAuditTriggers();
+    }
+
+    async migrateGuildColumns() {
+        const migrations = [
+            `ALTER TABLE ${pgConfig.tables.guilds} ADD COLUMN IF NOT EXISTS reaction_roles JSONB DEFAULT '{}'`
+        ];
+
+        for (const migration of migrations) {
+            try {
+                await this.pool.query(migration);
+            } catch (error) {
+                logger.warn('Error running guild column migration:', error.message);
+            }
+        }
+
+        logger.info('✅ Guild columns migrated/verified');
     }
 
     
@@ -642,6 +659,20 @@ class PostgreSQLDatabase {
             }
 
             const keys = [];
+
+            const rrPrefix = prefix.match(/^(reaction_roles):(\d+):$/);
+            if (rrPrefix) {
+                const rrListResult = await this.pool.query(
+                    `SELECT reaction_roles FROM ${pgConfig.tables.guilds} WHERE id = $1`,
+                    [rrPrefix[2]]
+                );
+                if (rrListResult.rows.length > 0) {
+                    const rrMap = rrListResult.rows[0].reaction_roles || {};
+                    for (const messageId of Object.keys(rrMap)) {
+                        keys.push(`${rrPrefix[1]}:${rrPrefix[2]}:${messageId}`);
+                    }
+                }
+            }
             
             const tempResult = await this.pool.query(
                 `SELECT key FROM ${pgConfig.tables.temp_data} WHERE key LIKE $1 AND (expires_at IS NULL OR expires_at > NOW())`,
@@ -776,6 +807,10 @@ class PostgreSQLDatabase {
             return { type: 'counters', guildId: parts[1], fullKey: key };
         }
 
+        if (parts[0] === 'reaction_roles' && parts[1] && parts[2]) {
+            return { type: 'reaction_roles', guildId: parts[1], messageId: parts[2], fullKey: key };
+        }
+
         
         return { type: 'temp', fullKey: key };
     }
@@ -870,6 +905,17 @@ class PostgreSQLDatabase {
                         [parsedKey.guildId]
                     );
                     return counterResult.rows.length > 0 ? counterResult.rows[0].counters : defaultValue;
+                
+                case 'reaction_roles':
+                    const rrResult = await this.pool.query(
+                        `SELECT reaction_roles FROM ${pgConfig.tables.guilds} WHERE id = $1`,
+                        [parsedKey.guildId]
+                    );
+                    if (rrResult.rows.length === 0) {
+                        return defaultValue;
+                    }
+                    const rrMap = rrResult.rows[0].reaction_roles || {};
+                    return rrMap[parsedKey.messageId] !== undefined ? rrMap[parsedKey.messageId] : defaultValue;
                 
                 default:
                     return defaultValue;
@@ -1124,6 +1170,36 @@ class PostgreSQLDatabase {
                     }
                     return true;
                 
+                case 'reaction_roles':
+                    await this.pool.query(
+                        `INSERT INTO ${pgConfig.tables.guilds} (id, created_at) 
+                         VALUES ($1, CURRENT_TIMESTAMP) 
+                         ON CONFLICT (id) DO NOTHING`,
+                        [parsedKey.guildId]
+                    );
+
+                    const rrColumn = await this.pool.query(`
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = $1 AND column_name = 'reaction_roles'
+                    `, [pgConfig.tables.guilds]);
+
+                    if (rrColumn.rows.length === 0) {
+                        await this.pool.query(
+                            `ALTER TABLE ${pgConfig.tables.guilds} ADD COLUMN IF NOT EXISTS reaction_roles JSONB DEFAULT '{}'`
+                        );
+                    }
+
+                    const rrEntry = JSON.stringify({ [parsedKey.messageId]: value });
+                    await this.pool.query(
+                        `UPDATE ${pgConfig.tables.guilds} 
+                         SET reaction_roles = COALESCE(reaction_roles, '{}'::jsonb) || $2::jsonb, 
+                             updated_at = CURRENT_TIMESTAMP 
+                         WHERE id = $1`,
+                        [parsedKey.guildId, rrEntry]
+                    );
+                    return true;
+                
                 default:
                     return false;
             }
@@ -1142,7 +1218,12 @@ class PostgreSQLDatabase {
         try {
             switch (parsedKey.type) {
                 case 'guild_config':
-                    await this.pool.query(`DELETE FROM ${pgConfig.tables.guilds} WHERE id = $1`, [parsedKey.guildId]);
+                    await this.pool.query(
+                        `UPDATE ${pgConfig.tables.guilds} 
+                         SET config = NULL, updated_at = CURRENT_TIMESTAMP 
+                         WHERE id = $1`,
+                        [parsedKey.guildId]
+                    );
                     return true;
                 
                 case 'guild_birthdays':
@@ -1155,6 +1236,16 @@ class PostgreSQLDatabase {
                 
                 case 'welcome_config':
                     await this.pool.query(`DELETE FROM ${pgConfig.tables.welcome_configs} WHERE guild_id = $1`, [parsedKey.guildId]);
+                    return true;
+                
+                case 'reaction_roles':
+                    await this.pool.query(
+                        `UPDATE ${pgConfig.tables.guilds} 
+                         SET reaction_roles = COALESCE(reaction_roles, '{}'::jsonb) - $2, 
+                             updated_at = CURRENT_TIMESTAMP 
+                         WHERE id = $1`,
+                        [parsedKey.guildId, parsedKey.messageId]
+                    );
                     return true;
                 
                 case 'leveling_config':
