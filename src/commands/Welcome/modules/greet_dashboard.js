@@ -272,42 +272,66 @@ export default {
                 }
                 const customId = btnInteraction.customId;
 
-                if (customId === `greet_cfg_toggle_welcome_${guildId}`) {
-                    cfg.enabled = !cfg.enabled;
-                    await saveWelcomeConfig(client, guildId, cfg);
-                    await btnInteraction.followUp({
-                        embeds: [
-                            successEmbed(
-                                '✅ Bienvenue mise à jour',
-                                `Les messages de bienvenue sont désormais **${cfg.enabled ? 'activés' : 'désactivés'}**.`,
-                            ),
-                        ],
-                        flags: MessageFlags.Ephemeral,
-                    });
-                } else if (customId === `greet_cfg_ping_welcome_${guildId}`) {
-                    cfg.welcomePing = !cfg.welcomePing;
-                    await saveWelcomeConfig(client, guildId, cfg);
-                    await btnInteraction.followUp({
-                        embeds: [
-                            successEmbed(
-                                '✅ Mention de bienvenue mise à jour',
-                                `Les nouveaux membres seront${cfg.welcomePing ? '' : ' **pas**'} mentionnés dans le message de bienvenue.`,
-                            ),
-                        ],
-                        flags: MessageFlags.Ephemeral,
-                    });
-                } else if (customId === `greet_cfg_adopt_${guildId}`) {
-                    await handleAdoptExistingMessage(btnInteraction, cfg, guildId, client, interaction.guild);
-                } else if (customId === `greet_cfg_preview_${guildId}`) {
-                    await handlePreview(btnInteraction, cfg, interaction.guild);
-                } else if (customId === `greet_cfg_back`) {
-                    if (typeof onBack === 'function') {
-                        await onBack(btnInteraction);
+                try {
+                    if (!cfg || typeof cfg !== 'object') {
+                        throw new Error('Welcome config is unavailable');
                     }
-                    return;
-                }
 
-                await refreshDashboard(interaction, cfg, guildId);
+                    if (customId === `greet_cfg_toggle_welcome_${guildId}`) {
+                        cfg.enabled = !cfg.enabled;
+                        const saved = await saveWelcomeConfig(client, guildId, cfg);
+
+                        if (saved === false) {
+                            cfg.enabled = !cfg.enabled;
+                            await InteractionHelper.sendErrorNotice(
+                                btnInteraction,
+                                'Impossible d\'enregistrer la configuration. La base de données a refusé l\'écriture.',
+                            );
+                            return;
+                        }
+
+                        await btnInteraction.followUp({
+                            embeds: [
+                                successEmbed(
+                                    '✅ Bienvenue mise à jour',
+                                    `Les messages de bienvenue sont désormais **${cfg.enabled ? 'activés' : 'désactivés'}**.`,
+                                ),
+                            ],
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    } else if (customId === `greet_cfg_ping_welcome_${guildId}`) {
+                        cfg.welcomePing = !cfg.welcomePing;
+                        await saveWelcomeConfig(client, guildId, cfg);
+                        await btnInteraction.followUp({
+                            embeds: [
+                                successEmbed(
+                                    '✅ Mention de bienvenue mise à jour',
+                                    `Les nouveaux membres seront${cfg.welcomePing ? '' : ' **pas**'} mentionnés dans le message de bienvenue.`,
+                                ),
+                            ],
+                            flags: MessageFlags.Ephemeral,
+                        });
+                    } else if (customId === `greet_cfg_adopt_${guildId}`) {
+                        await handleAdoptExistingMessage(btnInteraction, cfg, guildId, client, interaction.guild);
+                    } else if (customId === `greet_cfg_preview_${guildId}`) {
+                        await handlePreview(btnInteraction, cfg, interaction.guild);
+                    } else if (customId === `greet_cfg_back`) {
+                        if (typeof onBack === 'function') {
+                            await onBack(btnInteraction);
+                        }
+                        return;
+                    }
+
+                    await refreshDashboard(interaction, cfg, guildId);
+                } catch (error) {
+                    logger.error('Error in greet_dashboard button handler:', error);
+                    await InteractionHelper.sendErrorNotice(
+                        btnInteraction,
+                        error instanceof TitanBotError
+                            ? (error.userMessage || 'Une erreur est survenue.')
+                            : 'Une erreur inattendue est survenue.',
+                    ).catch(() => {});
+                }
             });
 
         } catch (error) {

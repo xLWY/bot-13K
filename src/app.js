@@ -484,9 +484,23 @@ try {
       bot.shutdown('UNCAUGHT_EXCEPTION');
     });
     
+    const FATAL_REJECTION_CODES = new Set([
+      'ENOTFOUND', 'ECONNREFUSED', 'EAI_AGAIN', 'ERR_SOCKET_CLOSED', 'EPIPE'
+    ]);
+
     process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-      bot.shutdown('UNHANDLED_REJECTION');
+      const code = reason && typeof reason === 'object' ? reason.code : null;
+      const message = reason && reason.message ? reason.message : String(reason);
+
+      logger.error('Unhandled Rejection:', { code, message });
+
+      if (code && FATAL_REJECTION_CODES.has(code)) {
+        logger.error(`Fatal network error (${code}), shutting down.`);
+        bot.shutdown('UNHANDLED_REJECTION');
+        return;
+      }
+
+      logger.warn('Rejection contained, bot keeps running.');
     });
   };
   
