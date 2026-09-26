@@ -31,6 +31,8 @@ class DatabaseWrapper {
             return;
         }
 
+        this.logPostgresConfigSanitized();
+
         try {
             logger.info('Attempting to connect to PostgreSQL...');
             const pgConnected = await pgDb.connect();
@@ -44,6 +46,9 @@ class DatabaseWrapper {
             }
 
             const pgFailure = pgDb.getLastFailure?.();
+            logger.error(
+                `PostgreSQL connection failed. reason=${pgFailure?.reason || 'unknown'} message=${pgFailure?.message || 'unknown'}`
+            );
             if (pgFailure?.reason === 'SCHEMA_VERSION_MISMATCH') {
                 const schemaError = new Error(
                     `Schema version mismatch detected (${pgFailure.message}). Run migrations before startup.`
@@ -76,6 +81,31 @@ class DatabaseWrapper {
 
     isDegraded() {
         return this.useFallback === true;
+    }
+
+    logPostgresConfigSanitized() {
+        const o = pgDb?.getResolvedOptions?.() || {};
+        const problems = [];
+
+        if (!process.env.POSTGRES_HOST && !process.env.DATABASE_URL && !process.env.POSTGRES_URL) {
+            problems.push('no host: set DATABASE_URL (Railway) or POSTGRES_HOST');
+        }
+        if (!o.host || o.host === 'localhost') {
+            problems.push(`host resolves to "${o.host}" (unreachable in production)`);
+        }
+        if (!o.user) problems.push('no user set');
+        if (!o.password) problems.push('no password set: POSTGRES_PASSWORD is empty or missing');
+        if (!o.database) problems.push('no database name set');
+
+        logger.info(
+            `PostgreSQL target: host=${o.host} port=${o.port} db=${o.database} user=${o.user} password=${o.password ? 'SET' : 'EMPTY'} ssl=${o.ssl ? 'on' : 'off'}`
+        );
+
+        if (problems.length > 0) {
+            logger.error(`PostgreSQL configuration problems: ${problems.join(' | ')}`);
+        } else {
+            logger.info('PostgreSQL configuration looks complete');
+        }
     }
 
     async set(key, value, ttl = null) {

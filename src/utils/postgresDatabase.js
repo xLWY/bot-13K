@@ -170,6 +170,10 @@ class PostgreSQLDatabase {
         };
     }
 
+    getResolvedOptions() {
+        return pgConfig.options;
+    }
+
     async ensureMigrationLedger() {
         const migrationTable = assertAllowlistedIdentifier(
             pgConfig.migration.table,

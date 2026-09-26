@@ -46,17 +46,38 @@ const validatedTables = Object.fromEntries(
 
 
 
+const rawConnectionUrl =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_CONNECTION_URL ||
+    process.env.PGURL ||
+    '';
+
+let parsedConnection = null;
+if (rawConnectionUrl) {
+    try {
+        parsedConnection = new URL(rawConnectionUrl);
+    } catch {
+        parsedConnection = null;
+    }
+}
+
+const envBool = (value, fallback) => {
+    if (value === undefined || value === null || value === '') return fallback;
+    return String(value).toLowerCase() === 'true';
+};
+
 export const pgConfig = {
-    url: process.env.POSTGRES_URL || 'postgresql://localhost:5432/titanbot',
-    
+    url: rawConnectionUrl || 'postgresql://localhost:5432/titanbot',
+
     options: {
-        
-        host: process.env.POSTGRES_HOST || 'localhost',
-        port: parseInt(process.env.POSTGRES_PORT) || 5432,
-        database: process.env.POSTGRES_DB || 'titanbot',
-        user: process.env.POSTGRES_USER || 'postgres',
-        password: (process.env.POSTGRES_PASSWORD || '').toString(),
-        ssl: false,
+
+        host: process.env.POSTGRES_HOST || parsedConnection?.hostname || 'localhost',
+        port: parseInt(process.env.POSTGRES_PORT) || parseInt(parsedConnection?.port) || 5432,
+        database: process.env.POSTGRES_DB || decodeURIComponent(parsedConnection?.pathname?.replace(/^\//, '') || '') || 'titanbot',
+        user: process.env.POSTGRES_USER || decodeURIComponent(parsedConnection?.username || '') || 'postgres',
+        password: (process.env.POSTGRES_PASSWORD || decodeURIComponent(parsedConnection?.password || '') || '').toString(),
+        ssl: envBool(process.env.POSTGRES_SSL, parsedConnection ? { rejectUnauthorized: false } : false),
         
         
         max: parseInt(process.env.POSTGRES_MAX_CONNECTIONS) || 20,
