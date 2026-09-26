@@ -129,6 +129,12 @@ function buildButtonRow(cfg, guildId, disabled = false) {
                 .setEmoji('♻️')
                 .setDisabled(disabled || !cfg.channelId),
             new ButtonBuilder()
+                .setCustomId(`greet_cfg_preview_${guildId}`)
+                .setLabel('Aperçu')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('👀')
+                .setDisabled(disabled),
+            new ButtonBuilder()
                 .setCustomId(`greet_cfg_back`)
                 .setLabel('Retour au panel')
                 .setEmoji('⬅️')
@@ -239,6 +245,7 @@ export default {
                     (i.customId === `greet_cfg_toggle_welcome_${guildId}` ||
                         i.customId === `greet_cfg_ping_welcome_${guildId}` ||
                         i.customId === `greet_cfg_adopt_${guildId}` ||
+                        i.customId === `greet_cfg_preview_${guildId}` ||
                         i.customId === `greet_cfg_back`),
                 time: 300_000,
             });
@@ -279,6 +286,8 @@ export default {
                     });
                 } else if (customId === `greet_cfg_adopt_${guildId}`) {
                     await handleAdoptExistingMessage(btnInteraction, cfg, guildId, client, interaction.guild);
+                } else if (customId === `greet_cfg_preview_${guildId}`) {
+                    await handlePreview(btnInteraction, cfg, interaction.guild);
                 } else if (customId === `greet_cfg_back`) {
                     if (typeof onBack === 'function') {
                         await onBack(btnInteraction);
@@ -559,6 +568,100 @@ async function updateLiveWelcomeMessage(client, guild, cfg) {
         logger.debug('Could not edit live welcome message:', error.message);
         return false;
     }
+}
+
+// ─── Preview ──────────────────────────────────────────────────────────────────
+
+async function resolveSampleMember(guild, viewerId) {
+    const viewer = guild.members.cache.get(viewerId) || (await guild.members.fetch(viewerId).catch(() => null));
+    if (viewer) return viewer;
+
+    const cached = [...guild.members.cache.values()].find(m => !m.user.bot);
+    if (cached) return cached;
+
+    const fetched = await guild.members.fetch({ limit: 10 }).catch(() => null);
+    if (fetched) {
+        const real = [...fetched.values()].find(m => !m.user.bot);
+        if (real) return real;
+    }
+
+    return guild.client.user ? { user: guild.client.user, displayName: guild.client.user.username } : null;
+}
+
+async function handlePreview(btnInteraction, cfg, guild) {
+    const sample = await resolveSampleMember(guild, btnInteraction.user.id);
+
+    if (!sample) {
+        await InteractionHelper.sendErrorNotice(btnInteraction, 'Impossible de trouver un membre pour l\'aperçu.');
+        return;
+    }
+
+    const formatData = {
+        user: sample.user,
+        guild,
+        member: sample,
+        config: cfg,
+    };
+
+    let unresolved = [];
+    const collectUnresolved = value => {
+        const found = value?.match(/\{[a-zA-Z0-9_.]{2,30}\}/g);
+        if (found) unresolved.push(...found);
+    };
+
+    const title = await formatWelcomeMessageAsync(cfg.welcomeEmbed?.title || '🎉 Bienvenue !', formatData);
+    const description = await formatWelcomeMessageAsync(
+        cfg.welcomeMessage || 'Bienvenue {user} sur **{server}** ! 🎉',
+        formatData,
+    );
+    const arrival = await formatWelcomeMessageAsync(
+        cfg.arrivalMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋",
+        formatData,
+    );
+
+    collectUnresolved(title);
+    collectUnresolved(description);
+    collectUnresolved(arrival);
+    unresolved = [...new Set(unresolved)];
+
+    const embed = new EmbedBuilder()
+        .setColor(cfg.welcomeEmbed?.color || getColor('success'))
+        .setTitle(title || '🎉 Bienvenue !')
+        .setDescription(description || '*Message vide*')
+        .setFooter({ text: `Aperçu avec ${sample.user.username} • ${guild.name}` })
+        .setTimestamp();
+
+    if (sample.user.displayAvatarURL) {
+        embed.setThumbnail(sample.user.displayAvatarURL());
+    }
+    if (typeof cfg.welcomeImage === 'string' && cfg.welcomeImage) {
+        embed.setImage(cfg.welcomeImage);
+    }
+
+    const arrivalLine = arrival.length > 500 ? `${arrival.slice(0, 500)}…` : arrival;
+    const arrivalTarget = cfg.arrivalChannelId ? `<#${cfg.arrivalChannelId}>` : '`Non défini`';
+
+    const notice = unresolved.length
+        ? `⚠️ Variable(s) non reconnue(s) : ${unresolved.map(t => `\`${t}\``).join(', ')}`
+        : '✅ Toutes les variables sont valides.';
+
+    await btnInteraction.followUp({
+        embeds: [
+            embed,
+            new EmbedBuilder()
+                .setColor(getColor('info'))
+                .setTitle('👋 Message d\'arrivée')
+                .setDescription(arrivalLine)
+                .addFields(
+                    { name: 'Salon d\'arrivée', value: arrivalTarget, inline: true },
+                    { name: 'Statut du message', value: cfg.enabled ? '✅ Bienvenue activée' : '❌ Bienvenue désactivée', inline: true },
+                )
+                .setFooter({ text: notice }),
+        ],
+        flags: MessageFlags.Ephemeral,
+    }).catch(error => {
+        logger.debug('Could not send greet preview:', error.message);
+    });
 }
 
 // ─── Adopt Existing Message ───────────────────────────────────────────────────
