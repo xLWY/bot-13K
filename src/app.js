@@ -56,7 +56,7 @@ GatewayIntentBits.Guilds,
       startupLog('Initializing database...');
       const dbInstance = await initializeDatabase();
       this.db = dbInstance.db;
-      
+
       // Check database status and report
       const dbStatus = this.db.getStatus();
       if (dbStatus.isDegraded) {

@@ -47,9 +47,19 @@ export async function handleDebug(interaction, client) {
 
     logger.error(`[SERVERSTATS DEBUG] guild=${guildId} rawType=${describe(raw)} parsed=${counters.length} readError=${readError?.message || 'none'} raw=${JSON.stringify(raw).substring(0, 900)}`);
 
+    const dbStatus = (() => {
+        try {
+            return client.db?.getStatus?.() || null;
+        } catch {
+            return null;
+        }
+    })();
+
+    const isDegraded = dbStatus?.isDegraded === true;
+
     const embed = new EmbedBuilder()
         .setTitle('🔍 Diagnostic des compteurs')
-        .setColor(client.db?.isDegraded?.() ? 0xed4245 : (readError || counters.length === 0 ? 0xed4245 : 0x57f287))
+        .setColor(isDegraded || readError || counters.length === 0 ? 0xed4245 : 0x57f287)
         .addFields(
             {
                 name: '📦 Valeur brute en base',
@@ -63,17 +73,18 @@ export async function handleDebug(interaction, client) {
             },
             {
                 name: '🔌 État de la base',
-                value: client.db?.isDegraded?.()
-                    ? '`⚠️ MODE MÉMOIRE` — PostgreSQL indisponible. Tout est perdu au prochain redémarrage. C\'est la cause de la disparition.'
-                    : (client.db?.connectionType
-                        ? `\`${client.db.connectionType}\``
-                        : (client.db?.isAvailable?.() === false
-                            ? '`INDISPONIBLE`'
-                            : '`OK` — persistant')),
+                value: isDegraded
+                    ? '`⚠️ MODE MÉMOIRE` — PostgreSQL indisponible. Tout est perdu au prochain redémarrage. **C\'est la cause de la disparition.**'
+                    : `\`${dbStatus?.connectionType || 'inconnu'}\`${dbStatus?.isDegraded === false ? ' — persistant, OK' : ''}`,
+                inline: false,
+            },
+            {
+                name: '🗄️ Type de backend',
+                value: `\`${client.db?.constructor?.name || 'inconnu'}\``,
                 inline: false,
             },
         )
-        .setFooter({ text: 'Ce diagnostic est ephémère et ne modifie rien.' })
+        .setFooter({ text: 'Ce diagnostic est éphémère et ne modifie rien.' })
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed], flags: 64 });
