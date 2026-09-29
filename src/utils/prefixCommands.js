@@ -230,7 +230,7 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
         get deferred() { return deferred; },
         get replied() { return replied; },
         deferReply: async () => {
-            replyMessage = await message.channel.send({ content: 'â³ Je m\'en occupeâ€¦' });
+            replyMessage = await message.channel.send({ content: '... Je m\'en occupe...' });
             deferred = true;
             return replyMessage;
         },
@@ -260,8 +260,15 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
             }
         },
         fetchReply: async () => replyMessage,
+        deferUpdate: async () => {
+            if (!replyMessage) {
+                replyMessage = await message.channel.send({ content: '... Je m\'en occupe...' });
+            }
+            deferred = true;
+            return replyMessage;
+        },
         showModal: async () => {
-            throw new Error('Les modales ne sont pas prises en charge pour les commandes Ã  prÃ©fixe â€” utilise la version slash `/` de cette commande Ã  la place.');
+            throw new Error('Les modales ne sont pas prises en charge pour les commandes à préfixe — utilise la version slash `/` de cette commande à la place.');
         }
     };
 

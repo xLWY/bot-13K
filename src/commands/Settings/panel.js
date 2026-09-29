@@ -171,7 +171,14 @@ export default {
             const { guild, client } = interaction;
 
             if (!isBotOwner(interaction.user.id) && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-                return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **GÃ©rer le serveur** pour utiliser `/panel`.');
+                return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/panel`.');
+            }
+
+            if (interaction.isPrefixCommand && interaction.isPrefixCommand()) {
+                return await interaction.followUp({
+                    content: 'Le panneau de contrôle est une commande slash : tape `/panel` dans le chat.',
+                    flags: MessageFlags.Ephemeral,
+                });
             }
 
             await InteractionHelper.safeDefer(interaction);
