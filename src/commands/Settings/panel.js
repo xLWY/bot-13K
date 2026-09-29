@@ -17,6 +17,7 @@ import shopDashboard from './modules/shop_dashboard.js';
 import serverstatsDashboard from './modules/serverstats_dashboard.js';
 import jtcDashboard from './modules/jtc_dashboard.js';
 import { openReactionRolesPanel } from '../Reaction_roles/reactroles.js';
+import { openSanctions } from '../Moderation/sanctions.js';
 
 export function openPanel(interaction, client, guildId) {
     const guild = interaction.guild || client.guilds.cache.get(guildId);
@@ -95,6 +96,7 @@ export function openPanel(interaction, client, guildId) {
             { id: 'panel_giveaway', label: 'Giveaways', emoji: '\u{1F381}' },
             { id: 'panel_shop', label: 'Boutique', emoji: '\u{1F6D2}' },
             { id: 'panel_reactionroles', label: 'Rôles réaction', emoji: '\u{1F3AD}' },
+            { id: 'panel_sanctions', label: 'Sanctions', emoji: '\u{1F6AB}' },
         ];
         const rows = [];
         for (let i = 0; i < modules.length; i += 5) {
@@ -123,7 +125,7 @@ export function openPanel(interaction, client, guildId) {
             componentType: ComponentType.Button,
             filter: i =>
                 i.user.id === interaction.user.id &&
-                ['panel_welcome', 'panel_ticket', 'panel_leveling', 'panel_jtc', 'panel_serverstats', 'panel_giveaway', 'panel_shop', 'panel_reactionroles'].includes(i.customId),
+                ['panel_welcome', 'panel_ticket', 'panel_leveling', 'panel_jtc', 'panel_serverstats', 'panel_giveaway', 'panel_shop', 'panel_reactionroles', 'panel_sanctions'].includes(i.customId),
                 time: 300_000,
         });
 
@@ -149,6 +151,11 @@ export function openPanel(interaction, client, guildId) {
                         return await shopDashboard.execute(btnInteraction, {}, client, onBack);
                     case 'panel_reactionroles':
                         return await openReactionRolesPanel(btnInteraction, onBack);
+                    case 'panel_sanctions':
+                        if (!isBotOwner(btnInteraction.user.id) && !btnInteraction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)) {
+                            return await InteractionHelper.sendErrorNotice(btnInteraction, 'Tu as besoin de la permission **Modérer les membres** pour ouvrir les sanctions.');
+                        }
+                        return await openSanctions(btnInteraction, client);
                 }
             } catch (error) {
                 logger.debug(`Panel module open failed (${btnInteraction.customId}):`, error.message);
