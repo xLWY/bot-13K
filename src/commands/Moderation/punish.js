@@ -62,9 +62,8 @@ function buildRows() {
     return rows;
 }
 
-function canRun(interaction, action) {
-    if (isBotOwner(interaction.user.id)) return true;
-    return Boolean(interaction.memberPermissions?.has(action.perm));
+function canRun(interaction) {
+    return isBotOwner(interaction.user.id);
 }
 
 function resolveUserId(raw) {
@@ -96,7 +95,7 @@ async function openPunish(interaction, client) {
 
     const collector = interaction.channel.createMessageComponentCollector({
         componentType: ComponentType.Button,
-        filter: i => i.user.id === interaction.user.id && ACTIONS.some(a => a.id === i.customId),
+        filter: i => i.user.id === interaction.user.id && isBotOwner(i.user.id) && ACTIONS.some(a => a.id === i.customId),
         time: 300_000,
     });
 
@@ -105,8 +104,8 @@ async function openPunish(interaction, client) {
         const action = ACTIONS.find(a => a.id === btn.customId);
         if (!action) return;
 
-        if (!canRun(btn, action)) {
-            await InteractionHelper.sendErrorNotice(btn, `Tu as besoin de la permission **${action.permLabel}** pour cette action.`).catch(() => {});
+        if (!canRun(btn)) {
+            await InteractionHelper.sendErrorNotice(btn, 'Ce panneau est réservé au propriétaire du bot.').catch(() => {});
             return;
         }
 
@@ -349,9 +348,8 @@ async function audit(interaction, eventName, targetId, reason, moderatorId, meta
 }
 
 async function openWarnList(btn) {
-    try {
-        await btn.deferUpdate();
-    } catch {
+    if (!isBotOwner(btn.user.id)) {
+        await InteractionHelper.sendErrorNotice(btn, 'Seul le propri\u{00E9}taire du bot peut consulter la liste des avertissements.').catch(() => {});
         return;
     }
 
@@ -423,10 +421,12 @@ export default {
         .setDescription('* Panneau des sanctions (warn, mute, timeout, kick, ban)')
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 
+    hiddenFromSlash: true,
+
     async execute(interaction, config, client) {
         try {
-            if (!isBotOwner(interaction.user.id) && !interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)) {
-                return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Modérer les membres** pour utiliser `/punish`.');
+            if (!isBotOwner(interaction.user.id)) {
+                return await InteractionHelper.sendErrorNotice(interaction, 'Cette commande est r\u{00E9}serv\u{00E9}e au propri\u{00E9}taire du bot.');
             }
 
             await InteractionHelper.safeDefer(interaction);

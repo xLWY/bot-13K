@@ -152,8 +152,8 @@ export function openPanel(interaction, client, guildId) {
                     case 'panel_reactionroles':
                         return await openReactionRolesPanel(btnInteraction, onBack);
                     case 'panel_sanctions':
-                        if (!isBotOwner(btnInteraction.user.id) && !btnInteraction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)) {
-                            return await InteractionHelper.sendErrorNotice(btnInteraction, 'Tu as besoin de la permission **Modérer les membres** pour ouvrir les sanctions.');
+                        if (!isBotOwner(btnInteraction.user.id)) {
+                            return await InteractionHelper.sendErrorNotice(btnInteraction, 'Ce panneau est réservé au propriétaire du bot.');
                         }
                         return await openPunish(btnInteraction, client);
                 }
