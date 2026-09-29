@@ -6,7 +6,7 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { logger } from './logger.js';
 import { InteractionHelper } from './interactionHelper.js';
-import { isBotOwner } from '../handlers/commandLoader.js';
+import { isBotOwner } from './ownerIds.js';
 
 
 

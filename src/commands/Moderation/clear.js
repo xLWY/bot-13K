@@ -1,5 +1,5 @@
 ﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
-import { isBotOwner } from '../../utils/permissionGuard.js';
+import { isBotOwner } from '../../utils/ownerIds.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';

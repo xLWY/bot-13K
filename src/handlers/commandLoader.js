@@ -3,32 +3,10 @@ import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { Collection } from 'discord.js';
 import { logger } from '../utils/logger.js';
+import { getBotOwnerIds } from '../utils/ownerIds.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const ownerIdCache = { value: null };
-
-export function getBotOwnerIds() {
-    if (ownerIdCache.value) {
-        return ownerIdCache.value;
-    }
-
-    const raw = process.env.OWNER_IDS || process.env.BOT_OWNER_IDS || '';
-    const ids = raw
-        .split(',')
-        .map(id => id.trim())
-        .filter(id => /^\d{17,20}$/.test(id));
-
-    ownerIdCache.value = ids;
-    return ids;
-}
-
-export function isBotOwner(userId) {
-    if (!userId) return false;
-    return getBotOwnerIds().includes(String(userId));
-}
-
 
 
 
