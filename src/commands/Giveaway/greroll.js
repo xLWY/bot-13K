@@ -1,4 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { isBotOwner } from '../../utils/permissionGuard.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
@@ -14,11 +15,11 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("greroll")
-        .setDescription("* Relance le tirage des gagnants d'un concours terminé.")
+        .setDescription("* Relance le tirage des gagnants d'un concours terminÃ©.")
         .addStringOption((option) =>
             option
                 .setName("messageid")
-                .setDescription("L'identifiant du message du concours terminé.")
+                .setDescription("L'identifiant du message du concours terminÃ©.")
                 .setRequired(true),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
@@ -30,17 +31,17 @@ export default {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
-                    'Cette commande ne peut être utilisée que sur un serveur.',
+                    'Cette commande ne peut Ãªtre utilisÃ©e que sur un serveur.',
                     { userId: interaction.user.id }
                 );
             }
 
             
-            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+            if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "Vous devez avoir la permission `Gérer le serveur` pour relancer le tirage d'un concours.",
+                    "Vous devez avoir la permission `GÃ©rer le serveur` pour relancer le tirage d'un concours.",
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -71,7 +72,7 @@ export default {
                 throw new TitanBotError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "Aucun concours n'a été trouvé avec cet identifiant de message dans la base de données.",
+                    "Aucun concours n'a Ã©tÃ© trouvÃ© avec cet identifiant de message dans la base de donnÃ©es.",
                     { messageId, guildId: interaction.guildId }
                 );
             }
@@ -132,8 +133,8 @@ export default {
                 return InteractionHelper.safeReply(interaction, {
                     embeds: [
                         successEmbed(
-                            "Relance terminée",
-                            "Les nouveaux gagnants ont été sélectionnés et enregistrés dans la base de données. Impossible de trouver le salon pour l'annoncer.",
+                            "Relance terminÃ©e",
+                            "Les nouveaux gagnants ont Ã©tÃ© sÃ©lectionnÃ©s et enregistrÃ©s dans la base de donnÃ©es. Impossible de trouver le salon pour l'annoncer.",
                         ),
                     ],
                     flags: MessageFlags.Ephemeral,
@@ -166,11 +167,11 @@ export default {
                     : null;
                 if (existingPingMsg) {
                     await existingPingMsg.edit({
-                        content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`,
+                        content: `ðŸ”„ Nouveau tirage ! FÃ©licitations ${winnerMentions} ! Tu as gagnÃ© le concours **${giveaway.prize || 'Concours mystÃ¨re'}** ! CrÃ©e un ticket pour rÃ©cupÃ©rer ton lot ðŸŽ`,
                     });
                 } else {
                     const newPingMsg = await channel.send({
-                        content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`,
+                        content: `ðŸ”„ Nouveau tirage ! FÃ©licitations ${winnerMentions} ! Tu as gagnÃ© le concours **${giveaway.prize || 'Concours mystÃ¨re'}** ! CrÃ©e un ticket pour rÃ©cupÃ©rer ton lot ðŸŽ`,
                     });
                     updatedGiveaway.winnerPingMessageId = newPingMsg.id;
                 }
@@ -183,22 +184,22 @@ export default {
                         guildId: interaction.guildId,
                         eventType: EVENT_TYPES.GIVEAWAY_REROLL,
                         data: {
-                            description: `Tirage relancé : ${giveaway.prize}`,
+                            description: `Tirage relancÃ© : ${giveaway.prize}`,
                             channelId: giveaway.channelId,
                             userId: interaction.user.id,
                             fields: [
                                 {
-                                    name: '🎁 Prix',
-                                    value: giveaway.prize || 'Concours mystère !',
+                                    name: 'ðŸŽ Prix',
+                                    value: giveaway.prize || 'Concours mystÃ¨re !',
                                     inline: true
                                 },
                                 {
-                                    name: '🏆 Nouveaux gagnants',
+                                    name: 'ðŸ† Nouveaux gagnants',
                                     value: winnerMentions,
                                     inline: false
                                 },
                                 {
-                                    name: '👥 Participations totales',
+                                    name: 'ðŸ‘¥ Participations totales',
                                     value: participants.length.toString(),
                                     inline: true
                                 }
@@ -212,8 +213,8 @@ export default {
                 return InteractionHelper.safeReply(interaction, {
                     embeds: [
                         successEmbed(
-                            "Relance terminée",
-                            `Les nouveaux gagnants ont été annoncés dans ${channel}. (Message d'origine introuvable).`,
+                            "Relance terminÃ©e",
+                            `Les nouveaux gagnants ont Ã©tÃ© annoncÃ©s dans ${channel}. (Message d'origine introuvable).`,
                         ),
                     ],
                     flags: MessageFlags.Ephemeral,
@@ -246,11 +247,11 @@ export default {
                 : null;
             if (existingPingMsg) {
                 await existingPingMsg.edit({
-                    content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`,
+                    content: `ðŸ”„ Nouveau tirage ! FÃ©licitations ${winnerMentions} ! Tu as gagnÃ© le concours **${giveaway.prize || 'Concours mystÃ¨re'}** ! CrÃ©e un ticket pour rÃ©cupÃ©rer ton lot ðŸŽ`,
                 });
             } else {
                 const newPingMsg = await channel.send({
-                    content: `🔄 Nouveau tirage ! Félicitations ${winnerMentions} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`,
+                    content: `ðŸ”„ Nouveau tirage ! FÃ©licitations ${winnerMentions} ! Tu as gagnÃ© le concours **${giveaway.prize || 'Concours mystÃ¨re'}** ! CrÃ©e un ticket pour rÃ©cupÃ©rer ton lot ðŸŽ`,
                 });
                 updatedGiveaway.winnerPingMessageId = newPingMsg.id;
             }
@@ -263,22 +264,22 @@ export default {
                     guildId: interaction.guildId,
                     eventType: EVENT_TYPES.GIVEAWAY_REROLL,
                     data: {
-                        description: `Tirage relancé : ${giveaway.prize}`,
+                        description: `Tirage relancÃ© : ${giveaway.prize}`,
                         channelId: giveaway.channelId,
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prix',
-                                value: giveaway.prize || 'Concours mystère !',
+                                name: 'ðŸŽ Prix',
+                                value: giveaway.prize || 'Concours mystÃ¨re !',
                                 inline: true
                             },
                             {
-                                name: '🏆 Nouveaux gagnants',
+                                name: 'ðŸ† Nouveaux gagnants',
                                 value: winnerMentions,
                                 inline: false
                             },
                             {
-                                name: '👥 Participations totales',
+                                name: 'ðŸ‘¥ Participations totales',
                                 value: participants.length.toString(),
                                 inline: true
                             }
@@ -292,8 +293,8 @@ export default {
             return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "Relance réussie ✅",
-                        `Tirage relancé avec succès pour **${giveaway.prize}** dans ${channel}. ${newWinners.length} nouveau(x) gagnant(s) sélectionné(s).`,
+                        "Relance rÃ©ussie âœ…",
+                        `Tirage relancÃ© avec succÃ¨s pour **${giveaway.prize}** dans ${channel}. ${newWinners.length} nouveau(x) gagnant(s) sÃ©lectionnÃ©(s).`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,

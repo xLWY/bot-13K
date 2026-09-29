@@ -1,4 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { isBotOwner } from '../../utils/permissionGuard.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
@@ -10,12 +11,12 @@ export default {
     data: new SlashCommandBuilder()
         .setName("gdelete")
         .setDescription(
-            "* Supprime un message de concours et le retire de la base de données.",
+            "* Supprime un message de concours et le retire de la base de donnÃ©es.",
         )
         .addStringOption((option) =>
             option
                 .setName("messageid")
-                .setDescription("L'identifiant du message du concours à supprimer.")
+                .setDescription("L'identifiant du message du concours Ã  supprimer.")
                 .setRequired(true),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
@@ -27,17 +28,17 @@ export default {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
-                    'Cette commande ne peut être utilisée que sur un serveur.',
+                    'Cette commande ne peut Ãªtre utilisÃ©e que sur un serveur.',
                     { userId: interaction.user.id }
                 );
             }
 
             
-            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+            if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "Vous devez avoir la permission `Gérer le serveur` pour supprimer un concours.",
+                    "Vous devez avoir la permission `GÃ©rer le serveur` pour supprimer un concours.",
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -63,7 +64,7 @@ export default {
                 throw new TitanBotError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "Aucun concours n'a été trouvé avec cet identifiant de message.",
+                    "Aucun concours n'a Ã©tÃ© trouvÃ© avec cet identifiant de message.",
                     { messageId, guildId: interaction.guildId }
                 );
             }
@@ -122,7 +123,7 @@ export default {
                 throw new TitanBotError(
                     `Failed to delete giveaway from database: ${messageId}`,
                     ErrorTypes.UNKNOWN,
-                    "Le concours n'a pas pu être retiré de la base de données. Veuillez réessayer.",
+                    "Le concours n'a pas pu Ãªtre retirÃ© de la base de donnÃ©es. Veuillez rÃ©essayer.",
                     { messageId, guildId: interaction.guildId }
                 );
             }
@@ -134,24 +135,24 @@ export default {
                 throw new TitanBotError(
                     `Giveaway still exists after deletion: ${messageId}`,
                     ErrorTypes.UNKNOWN,
-                    "La suppression n'a pas été enregistrée dans la base de données. Veuillez réessayer.",
+                    "La suppression n'a pas Ã©tÃ© enregistrÃ©e dans la base de donnÃ©es. Veuillez rÃ©essayer.",
                     { messageId, guildId: interaction.guildId }
                 );
             }
 
             const statusMsg = deletedMessage
-                ? `et le message a été supprimé de #${channelName}`
-                : `mais le message était déjà supprimé ou le salon était inaccessible.`;
+                ? `et le message a Ã©tÃ© supprimÃ© de #${channelName}`
+                : `mais le message Ã©tait dÃ©jÃ  supprimÃ© ou le salon Ã©tait inaccessible.`;
 
             const winnerIds = Array.isArray(giveaway.winnerIds) ? giveaway.winnerIds : [];
             const hasWinners = winnerIds.length > 0;
             const wasEnded = giveaway.ended === true || giveaway.isEnded === true || hasWinners;
 
             const winnerStatusMsg = hasWinners
-                ? `Ce concours avait déjà ${winnerIds.length} gagnant(s) sélectionné(s).`
+                ? `Ce concours avait dÃ©jÃ  ${winnerIds.length} gagnant(s) sÃ©lectionnÃ©(s).`
                 : wasEnded
-                    ? 'Ce concours était terminé sans gagnant valide.'
-                    : "Aucun gagnant n'avait été tiré avant la suppression.";
+                    ? 'Ce concours Ã©tait terminÃ© sans gagnant valide.'
+                    : "Aucun gagnant n'avait Ã©tÃ© tirÃ© avant la suppression.";
 
             logger.info(`Giveaway deleted: ${messageId} in ${channelName}`);
 
@@ -162,17 +163,17 @@ export default {
                     guildId: interaction.guildId,
                     eventType: EVENT_TYPES.GIVEAWAY_DELETE,
                     data: {
-                        description: `Concours supprimé : ${giveaway.prize}`,
+                        description: `Concours supprimÃ© : ${giveaway.prize}`,
                         channelId: giveaway.channelId,
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prix',
+                                name: 'ðŸŽ Prix',
                                 value: giveaway.prize || 'Inconnu',
                                 inline: true
                             },
                             {
-                                name: '📊 Participations',
+                                name: 'ðŸ“Š Participations',
                                 value: (giveaway.participants?.length || 0).toString(),
                                 inline: true
                             }
@@ -186,8 +187,8 @@ export default {
             return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "Concours supprimé",
-                        `Concours supprimé pour **${giveaway.prize}** ${statusMsg}. ${winnerStatusMsg}`,
+                        "Concours supprimÃ©",
+                        `Concours supprimÃ© pour **${giveaway.prize}** ${statusMsg}. ${winnerStatusMsg}`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,

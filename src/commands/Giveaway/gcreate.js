@@ -1,4 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
+import { isBotOwner } from '../../utils/permissionGuard.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
@@ -16,19 +17,19 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("gcreate")
-        .setDescription("* Lancer un nouveau concours dans un salon spécifié.")
+        .setDescription("* Lancer un nouveau concours dans un salon spÃ©cifiÃ©.")
         .addStringOption((option) =>
             option
                 .setName("duration")
                 .setDescription(
-                    "Durée du giveaway (ex: 1h, 30m, 5d).",
+                    "DurÃ©e du giveaway (ex: 1h, 30m, 5d).",
                 )
                 .setRequired(true),
         )
         .addIntegerOption((option) =>
             option
                 .setName("winners")
-                .setDescription("Le nombre de gagnants à tirer.")
+                .setDescription("Le nombre de gagnants Ã  tirer.")
                 .setMinValue(1)
                 .setMaxValue(10)
                 .setRequired(true),
@@ -36,13 +37,13 @@ export default {
         .addStringOption((option) =>
             option
                 .setName("prize")
-                .setDescription("Le prix à gagner.")
+                .setDescription("Le prix Ã  gagner.")
                 .setRequired(true),
         )
         .addChannelOption((option) =>
             option
                 .setName("channel")
-                .setDescription("Le salon où envoyer le concours (par défaut le salon actuel).")
+                .setDescription("Le salon oÃ¹ envoyer le concours (par dÃ©faut le salon actuel).")
                 .addChannelTypes(ChannelType.GuildText)
                 .setRequired(false),
         )
@@ -55,17 +56,17 @@ export default {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
-                    'Cette commande ne peut être utilisée que sur un serveur.',
+                    'Cette commande ne peut Ãªtre utilisÃ©e que sur un serveur.',
                     { userId: interaction.user.id }
                 );
             }
 
             
-            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+            if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "Vous devez avoir la permission `Gérer le serveur` pour lancer un concours.",
+                    "Vous devez avoir la permission `GÃ©rer le serveur` pour lancer un concours.",
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -88,7 +89,7 @@ export default {
                 throw new TitanBotError(
                     'Target channel is not text-based',
                     ErrorTypes.VALIDATION,
-                    'Le salon doit être un salon textuel.',
+                    'Le salon doit Ãªtre un salon textuel.',
                     { channelId: targetChannel.id, channelType: targetChannel.type }
                 );
             }
@@ -140,27 +141,27 @@ export default {
                     guildId: interaction.guildId,
                     eventType: EVENT_TYPES.GIVEAWAY_CREATE,
                     data: {
-                        description: `Concours créé : ${prizeName}`,
+                        description: `Concours crÃ©Ã© : ${prizeName}`,
                         channelId: targetChannel.id,
                         userId: interaction.user.id,
                         fields: [
                             {
-                                name: '🎁 Prix',
+                                name: 'ðŸŽ Prix',
                                 value: prizeName,
                                 inline: true
                             },
                             {
-                                name: '🏆 Gagnants',
+                                name: 'ðŸ† Gagnants',
                                 value: winnerCount.toString(),
                                 inline: true
                             },
                             {
-                                name: '⏰ Durée',
+                                name: 'â° DurÃ©e',
                                 value: durationString,
                                 inline: true
                             },
                             {
-                                name: '📍 Salon',
+                                name: 'ðŸ“ Salon',
                                 value: targetChannel.toString(),
                                 inline: true
                             }
@@ -177,8 +178,8 @@ export default {
             await InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
-                        `Concours lancé ! 🎉`,
-                        `Un nouveau concours pour **${prizeName}** a été lancé dans ${targetChannel} et se termine dans **${durationString}**.`,
+                        `Concours lancÃ© ! ðŸŽ‰`,
+                        `Un nouveau concours pour **${prizeName}** a Ã©tÃ© lancÃ© dans ${targetChannel} et se termine dans **${durationString}**.`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,

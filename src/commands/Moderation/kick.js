@@ -1,4 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { isBotOwner } from '../../utils/permissionGuard.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
@@ -12,7 +13,7 @@ export default {
     .addUserOption((option) =>
       option
         .setName("target")
-        .setDescription("L'utilisateur à expulser")
+        .setDescription("L'utilisateur Ã  expulser")
         .setRequired(true),
     )
     .addStringOption((option) =>
@@ -24,7 +25,7 @@ export default {
   async execute(interaction, config, client) {
     try {
       
-      if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
+      if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
         throw new TitanBotError(
           "User lacks permission",
           ErrorTypes.PERMISSION,
@@ -41,7 +42,7 @@ export default {
         throw new TitanBotError(
           "Cannot kick self",
           ErrorTypes.VALIDATION,
-          "Tu ne peux pas t'expulser toi-même."
+          "Tu ne peux pas t'expulser toi-mÃªme."
         );
       }
 
@@ -59,7 +60,7 @@ export default {
         throw new TitanBotError(
           "Target not found",
           ErrorTypes.USER_INPUT,
-          "L'utilisateur ciblé n'est actuellement pas dans ce serveur.",
+          "L'utilisateur ciblÃ© n'est actuellement pas dans ce serveur.",
           { subtype: 'user_not_found' }
         );
       }
@@ -69,7 +70,7 @@ export default {
         throw new TitanBotError(
           "Cannot kick user",
           ErrorTypes.PERMISSION,
-          "Tu ne peux pas expulser un utilisateur ayant un rôle égal ou supérieur au tien."
+          "Tu ne peux pas expulser un utilisateur ayant un rÃ´le Ã©gal ou supÃ©rieur au tien."
         );
       }
 
@@ -78,7 +79,7 @@ export default {
         throw new TitanBotError(
           "Bot cannot kick",
           ErrorTypes.PERMISSION,
-          "Je ne peux pas expulser cet utilisateur. Vérifie ma position de rôle par rapport à l'utilisateur ciblé."
+          "Je ne peux pas expulser cet utilisateur. VÃ©rifie ma position de rÃ´le par rapport Ã  l'utilisateur ciblÃ©."
         );
       }
 
@@ -105,7 +106,7 @@ export default {
       await InteractionHelper.universalReply(interaction, {
         embeds: [
           successEmbed(
-            `👢 **Expulsé** ${targetUser.tag}`,
+            `ðŸ‘¢ **ExpulsÃ©** ${targetUser.tag}`,
             `**Raison :** ${reason}\n**ID de cas :** #${caseId}`,
           ),
         ],

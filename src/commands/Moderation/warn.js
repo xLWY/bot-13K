@@ -1,4 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
+import { isBotOwner } from '../../utils/permissionGuard.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
@@ -13,7 +14,7 @@ export default {
             o
                 .setName("target")
                 .setRequired(true)
-                .setDescription("Utilisateur à avertir"),
+                .setDescription("Utilisateur Ã  avertir"),
         )
         .addStringOption((o) =>
             o
@@ -36,8 +37,8 @@ export default {
         }
 
         try {
-                if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-                    throw new Error("Tu as besoin de la permission `Modérer les membres` pour émettre des avertissements.");
+                if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+                    throw new Error("Tu as besoin de la permission `ModÃ©rer les membres` pour Ã©mettre des avertissements.");
                 }
 
                 const target = interaction.options.getUser("target");
@@ -47,7 +48,7 @@ export default {
                 const guildId = interaction.guildId;
 
                 if (!member) {
-                    throw new Error("L'utilisateur ciblé n'est actuellement pas dans ce serveur.");
+                    throw new Error("L'utilisateur ciblÃ© n'est actuellement pas dans ce serveur.");
                 }
 
                 
@@ -60,7 +61,7 @@ export default {
                 });
 
                 if (!result.success) {
-                    throw new Error("Échec de l'enregistrement de l'avertissement en base de données");
+                    throw new Error("Ã‰chec de l'enregistrement de l'avertissement en base de donnÃ©es");
                 }
 
                 const totalWarns = result.totalCount;
@@ -86,7 +87,7 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
-                            `⚠️ **Averti** ${target.tag}`,
+                            `âš ï¸ **Averti** ${target.tag}`,
                             `**Raison :** ${reason}\n**Total d'avertissements :** ${totalWarns}`,
                         ),
                     ],

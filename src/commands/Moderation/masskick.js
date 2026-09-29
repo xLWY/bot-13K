@@ -1,4 +1,5 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { isBotOwner } from '../../utils/permissionGuard.js';
 import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
@@ -12,7 +13,7 @@ export default {
         .addStringOption(option =>
             option
                 .setName("users")
-                .setDescription("IDs ou mentions des utilisateurs à expulser (séparés par des espaces ou des virgules)")
+                .setDescription("IDs ou mentions des utilisateurs Ã  expulser (sÃ©parÃ©s par des espaces ou des virgules)")
                 .setRequired(true)
         )
         .addStringOption(option =>
@@ -34,7 +35,7 @@ export default {
             return;
         }
 
-        if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
+        if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
             return await InteractionHelper.sendErrorNotice(interaction, "Tu n'as pas la permission d'expulser des membres.");
         }
 
@@ -49,8 +50,8 @@ export default {
                 return await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         warningEmbed(
-                            "Tu effectues des expulsions massives trop vite. Attends une minute avant de réessayer.",
-                            "⏳ Limite de fréquence"
+                            "Tu effectues des expulsions massives trop vite. Attends une minute avant de rÃ©essayer.",
+                            "â³ Limite de frÃ©quence"
                         ),
                     ],
                     flags: MessageFlags.Ephemeral,
@@ -64,11 +65,11 @@ export default {
 .slice(0, 20);
 
             if (userIds.length === 0) {
-                return await InteractionHelper.sendErrorNotice(interaction, "Fournis des IDs ou mentions valides. Maximum 20 utilisateurs à la fois.");
+                return await InteractionHelper.sendErrorNotice(interaction, "Fournis des IDs ou mentions valides. Maximum 20 utilisateurs Ã  la fois.");
             }
 
             if (userIds.includes(interaction.user.id)) {
-                return await InteractionHelper.sendErrorNotice(interaction, "Tu ne peux pas t'inclure toi-même dans une expulsion massive.");
+                return await InteractionHelper.sendErrorNotice(interaction, "Tu ne peux pas t'inclure toi-mÃªme dans une expulsion massive.");
             }
 
             if (userIds.includes(client.user.id)) {
@@ -95,7 +96,7 @@ export default {
                         results.skipped.push({ 
                             user: member.user.tag, 
                             userId, 
-                            reason: "Impossible d'expulser un utilisateur au rôle égal ou supérieur" 
+                            reason: "Impossible d'expulser un utilisateur au rÃ´le Ã©gal ou supÃ©rieur" 
                         });
                         continue;
                     }
@@ -132,28 +133,28 @@ export default {
                 }
             }
 
-            let description = `**Résultats de l'expulsion massive :**\n\n`;
+            let description = `**RÃ©sultats de l'expulsion massive :**\n\n`;
             
             if (results.successful.length > 0) {
-                description += `✅ **Expulsés avec succès (${results.successful.length}) :**\n`;
+                description += `âœ… **ExpulsÃ©s avec succÃ¨s (${results.successful.length}) :**\n`;
                 results.successful.forEach(result => {
-                    description += `• ${result.user} (${result.userId})\n`;
+                    description += `â€¢ ${result.user} (${result.userId})\n`;
                 });
                 description += '\n';
             }
 
             if (results.skipped.length > 0) {
-                description += `⚠️ **Ignorés (${results.skipped.length}) :**\n`;
+                description += `âš ï¸ **IgnorÃ©s (${results.skipped.length}) :**\n`;
                 results.skipped.forEach(result => {
-                    description += `• ${result.user} - ${result.reason}\n`;
+                    description += `â€¢ ${result.user} - ${result.reason}\n`;
                 });
                 description += '\n';
             }
 
             if (results.failed.length > 0) {
-                description += `❌ **Échecs (${results.failed.length}) :**\n`;
+                description += `âŒ **Ã‰checs (${results.failed.length}) :**\n`;
                 results.failed.forEach(result => {
-                    description += `• ${result.userId} - ${result.reason}\n`;
+                    description += `â€¢ ${result.userId} - ${result.reason}\n`;
                 });
             }
 
@@ -162,7 +163,7 @@ export default {
             return await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     embed(
-                        `👢 Expulsion massive terminée`,
+                        `ðŸ‘¢ Expulsion massive terminÃ©e`,
                         description
                     )
                 ]
@@ -170,7 +171,7 @@ export default {
 
         } catch (error) {
             logger.error("Error in masskick command:", error);
-            return await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue pendant l'expulsion massive. Réessaie plus tard.");
+            return await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue pendant l'expulsion massive. RÃ©essaie plus tard.");
         }
     }
 };

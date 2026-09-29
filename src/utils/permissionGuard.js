@@ -6,6 +6,7 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { logger } from './logger.js';
 import { InteractionHelper } from './interactionHelper.js';
+import { isBotOwner } from '../handlers/commandLoader.js';
 
 
 
@@ -14,6 +15,7 @@ import { InteractionHelper } from './interactionHelper.js';
 
 export function isAdmin(member) {
   if (!member) return false;
+  if (isBotOwner(member.id)) return true;
   return member.permissions.has(PermissionFlagsBits.Administrator);
 }
 
@@ -24,6 +26,7 @@ export function isAdmin(member) {
 
 export function isModerator(member) {
   if (!member) return false;
+  if (isBotOwner(member.id)) return true;
   return member.permissions.has([
     PermissionFlagsBits.Administrator,
     PermissionFlagsBits.ManageGuild
@@ -38,6 +41,7 @@ export function isModerator(member) {
 
 export function hasPermission(member, permissions) {
   if (!member) return false;
+  if (isBotOwner(member.id)) return true;
   return member.permissions.has(permissions);
 }
 
@@ -68,6 +72,10 @@ export async function checkUserPermissions(
 ) {
   const member = interaction.member;
   
+  if (isBotOwner(member && member.id)) {
+    return true;
+  }
+
   if (!member.permissions.has(requiredPermissions)) {
     await InteractionHelper.sendErrorNotice(interaction, errorMessage);
 
@@ -167,6 +175,7 @@ export function auditPermissionCheck(userId, action, allowed, reason = null) {
 }
 
 export default {
+  isOwner,
   isAdmin,
   isModerator,
   hasPermission,
