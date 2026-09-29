@@ -17,7 +17,7 @@ import shopDashboard from './modules/shop_dashboard.js';
 import serverstatsDashboard from './modules/serverstats_dashboard.js';
 import jtcDashboard from './modules/jtc_dashboard.js';
 import { openReactionRolesPanel } from '../Reaction_roles/reactroles.js';
-import { openSanctions } from '../Moderation/sanctions.js';
+import { openPunish } from '../Moderation/punish.js';
 
 export function openPanel(interaction, client, guildId) {
     const guild = interaction.guild || client.guilds.cache.get(guildId);
@@ -155,7 +155,7 @@ export function openPanel(interaction, client, guildId) {
                         if (!isBotOwner(btnInteraction.user.id) && !btnInteraction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)) {
                             return await InteractionHelper.sendErrorNotice(btnInteraction, 'Tu as besoin de la permission **Modérer les membres** pour ouvrir les sanctions.');
                         }
-                        return await openSanctions(btnInteraction, client);
+                        return await openPunish(btnInteraction, client);
                 }
             } catch (error) {
                 logger.debug(`Panel module open failed (${btnInteraction.customId}):`, error.message);
