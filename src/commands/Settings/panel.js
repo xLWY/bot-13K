@@ -1,6 +1,7 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags, ComponentType } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { isBotOwner } from '../../handlers/commandLoader.js';
 import { logger } from '../../utils/logger.js';
 import { getWelcomeConfig } from '../../utils/database.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
@@ -169,7 +170,7 @@ export default {
         try {
             const { guild, client } = interaction;
 
-            if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+            if (!isBotOwner(interaction.user.id) && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
                 return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/panel`.');
             }
 

@@ -1,8 +1,10 @@
 import { PermissionsBitField } from 'discord.js';
 import { logger } from './logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
+import { BotConfig } from '../config/bot.js';
 import { handleInteractionError } from './errorHandler.js';
 import { enforceAbuseProtection, formatCooldownDuration } from './abuseProtection.js';
+import { isBotOwner } from '../handlers/commandLoader.js';
 
 const OPTION_TYPE = {
     SUBCOMMAND: 1,
@@ -304,8 +306,8 @@ export async function handlePrefixCommand(message, client) {
         logger.error('Failed to load guild config for prefix command check:', error);
     }
 
-    const configuredPrefix = guildConfig?.prefix;
-    if (!configuredPrefix || !message.content.startsWith(configuredPrefix)) return false;
+    const configuredPrefix = guildConfig?.prefix || BotConfig.prefix || '!';
+    if (!message.content.startsWith(configuredPrefix)) return false;
 
     const withoutPrefix = message.content.slice(configuredPrefix.length).trim();
     if (!withoutPrefix) return false;
@@ -368,8 +370,9 @@ export async function handlePrefixCommand(message, client) {
 
         const requiredPerms = commandJSON.default_member_permissions;
         if (requiredPerms !== undefined && requiredPerms !== null) {
+            const isOwner = isBotOwner(message.author.id);
             const perms = new PermissionsBitField(BigInt(requiredPerms));
-            if (!message.member.permissions.has(perms)) {
+            if (!isOwner && !message.member.permissions.has(perms)) {
                 await replyWithNotice(message, 'tu n\'as pas la permission d\'utiliser cette commande');
                 return true;
             }
