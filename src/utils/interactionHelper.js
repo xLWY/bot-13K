@@ -138,8 +138,9 @@ if (error.code === 10062) {
             }
 
             const isCommand = typeof interaction.isCommand === 'function' && interaction.isCommand();
+            const isPrefixLike = typeof interaction.isPrefixCommand === 'function' && interaction.isPrefixCommand();
 
-            if (!isCommand && interaction.message) {
+            if (!isCommand && !isPrefixLike && interaction.message) {
                 await interaction.deferUpdate();
                 return true;
             }

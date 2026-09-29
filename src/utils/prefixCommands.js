@@ -217,6 +217,7 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
         guildId: message.guild?.id ?? null,
         channel: message.channel,
         channelId: message.channel?.id ?? null,
+        message,
         client,
         createdTimestamp: message.createdTimestamp,
         memberPermissions: message.member?.permissions ?? new PermissionsBitField(),
@@ -267,8 +268,14 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
             deferred = true;
             return replyMessage;
         },
-        showModal: async () => {
-            throw new Error('Les modales ne sont pas prises en charge pour les commandes à préfixe — utilise la version slash `/` de cette commande à la place.');
+        showModal: async (modal) => {
+            const builder = typeof modal?.toJSON === 'function' ? modal.toJSON() : modal;
+            if (!builder?.custom_id) {
+                throw new Error('La modale doit avoir un custom_id.');
+            }
+
+            const view = new (await import('discord.js')).ModalBuilder(builder).toJSON();
+            await message.channel.send({ content: '📝 **Modale requise**', components: [[view]] });
         }
     };
 

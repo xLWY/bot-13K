@@ -175,10 +175,7 @@ export default {
             }
 
             if (interaction.isPrefixCommand && interaction.isPrefixCommand()) {
-                return await interaction.followUp({
-                    content: 'Le panneau de contrôle est une commande slash : tape `/panel` dans le chat.',
-                    flags: MessageFlags.Ephemeral,
-                });
+                logger.info('Opening /panel dashboard via prefix command');
             }
 
             await InteractionHelper.safeDefer(interaction);
