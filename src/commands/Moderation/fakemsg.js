@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -6,7 +6,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("fakemsg")
-        .setDescription("* Publier un message dans un salon, affichÃ© comme venant d'un autre membre")
+        .setDescription("* Publier un message dans un salon, affiché comme venant d'un autre membre")
         .addUserOption(option =>
             option
                 .setName("user")
@@ -16,19 +16,19 @@ export default {
         .addStringOption(option =>
             option
                 .setName("message")
-                .setDescription("Le contenu du message (2000 caractÃ¨res max)")
+                .setDescription("Le contenu du message (2000 caractères max)")
                 .setRequired(false)
         )
         .addAttachmentOption(option =>
             option
                 .setName("image")
-                .setDescription("Une image Ã  envoyer en piÃ¨ce jointe")
+                .setDescription("Une image à envoyer en pièce jointe")
                 .setRequired(false)
         )
         .addChannelOption(option =>
             option
                 .setName("channel")
-                .setDescription("Le salon oÃ¹ envoyer (par dÃ©faut : le salon actuel)")
+                .setDescription("Le salon où envoyer (par défaut : le salon actuel)")
                 .addChannelTypes(ChannelType.GuildText, ChannelType.GuildForum)
                 .setRequired(false)
         )
@@ -48,7 +48,7 @@ export default {
         }
 
         if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageWebhooks)) {
-            return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission **GÃ©rer les webhooks** pour utiliser cette commande.");
+            return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission **Gérer les webhooks** pour utiliser cette commande.");
         }
 
         const targetUser = interaction.options.getUser("user");
@@ -57,11 +57,11 @@ export default {
         const channel = interaction.options.getChannel("channel") || interaction.channel;
 
         if (!message && !image) {
-            return await InteractionHelper.sendErrorNotice(interaction, "Indique un message ou une image Ã  envoyer.");
+            return await InteractionHelper.sendErrorNotice(interaction, "Indique un message ou une image à envoyer.");
         }
 
         if (message && message.length > 2000) {
-            return await InteractionHelper.sendErrorNotice(interaction, "Les messages doivent faire moins de 2000 caractÃ¨res.");
+            return await InteractionHelper.sendErrorNotice(interaction, "Les messages doivent faire moins de 2000 caractères.");
         }
 
         let targetChannel = channel;
@@ -97,7 +97,7 @@ export default {
             const webhook = await targetChannel.createWebhook({
                 name,
                 avatar: avatarBuffer || undefined,
-                reason: `Message factice postÃ© par ${interaction.user.tag}`
+                reason: `Message factice posté par ${interaction.user.tag}`
             });
 
             try {
@@ -109,7 +109,7 @@ export default {
                     files: image ? [image.url] : undefined
                 });
             } finally {
-                await webhook.delete('Message factice envoyÃ©').catch(() => {});
+                await webhook.delete('Message factice envoyé').catch(() => {});
             }
 
             try {
@@ -120,7 +120,7 @@ export default {
             }
         } catch (error) {
             logger.error("Error in fakemsg command:", error);
-            return await InteractionHelper.sendErrorNotice(interaction, "Ã‰chec de la publication du message factice. VÃ©rifie la permission **GÃ©rer les webhooks** du bot dans ce salon.");
+            return await InteractionHelper.sendErrorNotice(interaction, "Échec de la publication du message factice. Vérifie la permission **Gérer les webhooks** du bot dans ce salon.");
         }
     }
 };

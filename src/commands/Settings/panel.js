@@ -1,4 +1,4 @@
-﻿import { getColor } from '../../config/bot.js';
+import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags, ComponentType } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
@@ -39,62 +39,62 @@ export function openPanel(interaction, client, guildId) {
         const rrList = reactionRoles.status === 'fulfilled' ? reactionRoles.value : [];
 
         const welcomeStatus = welcomeConfig?.channelId
-            ? (guild.channels.cache.get(welcomeConfig.channelId) ? `<#${welcomeConfig.channelId}>` : '`âš ï¸ Introuvable`')
-            : '`Non configurÃ©`';
+            ? (guild.channels.cache.get(welcomeConfig.channelId) ? `<#${welcomeConfig.channelId}>` : '`⚠️ Introuvable`')
+            : '`Non configuré`';
         const ticketStatus = guildConfig?.ticketPanelChannelId
-            ? (guild.channels.cache.get(guildConfig.ticketPanelChannelId) ? `<#${guildConfig.ticketPanelChannelId}>` : '`âš ï¸ Introuvable`')
-            : '`Non configurÃ©`';
-        const levelingStatus = leveling?.enabled ? 'âœ… ActivÃ©' : 'âŒ DÃ©sactivÃ©';
+            ? (guild.channels.cache.get(guildConfig.ticketPanelChannelId) ? `<#${guildConfig.ticketPanelChannelId}>` : '`⚠️ Introuvable`')
+            : '`Non configuré`';
+        const levelingStatus = leveling?.enabled ? '✅ Activé' : '❌ Désactivé';
         const jtcTriggerList = Array.isArray(jtc?.triggerChannels)
             ? jtc.triggerChannels
             : (jtc?.triggerChannels ? [jtc.triggerChannels] : []);
         const jtcStatus = (jtc?.enabled === true || jtc?.enabled === 'true') && jtcTriggerList.length
-            ? `âœ… ${jtcTriggerList.length} salon(s)`
-            : 'âŒ DÃ©sactivÃ©';
-        const counterStatus = counterList.length ? `âœ… ${counterList.length} compteur(s)` : 'âŒ Aucun';
-        const rrStatus = rrList.length ? `âœ… ${rrList.length} message(s)` : 'âŒ Aucun';
+            ? `✅ ${jtcTriggerList.length} salon(s)`
+            : '❌ Désactivé';
+        const counterStatus = counterList.length ? `✅ ${counterList.length} compteur(s)` : '❌ Aucun';
+        const rrStatus = rrList.length ? `✅ ${rrList.length} message(s)` : '❌ Aucun';
 
         const alerts = [];
         if (welcomeConfig?.channelId && !guild.channels.cache.get(welcomeConfig.channelId)) {
-            alerts.push('âš ï¸ Le canal de bienvenue n\'existe plus â€” reconfigure via `/welcome dashboard`.');
+            alerts.push('⚠️ Le canal de bienvenue n\'existe plus — reconfigure via `/welcome dashboard`.');
         }
         if (welcomeConfig?.pingChannelId && !guild.channels.cache.get(welcomeConfig.pingChannelId)) {
-            alerts.push('âš ï¸ Le salon de ping de bienvenue n\'existe plus.');
+            alerts.push('⚠️ Le salon de ping de bienvenue n\'existe plus.');
         }
         if (guildConfig?.ticketPanelChannelId && !guild.channels.cache.get(guildConfig.ticketPanelChannelId)) {
-            alerts.push('âš ï¸ Le salon du panneau de tickets n\'existe plus.');
+            alerts.push('⚠️ Le salon du panneau de tickets n\'existe plus.');
         }
 
         const embed = new EmbedBuilder()
-            .setTitle(`âš™ï¸ Panneau de contrÃ´le â€” ${guild.name}`)
+            .setTitle(`⚙️ Panneau de contrôle — ${guild.name}`)
             .setDescription(
                 alerts.length
-                    ? `Voici l\'Ã©tat global du serveur. **Alerte(s)** :\n${alerts.join('\n')}\n\nUtilise les boutons ci-dessous pour ouvrir chaque module.`
-                    : 'Tout est bien configurÃ©. Utilise les boutons ci-dessous pour ouvrir et modifier chaque module.',
+                    ? `Voici l\'état global du serveur. **Alerte(s)** :\n${alerts.join('\n')}\n\nUtilise les boutons ci-dessous pour ouvrir chaque module.`
+                    : 'Tout est bien configuré. Utilise les boutons ci-dessous pour ouvrir et modifier chaque module.',
             )
             .setColor(alerts.length ? getColor('warning') : getColor('success'))
             .addFields(
-                { name: 'ðŸ·ï¸ Bienvenue / Au revoir', value: welcomeStatus, inline: true },
-                { name: 'ðŸŽ« Tickets', value: ticketStatus, inline: true },
-                { name: 'ðŸ“ˆ Leveling / XP', value: levelingStatus, inline: true },
-                { name: 'ðŸ”Š Salon vocal', value: jtcStatus, inline: true },
-                { name: 'ðŸ“Š Compteurs', value: counterStatus, inline: true },
-                { name: 'ðŸŽ­ RÃ´les rÃ©action', value: rrStatus, inline: true },
-                { name: 'ðŸŽ Giveaways', value: '`Via le dashboard`', inline: true },
-                { name: 'ðŸª Boutique', value: '`Via le dashboard`', inline: true },
+                { name: '\u{1F44B} Bienvenue / Au revoir', value: welcomeStatus, inline: true },
+                { name: '\u{1F3AB} Tickets', value: ticketStatus, inline: true },
+                { name: '\u{1F4C8} Leveling / XP', value: levelingStatus, inline: true },
+                { name: '\u{1F5E3}\u{FE0F} Salon vocal', value: jtcStatus, inline: true },
+                { name: '\u{1F4CA} Compteurs', value: counterStatus, inline: true },
+                { name: '\u{1F3AD} Rôles réaction', value: rrStatus, inline: true },
+                { name: '\u{1F381} Giveaways', value: '`Via le dashboard`', inline: true },
+                { name: '\u{1F6EA} Boutique', value: '`Via le dashboard`', inline: true },
             )
-            .setFooter({ text: 'RÃ©servÃ© aux administrateurs â€¢ /panel' })
+            .setFooter({ text: 'Réservé aux administrateurs • /panel' })
             .setTimestamp();
 
         const modules = [
-            { id: 'panel_welcome', label: 'Bienvenue', emoji: 'ðŸ·ï¸' },
-            { id: 'panel_ticket', label: 'Tickets', emoji: 'ðŸŽ«' },
-            { id: 'panel_leveling', label: 'Leveling', emoji: 'ðŸ“ˆ' },
-            { id: 'panel_jtc', label: 'Salon vocal', emoji: 'ðŸ”Š' },
-            { id: 'panel_serverstats', label: 'Compteurs', emoji: 'ðŸ“Š' },
-            { id: 'panel_giveaway', label: 'Giveaways', emoji: 'ðŸŽ' },
-            { id: 'panel_shop', label: 'Boutique', emoji: 'ðŸª' },
-            { id: 'panel_reactionroles', label: 'RÃ´les rÃ©action', emoji: 'ðŸŽ­' },
+            { id: 'panel_welcome', label: 'Bienvenue', emoji: '\u{1F44B}' },
+            { id: 'panel_ticket', label: 'Tickets', emoji: '\u{1F3AB}' },
+            { id: 'panel_leveling', label: 'Leveling', emoji: '\u{1F4C8}' },
+            { id: 'panel_jtc', label: 'Salon vocal', emoji: '\u{1F5E3}\u{FE0F}' },
+            { id: 'panel_serverstats', label: 'Compteurs', emoji: '\u{1F4CA}' },
+            { id: 'panel_giveaway', label: 'Giveaways', emoji: '\u{1F381}' },
+            { id: 'panel_shop', label: 'Boutique', emoji: '\u{1F6EA}' },
+            { id: 'panel_reactionroles', label: 'Rôles réaction', emoji: '\u{1F3AD}' },
         ];
         const rows = [];
         for (let i = 0; i < modules.length; i += 5) {
@@ -152,7 +152,7 @@ export function openPanel(interaction, client, guildId) {
                 }
             } catch (error) {
                 logger.debug(`Panel module open failed (${btnInteraction.customId}):`, error.message);
-                const message = error?.userMessage || 'Impossible d\'ouvrir ce module. VÃ©rifie qu\'il est configurÃ©, puis rÃ©essaie.';
+                const message = error?.userMessage || 'Impossible d\'ouvrir ce module. Vérifie qu\'il est configuré, puis réessaie.';
                 await InteractionHelper.sendErrorNotice(btnInteraction, message).catch(() => {});
             }
         });
@@ -163,7 +163,7 @@ export function openPanel(interaction, client, guildId) {
 export default {
     data: new SlashCommandBuilder()
         .setName('panel')
-        .setDescription('* Ouvrir le panneau de contrÃ´le global du serveur')
+        .setDescription('* Ouvrir le panneau de contrôle global du serveur')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
     async execute(interaction) {

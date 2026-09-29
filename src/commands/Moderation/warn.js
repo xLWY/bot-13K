@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
@@ -14,7 +14,7 @@ export default {
             o
                 .setName("target")
                 .setRequired(true)
-                .setDescription("Utilisateur Ã  avertir"),
+                .setDescription("Utilisateur à avertir"),
         )
         .addStringOption((o) =>
             o
@@ -38,7 +38,7 @@ export default {
 
         try {
                 if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-                    throw new Error("Tu as besoin de la permission `ModÃ©rer les membres` pour Ã©mettre des avertissements.");
+                    throw new Error("Tu as besoin de la permission `Modérer les membres` pour émettre des avertissements.");
                 }
 
                 const target = interaction.options.getUser("target");
@@ -48,7 +48,7 @@ export default {
                 const guildId = interaction.guildId;
 
                 if (!member) {
-                    throw new Error("L'utilisateur ciblÃ© n'est actuellement pas dans ce serveur.");
+                    throw new Error("L'utilisateur ciblé n'est actuellement pas dans ce serveur.");
                 }
 
                 
@@ -61,7 +61,7 @@ export default {
                 });
 
                 if (!result.success) {
-                    throw new Error("Ã‰chec de l'enregistrement de l'avertissement en base de donnÃ©es");
+                    throw new Error("Échec de l'enregistrement de l'avertissement en base de données");
                 }
 
                 const totalWarns = result.totalCount;
@@ -87,7 +87,7 @@ export default {
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
-                            `âš ï¸ **Averti** ${target.tag}`,
+                            `⚠️ **Averti** ${target.tag}`,
                             `**Raison :** ${reason}\n**Total d'avertissements :** ${totalWarns}`,
                         ),
                     ],

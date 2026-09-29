@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { errorEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
@@ -8,7 +8,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('nuke')
-        .setDescription('* Supprime et recrÃ©e ce salon Ã  l\'identique, effaÃ§ant tous les messages.')
+        .setDescription('* Supprime et recrée ce salon à l\'identique, effaçant tous les messages.')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
     category: 'moderation',
 
@@ -24,27 +24,27 @@ export default {
         }
 
         if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-            return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission `GÃ©rer les salons` pour dÃ©truire un salon.');
+            return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission `Gérer les salons` pour détruire un salon.');
         }
 
         const channel = interaction.channel;
 
         if (!channel || !channel.guild || typeof channel.clone !== 'function') {
-            return await InteractionHelper.sendErrorNotice(interaction, 'Cette commande ne peut Ãªtre utilisÃ©e que dans un salon de serveur.');
+            return await InteractionHelper.sendErrorNotice(interaction, 'Cette commande ne peut être utilisée que dans un salon de serveur.');
         }
 
         try {
             const position = channel.rawPosition ?? channel.position;
 
             const newChannel = await channel.clone({
-                reason: `Salon dÃ©truit par ${interaction.user.tag}`
+                reason: `Salon détruit par ${interaction.user.tag}`
             });
 
             await newChannel.setPosition(position).catch((err) => {
                 logger.warn('Could not restore exact channel position after nuke:', err);
             });
 
-            await channel.delete(`Salon dÃ©truit par ${interaction.user.tag}`);
+            await channel.delete(`Salon détruit par ${interaction.user.tag}`);
 
             await logEvent({
                 client,
@@ -62,13 +62,13 @@ export default {
                 }
             });
 
-            const nukeMessage = await newChannel.send(`ðŸ’¥ Salon dÃ©truit avec succÃ¨s, ${interaction.user} !`);
+            const nukeMessage = await newChannel.send(`💥 Salon détruit avec succès, ${interaction.user} !`);
             setTimeout(() => nukeMessage.delete().catch(() => {}), 3000);
         } catch (error) {
             logger.error('Nuke command error:', error);
             try {
                 await channel.send({
-                    embeds: [errorEmbed('Une erreur inattendue est survenue lors de la destruction de ce salon. VÃ©rifie mes permissions (il me faut \'GÃ©rer les salons\').')]
+                    embeds: [errorEmbed('Une erreur inattendue est survenue lors de la destruction de ce salon. Vérifie mes permissions (il me faut \'Gérer les salons\').')]
                 });
             } catch {
                 // Original channel may already be gone at this point; nothing more we can do.

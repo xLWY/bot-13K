@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
@@ -19,18 +19,18 @@ const durationChoices = [
 export default {
     data: new SlashCommandBuilder()
         .setName("timeout")
-        .setDescription("* Mettre un utilisateur en timeout pour une durÃ©e prÃ©cise.")
+        .setDescription("* Mettre un utilisateur en timeout pour une durée précise.")
         .addUserOption((option) =>
             option
                 .setName("target")
-                .setDescription("Utilisateur Ã  mettre en timeout")
+                .setDescription("Utilisateur à mettre en timeout")
                 .setRequired(true),
         )
         .addIntegerOption(
             (option) =>
                 option
                     .setName("duration")
-                    .setDescription("DurÃ©e du timeout")
+                    .setDescription("Durée du timeout")
                     .setRequired(true)
 .addChoices(...durationChoices),
         )
@@ -56,7 +56,7 @@ export default {
                 throw new TitanBotError(
                     "User lacks permission",
                     ErrorTypes.PERMISSION,
-                    "Tu as besoin de la permission `ModÃ©rer les membres` pour dÃ©finir un timeout."
+                    "Tu as besoin de la permission `Modérer les membres` pour définir un timeout."
                 );
             }
 
@@ -69,7 +69,7 @@ export default {
                 throw new TitanBotError(
                     "Cannot timeout self",
                     ErrorTypes.VALIDATION,
-                    "Tu ne peux pas te mettre en timeout toi-mÃªme."
+                    "Tu ne peux pas te mettre en timeout toi-même."
                 );
             }
             if (targetUser.id === client.user.id) {
@@ -83,7 +83,7 @@ export default {
                 throw new TitanBotError(
                     "Target not found",
                     ErrorTypes.USER_INPUT,
-                    "L'utilisateur ciblÃ© n'est actuellement pas dans ce serveur."
+                    "L'utilisateur ciblé n'est actuellement pas dans ce serveur."
                 );
             }
 
@@ -91,7 +91,7 @@ export default {
                 throw new TitanBotError(
                     "Cannot timeout member",
                     ErrorTypes.PERMISSION,
-                    "Je ne peux pas mettre cet utilisateur en timeout. Il a peut-Ãªtre un rÃ´le plus Ã©levÃ© que moi ou que toi."
+                    "Je ne peux pas mettre cet utilisateur en timeout. Il a peut-être un rôle plus élevé que moi ou que toi."
                 );
             }
 
@@ -109,7 +109,7 @@ export default {
                     action: "Member Timed Out",
                     target: `<@${targetUser.id}> (${targetUser.id})`,
                     executor: `<@${interaction.user.id}> (${interaction.user.id})`,
-                    reason: `${reason}\nDurÃ©e : ${durationDisplay}`,
+                    reason: `${reason}\nDurée : ${durationDisplay}`,
                     duration: durationDisplay,
                     metadata: {
                         userId: targetUser.id,
@@ -123,14 +123,14 @@ export default {
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
                     successEmbed(
-                        `â³ **Timeout** ${targetUser.tag} pour une durÃ©e de ${durationDisplay}.`,
+                        `⏳ **Timeout** ${targetUser.tag} pour une durée de ${durationDisplay}.`,
                         `**Raison :** ${reason}\n**ID de cas :** #${caseId}`,
                     ),
                 ],
             });
         } catch (error) {
             logger.error('Timeout command error:', error);
-            return await InteractionHelper.sendErrorNotice(interaction, error.userMessage || "Une erreur inattendue est survenue pendant le timeout. VÃ©rifie mes permissions de rÃ´le.");
+            return await InteractionHelper.sendErrorNotice(interaction, error.userMessage || "Une erreur inattendue est survenue pendant le timeout. Vérifie mes permissions de rôle.");
         }
     }
 };

@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
@@ -13,7 +13,7 @@ export default {
     .addUserOption((option) =>
       option
         .setName("target")
-        .setDescription("L'utilisateur Ã  expulser")
+        .setDescription("L'utilisateur à expulser")
         .setRequired(true),
     )
     .addStringOption((option) =>
@@ -42,7 +42,7 @@ export default {
         throw new TitanBotError(
           "Cannot kick self",
           ErrorTypes.VALIDATION,
-          "Tu ne peux pas t'expulser toi-mÃªme."
+          "Tu ne peux pas t'expulser toi-même."
         );
       }
 
@@ -60,7 +60,7 @@ export default {
         throw new TitanBotError(
           "Target not found",
           ErrorTypes.USER_INPUT,
-          "L'utilisateur ciblÃ© n'est actuellement pas dans ce serveur.",
+          "L'utilisateur ciblé n'est actuellement pas dans ce serveur.",
           { subtype: 'user_not_found' }
         );
       }
@@ -70,7 +70,7 @@ export default {
         throw new TitanBotError(
           "Cannot kick user",
           ErrorTypes.PERMISSION,
-          "Tu ne peux pas expulser un utilisateur ayant un rÃ´le Ã©gal ou supÃ©rieur au tien."
+          "Tu ne peux pas expulser un utilisateur ayant un rôle égal ou supérieur au tien."
         );
       }
 
@@ -79,7 +79,7 @@ export default {
         throw new TitanBotError(
           "Bot cannot kick",
           ErrorTypes.PERMISSION,
-          "Je ne peux pas expulser cet utilisateur. VÃ©rifie ma position de rÃ´le par rapport Ã  l'utilisateur ciblÃ©."
+          "Je ne peux pas expulser cet utilisateur. Vérifie ma position de rôle par rapport à l'utilisateur ciblé."
         );
       }
 
@@ -106,7 +106,7 @@ export default {
       await InteractionHelper.universalReply(interaction, {
         embeds: [
           successEmbed(
-            `ðŸ‘¢ **ExpulsÃ©** ${targetUser.tag}`,
+            `👢 **Expulsé** ${targetUser.tag}`,
             `**Raison :** ${reason}\n**ID de cas :** #${caseId}`,
           ),
         ],

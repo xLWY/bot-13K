@@ -1,4 +1,4 @@
-﻿import { PermissionsBitField } from 'discord.js';
+import { PermissionsBitField } from 'discord.js';
 import { logger } from './logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { BotConfig } from '../config/bot.js';
@@ -98,19 +98,19 @@ function buildOptionsFromTokens(message, optionDefs, tokens) {
                 break;
             case OPTION_TYPE.INTEGER: {
                 const n = parseInt(rawToken, 10);
-                if (Number.isNaN(n)) return { error: `\`${def.name}\` doit Ãªtre un nombre entier.` };
+                if (Number.isNaN(n)) return { error: `\`${def.name}\` doit être un nombre entier.` };
                 value = n;
                 break;
             }
             case OPTION_TYPE.NUMBER: {
                 const n = parseFloat(rawToken);
-                if (Number.isNaN(n)) return { error: `\`${def.name}\` doit Ãªtre un nombre.` };
+                if (Number.isNaN(n)) return { error: `\`${def.name}\` doit être un nombre.` };
                 value = n;
                 break;
             }
             case OPTION_TYPE.BOOLEAN: {
                 const b = parseBoolean(rawToken);
-                if (b === null) return { error: `\`${def.name}\` doit Ãªtre Â« true Â» ou Â« false Â».` };
+                if (b === null) return { error: `\`${def.name}\` doit être « true » ou « false ».` };
                 value = b;
                 break;
             }
@@ -128,18 +128,18 @@ function buildOptionsFromTokens(message, optionDefs, tokens) {
             }
             case OPTION_TYPE.ROLE: {
                 const role = resolveRole(message, rawToken);
-                if (!role) return { error: `Impossible de trouver un rÃ´le pour \`${def.name}\`. Mentionne-le ou utilise son ID.` };
+                if (!role) return { error: `Impossible de trouver un rôle pour \`${def.name}\`. Mentionne-le ou utilise son ID.` };
                 value = role;
                 break;
             }
             case OPTION_TYPE.MENTIONABLE: {
                 const resolved = resolveUser(message, rawToken) || resolveRole(message, rawToken);
-                if (!resolved) return { error: `Impossible de rÃ©soudre \`${def.name}\`.` };
+                if (!resolved) return { error: `Impossible de résoudre \`${def.name}\`.` };
                 value = resolved;
                 break;
             }
             case OPTION_TYPE.ATTACHMENT:
-                return { error: `\`${def.name}\` nÃ©cessite une piÃ¨ce jointe â€” utilise la version slash \`/\` de cette commande Ã  la place.` };
+                return { error: `\`${def.name}\` nécessite une pièce jointe — utilise la version slash \`/\` de cette commande à la place.` };
             default:
                 value = rawToken;
         }
@@ -275,7 +275,7 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
             }
 
             const view = new (await import('discord.js')).ModalBuilder(builder).toJSON();
-            await message.channel.send({ content: '📝 **Modale requise**', components: [[view]] });
+            await message.channel.send({ content: '?? **Modale requise**', components: [[view]] });
         }
     };
 
@@ -348,12 +348,12 @@ export async function handlePrefixCommand(message, client) {
         );
         if (!abuseProtection.allowed) {
             const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
-            await replyWithNotice(message, `cette commande est en temps de recharge, attends ${formattedCooldown} avant de rÃ©essayer`);
+            await replyWithNotice(message, `cette commande est en temps de recharge, attends ${formattedCooldown} avant de réessayer`);
             return true;
         }
 
         if (guildConfig?.disabledCommands?.[commandName]) {
-            await replyWithNotice(message, 'cette commande a Ã©tÃ© dÃ©sactivÃ©e sur ce serveur');
+            await replyWithNotice(message, 'cette commande a été désactivée sur ce serveur');
             return true;
         }
 
@@ -366,14 +366,14 @@ export async function handlePrefixCommand(message, client) {
             const groupToken = tokens.shift();
             const group = optionDefs.find(o => o.name === groupToken?.toLowerCase());
             if (!group) {
-                await replyWithNotice(message, `utilisation : ${usageLine(configuredPrefix, commandName, null, [])} â€” groupes disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
+                await replyWithNotice(message, `utilisation : ${usageLine(configuredPrefix, commandName, null, [])} — groupes disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommandGroup = group.name;
             const subToken = tokens.shift();
             const sub = group.options?.find(o => o.name === subToken?.toLowerCase());
             if (!sub) {
-                await replyWithNotice(message, `utilisation : \`${configuredPrefix}${commandName} ${group.name} <sous-commande>\` â€” disponibles : ${(group.options || []).map(o => o.name).join(', ')}`);
+                await replyWithNotice(message, `utilisation : \`${configuredPrefix}${commandName} ${group.name} <sous-commande>\` — disponibles : ${(group.options || []).map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommand = sub.name;
@@ -382,7 +382,7 @@ export async function handlePrefixCommand(message, client) {
             const subToken = tokens.shift();
             const sub = optionDefs.find(o => o.name === subToken?.toLowerCase());
             if (!sub) {
-                await replyWithNotice(message, `utilisation : \`${configuredPrefix}${commandName} <sous-commande>\` â€” disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
+                await replyWithNotice(message, `utilisation : \`${configuredPrefix}${commandName} <sous-commande>\` — disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
                 return true;
             }
             subcommand = sub.name;
@@ -401,7 +401,7 @@ export async function handlePrefixCommand(message, client) {
 
         const parsed = buildOptionsFromTokens(message, optionDefs, tokens);
         if (parsed.error) {
-            await replyWithNotice(message, `${parsed.error} â€” utilisation : ${usageLine(configuredPrefix, commandName, subcommand, optionDefs)}`);
+            await replyWithNotice(message, `${parsed.error} — utilisation : ${usageLine(configuredPrefix, commandName, subcommand, optionDefs)}`);
             return true;
         }
 

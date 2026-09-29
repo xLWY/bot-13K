@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
@@ -16,12 +16,12 @@ export default {
     data: new SlashCommandBuilder()
         .setName("gend")
         .setDescription(
-            "* Termine immÃ©diatement un concours actif et tire le(s) gagnant(s).",
+            "* Termine immédiatement un concours actif et tire le(s) gagnant(s).",
         )
         .addStringOption((option) =>
             option
                 .setName("messageid")
-                .setDescription("L'identifiant du message du concours Ã  terminer.")
+                .setDescription("L'identifiant du message du concours à terminer.")
                 .setRequired(true),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
@@ -33,7 +33,7 @@ export default {
                 throw new TitanBotError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
-                    'Cette commande ne peut Ãªtre utilisÃ©e que sur un serveur.',
+                    'Cette commande ne peut être utilisée que sur un serveur.',
                     { userId: interaction.user.id }
                 );
             }
@@ -43,7 +43,7 @@ export default {
                 throw new TitanBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "Vous devez avoir la permission `GÃ©rer le serveur` pour terminer un concours.",
+                    "Vous devez avoir la permission `Gérer le serveur` pour terminer un concours.",
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -69,7 +69,7 @@ export default {
                 throw new TitanBotError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "Aucun concours n'a Ã©tÃ© trouvÃ© avec cet identifiant de message dans la base de donnÃ©es.",
+                    "Aucun concours n'a été trouvé avec cet identifiant de message dans la base de données.",
                     { messageId, guildId: interaction.guildId }
                 );
             }
@@ -97,7 +97,7 @@ export default {
                 throw new TitanBotError(
                     `Channel not found: ${updatedGiveaway.channelId}`,
                     ErrorTypes.VALIDATION,
-                    "Impossible de trouver le salon oÃ¹ le concours Ã©tait hÃ©bergÃ©. L'Ã©tat du concours a Ã©tÃ© mis Ã  jour.",
+                    "Impossible de trouver le salon où le concours était hébergé. L'état du concours a été mis à jour.",
                     { channelId: updatedGiveaway.channelId, messageId }
                 );
             }
@@ -113,7 +113,7 @@ export default {
                 throw new TitanBotError(
                     `Message not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "Impossible de trouver le message du concours. L'Ã©tat du concours a Ã©tÃ© mis Ã  jour.",
+                    "Impossible de trouver le message du concours. L'état du concours a été mis à jour.",
                     { messageId, channelId: updatedGiveaway.channelId }
                 );
             }
@@ -141,7 +141,7 @@ export default {
                     .map((id) => `<@${id}>`)
                     .join(", ");
                 const winnerPingMsg = await channel.send({
-                    content: `ðŸŽ‰ FÃ©licitations ${winnerMentions} ! Tu as gagnÃ© le concours **${updatedGiveaway.prize || 'Concours mystÃ¨re'}** ! CrÃ©e un ticket pour rÃ©cupÃ©rer ton lot ðŸŽ`,
+                    content: `🎉 Félicitations ${winnerMentions} ! Tu as gagné le concours **${updatedGiveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`,
                 });
                 updatedGiveaway.winnerPingMessageId = winnerPingMsg.id;
                 await saveGiveaway(interaction.client, interaction.guildId, updatedGiveaway);
@@ -155,22 +155,22 @@ export default {
                         guildId: interaction.guildId,
                         eventType: EVENT_TYPES.GIVEAWAY_WINNER,
                         data: {
-                            description: `Concours terminÃ© avec ${winners.length} gagnant(s)`,
+                            description: `Concours terminé avec ${winners.length} gagnant(s)`,
                             channelId: channel.id,
                             userId: interaction.user.id,
                             fields: [
                                 {
-                                    name: 'ðŸŽ Prix',
-                                    value: updatedGiveaway.prize || 'Concours mystÃ¨re !',
+                                    name: '🎁 Prix',
+                                    value: updatedGiveaway.prize || 'Concours mystère !',
                                     inline: true
                                 },
                                 {
-                                    name: 'ðŸ† Gagnants',
+                                    name: '🏆 Gagnants',
                                     value: winnerMentions,
                                     inline: false
                                 },
                                 {
-                                    name: 'ðŸ‘¥ Participants',
+                                    name: '👥 Participants',
                                     value: endResult.participantCount.toString(),
                                     inline: true
                                 }
@@ -182,7 +182,7 @@ export default {
                 }
             } else {
                 await channel.send({
-                    content: `Le concours pour **${updatedGiveaway.prize || 'Concours mystÃ¨re'}** est terminÃ© sans participation valide.`,
+                    content: `Le concours pour **${updatedGiveaway.prize || 'Concours mystère'}** est terminé sans participation valide.`,
                 });
                 logger.info(`Giveaway ended with no winners: ${messageId}`);
             }
@@ -192,8 +192,8 @@ export default {
             return InteractionHelper.safeReply(interaction, {
                 embeds: [
                     successEmbed(
-                        "Concours terminÃ© âœ…",
-                        `Le concours **${updatedGiveaway.prize || 'Concours mystÃ¨re'}** est terminÃ© dans ${channel}. ${winners.length} gagnant(s) sÃ©lectionnÃ©(s) parmi ${endResult.participantCount} participant(s).`,
+                        "Concours terminé ✅",
+                        `Le concours **${updatedGiveaway.prize || 'Concours mystère'}** est terminé dans ${channel}. ${winners.length} gagnant(s) sélectionné(s) parmi ${endResult.participantCount} participant(s).`,
                     ),
                 ],
                 flags: MessageFlags.Ephemeral,

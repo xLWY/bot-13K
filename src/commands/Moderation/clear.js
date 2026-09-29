@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
@@ -9,7 +9,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("clear")
-    .setDescription("* Supprimer un nombre prÃ©cis de messages")
+    .setDescription("* Supprimer un nombre précis de messages")
     .addIntegerOption((option) =>
       option
         .setName("amount")
@@ -35,13 +35,13 @@ export default {
     }
 
     if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageMessages))
-      return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission `GÃ©rer les messages` pour supprimer des messages.");
+      return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission `Gérer les messages` pour supprimer des messages.");
 
     const amount = interaction.options.getInteger("amount");
     const channel = interaction.channel;
 
     if (amount < 1 || amount > 100)
-      return await InteractionHelper.sendErrorNotice(interaction, "SpÃ©cifie un nombre entre 1 et 100.");
+      return await InteractionHelper.sendErrorNotice(interaction, "Spécifie un nombre entre 1 et 100.");
 
     try {
       
@@ -54,14 +54,14 @@ export default {
       const deletedCount = deleted.size;
 
       const purgeEmbed = createEmbed(
-        "ðŸ—‘ï¸ Messages supprimÃ©s (Journal d'actions)",
-        `${deletedCount} messages ont Ã©tÃ© supprimÃ©s par ${interaction.user}.`,
+        "🗑️ Messages supprimés (Journal d'actions)",
+        `${deletedCount} messages ont été supprimés par ${interaction.user}.`,
       )
 .setColor(getColor('moderation'))
         .addFields(
           { name: "Salon", value: channel.toString(), inline: true },
           {
-            name: "ModÃ©rateur",
+            name: "Modérateur",
             value: `${interaction.user.tag} (${interaction.user.id})`,
             inline: true,
           },
@@ -75,7 +75,7 @@ export default {
           action: "Messages Purged",
           target: `${channel} (${deletedCount} messages)`,
           executor: `<@${interaction.user.id}> (${interaction.user.id})`,
-          reason: `${deletedCount} messages supprimÃ©s`,
+          reason: `${deletedCount} messages supprimés`,
           metadata: {
             channelId: channel.id,
             messageCount: deletedCount,
@@ -88,7 +88,7 @@ export default {
       if (!isPrefix) {
         await InteractionHelper.safeEditReply(interaction, {
           embeds: [
-            successEmbed(`ðŸ—‘ï¸ ${deletedCount} messages supprimÃ©s dans ${channel}.`),
+            successEmbed(`🗑️ ${deletedCount} messages supprimés dans ${channel}.`),
           ],
         flags: MessageFlags.Ephemeral,
         });
@@ -101,7 +101,7 @@ export default {
       }
     } catch (error) {
       logger.error('Purge command error:', error);
-      return await InteractionHelper.sendErrorNotice(interaction, "Une erreur inattendue est survenue lors de la suppression des messages. Remarque : les messages de plus de 14 jours ne peuvent pas Ãªtre supprimÃ©s en masse.");
+      return await InteractionHelper.sendErrorNotice(interaction, "Une erreur inattendue est survenue lors de la suppression des messages. Remarque : les messages de plus de 14 jours ne peuvent pas être supprimés en masse.");
     }
   }
 };

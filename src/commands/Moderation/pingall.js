@@ -1,4 +1,4 @@
-﻿import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
@@ -29,7 +29,7 @@ export default {
         const client = interaction.client;
 
         if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-            return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission `GÃ©rer le serveur` pour pinger tout le monde.');
+            return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission `Gérer le serveur` pour pinger tout le monde.');
         }
 
         const remaining = hasCooldown(interaction.user.id);
