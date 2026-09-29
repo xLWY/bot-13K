@@ -299,6 +299,10 @@ export async function handlePrefixCommand(message, client) {
     if (message.author.bot || !message.guild) return false;
     if (!message.content) return false;
 
+    if (message.content.startsWith('!')) {
+        logger.debug(`[PREFIX_DEBUG] received "${message.content}" from ${message.author.tag}`);
+    }
+
     let guildConfig = null;
     try {
         guildConfig = await getGuildConfig(client, message.guild.id);
@@ -307,6 +311,7 @@ export async function handlePrefixCommand(message, client) {
     }
 
     const configuredPrefix = guildConfig?.prefix || BotConfig.prefix || '!';
+
     if (!message.content.startsWith(configuredPrefix)) return false;
 
     const withoutPrefix = message.content.slice(configuredPrefix.length).trim();
@@ -318,6 +323,8 @@ export async function handlePrefixCommand(message, client) {
 
     const command = client.commands.get(commandName);
     if (!command) return false;
+
+    logger.info(`[PREFIX] ${message.author.tag} ran "${configuredPrefix}${commandName}" (owner=${isBotOwner(message.author.id)})`);
 
     try {
         const abuseProtection = await enforceAbuseProtection(
