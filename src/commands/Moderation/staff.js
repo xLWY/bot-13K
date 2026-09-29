@@ -10,16 +10,16 @@ import { WarningService } from '../../services/warningService.js';
 const P = PermissionFlagsBits;
 
 const ACTIONS = [
-    { id: 'punish_warn', label: 'Warn', emoji: '\u{1F4CC}', style: ButtonStyle.Primary, perm: P.ModerateMembers, permLabel: 'Modérer les membres' },
-    { id: 'punish_mute', label: 'Mute vocal', emoji: '\u{1F507}', style: ButtonStyle.Secondary, perm: P.MuteMembers, permLabel: 'Couper les micros' },
-    { id: 'punish_unmute', label: 'Unmute', emoji: '\u{1F3A4}', style: ButtonStyle.Secondary, perm: P.MuteMembers, permLabel: 'Couper les micros' },
-    { id: 'punish_jail', label: 'Jail', emoji: '\u{1F6D1}', style: ButtonStyle.Secondary, perm: P.ModerateMembers, permLabel: 'Modérer les membres' },
-    { id: 'punish_untimeout', label: 'Untimeout', emoji: '\u{1F6D1}', style: ButtonStyle.Secondary, perm: P.ModerateMembers, permLabel: 'Modérer les membres' },
-    { id: 'punish_timeout', label: 'Timeout', emoji: '\u{23F1}', style: ButtonStyle.Secondary, perm: P.ModerateMembers, permLabel: 'Modérer les membres' },
-    { id: 'punish_kick', label: 'Kick', emoji: '\u{1F5D1}', style: ButtonStyle.Secondary, perm: P.KickMembers, permLabel: 'Expulser des membres' },
-    { id: 'punish_ban', label: 'Ban', emoji: '\u{1F6AB}', style: ButtonStyle.Danger, perm: P.BanMembers, permLabel: 'Bannir des membres' },
-    { id: 'punish_unban', label: 'Unban', emoji: '\u{1F91E}', style: ButtonStyle.Secondary, perm: P.BanMembers, permLabel: 'Bannir des membres' },
-    { id: 'punish_warnlist', label: 'Warn list', emoji: '\u{1F4CB}', style: ButtonStyle.Secondary, perm: P.ModerateMembers, permLabel: 'Modérer les membres' },
+    { id: 'staff_warn', label: 'Warn', emoji: '\u{1F4CC}', style: ButtonStyle.Primary, perm: P.ModerateMembers, permLabel: 'Modérer les membres' },
+    { id: 'staff_mute', label: 'Mute vocal', emoji: '\u{1F507}', style: ButtonStyle.Secondary, perm: P.MuteMembers, permLabel: 'Couper les micros' },
+    { id: 'staff_unmute', label: 'Unmute', emoji: '\u{1F3A4}', style: ButtonStyle.Secondary, perm: P.MuteMembers, permLabel: 'Couper les micros' },
+    { id: 'staff_jail', label: 'Jail', emoji: '\u{1F6D1}', style: ButtonStyle.Secondary, perm: P.ModerateMembers, permLabel: 'Modérer les membres' },
+    { id: 'staff_untimeout', label: 'Untimeout', emoji: '\u{1F6D1}', style: ButtonStyle.Secondary, perm: P.ModerateMembers, permLabel: 'Modérer les membres' },
+    { id: 'staff_timeout', label: 'Timeout', emoji: '\u{23F1}', style: ButtonStyle.Secondary, perm: P.ModerateMembers, permLabel: 'Modérer les membres' },
+    { id: 'staff_kick', label: 'Kick', emoji: '\u{1F5D1}', style: ButtonStyle.Secondary, perm: P.KickMembers, permLabel: 'Expulser des membres' },
+    { id: 'staff_ban', label: 'Ban', emoji: '\u{1F6AB}', style: ButtonStyle.Danger, perm: P.BanMembers, permLabel: 'Bannir des membres' },
+    { id: 'staff_unban', label: 'Unban', emoji: '\u{1F91E}', style: ButtonStyle.Secondary, perm: P.BanMembers, permLabel: 'Bannir des membres' },
+    { id: 'staff_warnlist', label: 'Warn list', emoji: '\u{1F4CB}', style: ButtonStyle.Secondary, perm: P.ModerateMembers, permLabel: 'Modérer les membres' },
 ];
 
 const REASON_LIMIT = 512;
@@ -42,7 +42,7 @@ function buildEmbed(guild) {
             { name: '\u{1F6AB} Ban', value: '`Bannissement`', inline: true },
             { name: '\u{1F4CB} Warn list', value: '`Consulte les warns`', inline: true },
         )
-        .setFooter({ text: 'Réservé aux modérateurs • /punish' })
+        .setFooter({ text: 'Réservé aux modérateurs • /staff' })
         .setTimestamp();
 }
 
@@ -83,7 +83,7 @@ function parseDuration(raw) {
     return amount * { s: 1000, m: 60000, h: 3600000, d: 86400000 }[match[2]];
 }
 
-async function openPunish(interaction, client) {
+async function openStaff(interaction, client) {
     await InteractionHelper.safeDeferOrUpdate(interaction, {});
     await InteractionHelper.safeEditReply(interaction, {
         embeds: [buildEmbed(interaction.guild)],
@@ -109,7 +109,7 @@ async function openPunish(interaction, client) {
             return;
         }
 
-        if (action.id === 'punish_warnlist') {
+        if (action.id === 'staff_warnlist') {
             await openWarnList(btn);
             return;
         }
@@ -119,11 +119,11 @@ async function openPunish(interaction, client) {
 }
 
 async function openActionModal(btn, action) {
-    const needsId = action.id === 'punish_unban';
-    const hasDuration = action.id === 'punish_timeout' || action.id === 'punish_jail';
+    const needsId = action.id === 'staff_unban';
+    const hasDuration = action.id === 'staff_timeout' || action.id === 'staff_jail';
 
     const modal = new ModalBuilder()
-        .setCustomId(`punish_modal_${action.id}`)
+        .setCustomId(`staff_modal_${action.id}`)
         .setTitle(`${action.label} — ${btn.guild.name}`.slice(0, 45))
         .addComponents(
             new ActionRowBuilder().addComponents(
@@ -171,7 +171,7 @@ async function openActionModal(btn, action) {
 
     const submitted = await btn
         .awaitModalSubmit({
-            filter: i => i.customId === `punish_modal_${action.id}` && i.user.id === btn.user.id,
+            filter: i => i.customId === `staff_modal_${action.id}` && i.user.id === btn.user.id,
             time: 120_000,
         })
         .catch(() => null);
@@ -217,7 +217,7 @@ async function applyAction({ interaction, action, targetId, reason, durationRaw 
         return { success: false, error: 'Tu ne peux pas te sanctionner toi-meme.' };
     }
 
-    if (action.id === 'punish_ban') {
+    if (action.id === 'staff_ban') {
         const ok = await guild.bans.create(targetId, { reason: reason.slice(0, REASON_LIMIT) })
             .then(() => true).catch(() => false);
         if (!ok) return { success: false, error: 'Ban impossible. Permissions insuffisantes ou membre deja banni.' };
@@ -225,7 +225,7 @@ async function applyAction({ interaction, action, targetId, reason, durationRaw 
         return { success: true, title: '\u{1F6AB} Banni', message: `<@${targetId}> a ete banni.` };
     }
 
-    if (action.id === 'punish_unban') {
+    if (action.id === 'staff_unban') {
         const banned = await guild.bans.fetch(targetId).then(() => true).catch(() => false);
         if (!banned) return { success: false, error: 'Cet utilisateur n est pas banni.' };
         const ok = await guild.bans.remove(targetId, reason.slice(0, REASON_LIMIT))
@@ -245,8 +245,8 @@ async function applyAction({ interaction, action, targetId, reason, durationRaw 
         return { success: false, error: 'Ce membre a un role superieur ou egal au tien.' };
     }
 
-    if (action.id === 'punish_mute' || action.id === 'punish_unmute') {
-        const shouldMute = action.id === 'punish_mute';
+    if (action.id === 'staff_mute' || action.id === 'staff_unmute') {
+        const shouldMute = action.id === 'staff_mute';
         if (member.voice.channelId === null || member.voice.channelId === undefined) {
             return { success: false, error: 'Ce membre n est pas connecte en vocal.' };
         }
@@ -264,8 +264,8 @@ async function applyAction({ interaction, action, targetId, reason, durationRaw 
         };
     }
 
-    if (action.id === 'punish_jail' || action.id === 'punish_untimeout') {
-        const isJail = action.id === 'punish_jail';
+    if (action.id === 'staff_jail' || action.id === 'staff_untimeout') {
+        const isJail = action.id === 'staff_jail';
         const duration = parseDuration(durationRaw) || (isJail ? 3600000 : 0);
 
         if (isJail) {
@@ -296,14 +296,14 @@ async function applyAction({ interaction, action, targetId, reason, durationRaw 
         return { success: true, title: '\u{1F6D1} Unjailed', message: `<@${targetId}> n est plus en jail.` };
     }
 
-    if (action.id === 'punish_kick') {
+    if (action.id === 'staff_kick') {
         const ok = await member.kick(reason.slice(0, REASON_LIMIT)).then(() => true).catch(() => false);
         if (!ok) return { success: false, error: 'Kick impossible. Permissions insuffisantes.' };
         await audit(interaction, 'User Kicked', targetId, reason, moderatorId);
         return { success: true, title: '\u{1F5D1} Expulse', message: `<@${targetId}> a ete expulse.` };
     }
 
-    if (action.id === 'punish_timeout') {
+    if (action.id === 'staff_timeout') {
         const duration = parseDuration(durationRaw);
         if (!duration) return { success: false, error: 'Duree invalide. Formats : 30m, 2h, 7d.' };
         if (duration > MAX_TIMEOUT) return { success: false, error: 'La duree max est de 28 jours.' };
@@ -313,7 +313,7 @@ async function applyAction({ interaction, action, targetId, reason, durationRaw 
         return { success: true, title: '\u{23F1} Timeout', message: `<@${targetId}> est en timeout.` };
     }
 
-    if (action.id === 'punish_warn') {
+    if (action.id === 'staff_warn') {
         const result = await WarningService.addWarning({
             guildId: guild.id,
             userId: targetId,
@@ -356,7 +356,7 @@ async function openWarnList(btn) {
     try {
         await btn.showModal(
             new ModalBuilder()
-                .setCustomId('punish_warnlist_modal')
+                .setCustomId('staff_warnlist_modal')
                 .setTitle('Warn list')
                 .addComponents(
                     new ActionRowBuilder().addComponents(
@@ -376,7 +376,7 @@ async function openWarnList(btn) {
 
     const submitted = await btn
         .awaitModalSubmit({
-            filter: i => i.customId === 'punish_warnlist_modal' && i.user.id === btn.user.id,
+            filter: i => i.customId === 'staff_warnlist_modal' && i.user.id === btn.user.id,
             time: 120_000,
         })
         .catch(() => null);
@@ -417,7 +417,7 @@ async function openWarnList(btn) {
 
 export default {
     data: new SlashCommandBuilder()
-        .setName('punish')
+        .setName('staff')
         .setDescription('* Panneau des sanctions (warn, mute, timeout, kick, ban)')
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 
@@ -430,12 +430,12 @@ export default {
             }
 
             await InteractionHelper.safeDefer(interaction);
-            await openPunish(interaction, client);
+            await openStaff(interaction, client);
         } catch (error) {
-            logger.error('Error in /punish:', error);
+            logger.error('Error in /staff:', error);
             return await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de l\'ouverture du panneau des sanctions.');
         }
     },
 };
 
-export { openPunish };
+export { openStaff };
