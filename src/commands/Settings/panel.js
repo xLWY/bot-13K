@@ -77,11 +77,11 @@ export function openPanel(interaction, client, guildId) {
                 { name: '\u{1F44B} Bienvenue / Au revoir', value: welcomeStatus, inline: true },
                 { name: '\u{1F3AB} Tickets', value: ticketStatus, inline: true },
                 { name: '\u{1F4C8} Leveling / XP', value: levelingStatus, inline: true },
-                { name: '\u{1F5E3}\u{FE0F} Salon vocal', value: jtcStatus, inline: true },
+                { name: '\u{1F3A4} Salon vocal', value: jtcStatus, inline: true },
                 { name: '\u{1F4CA} Compteurs', value: counterStatus, inline: true },
                 { name: '\u{1F3AD} Rôles réaction', value: rrStatus, inline: true },
                 { name: '\u{1F381} Giveaways', value: '`Via le dashboard`', inline: true },
-                { name: '\u{1F6EA} Boutique', value: '`Via le dashboard`', inline: true },
+                { name: '\u{1F6D2} Boutique', value: '`Via le dashboard`', inline: true },
             )
             .setFooter({ text: 'Réservé aux administrateurs • /panel' })
             .setTimestamp();
@@ -90,10 +90,10 @@ export function openPanel(interaction, client, guildId) {
             { id: 'panel_welcome', label: 'Bienvenue', emoji: '\u{1F44B}' },
             { id: 'panel_ticket', label: 'Tickets', emoji: '\u{1F3AB}' },
             { id: 'panel_leveling', label: 'Leveling', emoji: '\u{1F4C8}' },
-            { id: 'panel_jtc', label: 'Salon vocal', emoji: '\u{1F5E3}\u{FE0F}' },
+            { id: 'panel_jtc', label: 'Salon vocal', emoji: '\u{1F3A4}' },
             { id: 'panel_serverstats', label: 'Compteurs', emoji: '\u{1F4CA}' },
             { id: 'panel_giveaway', label: 'Giveaways', emoji: '\u{1F381}' },
-            { id: 'panel_shop', label: 'Boutique', emoji: '\u{1F6EA}' },
+            { id: 'panel_shop', label: 'Boutique', emoji: '\u{1F6D2}' },
             { id: 'panel_reactionroles', label: 'Rôles réaction', emoji: '\u{1F3AD}' },
         ];
         const rows = [];
