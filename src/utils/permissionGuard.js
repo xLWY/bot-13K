@@ -8,6 +8,10 @@ import { logger } from './logger.js';
 import { InteractionHelper } from './interactionHelper.js';
 import { isBotOwner } from './ownerIds.js';
 
+export function isOwner(userId) {
+  return isBotOwner(userId);
+}
+
 
 
 
