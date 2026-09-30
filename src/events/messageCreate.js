@@ -10,6 +10,7 @@ import { addXp } from '../services/xpSystem.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { handlePrefixCommand } from '../utils/prefixCommands.js';
 import { recordMessage } from '../services/statsService.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -26,6 +27,12 @@ export default {
     try {
       
       if (message.author.bot) return;
+
+      if (!message.guild) {
+        logger.info(
+          `[DM] received from ${message.author.tag} (${message.author.id}) | owner=${isBotOwner(message.author.id)} | content="${message.content}"`
+        );
+      }
 
       const handledAsCommand = await handlePrefixCommand(message, client).catch((error) => {
         logger.error('Error handling prefix command:', error);
