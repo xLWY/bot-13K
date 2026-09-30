@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Commandes autorisees en message prive (slash + prefixe).
-const DM_ENABLED_COMMANDS = new Set(['ping', 'help', 'avatar']);
+const DM_ENABLED_COMMANDS = new Set(['ping', 'diag', 'avatar']);
 
 
 
@@ -143,6 +143,14 @@ export async function loadCommands(client) {
 
 const GLOBAL_DESC_LIMIT = 100;
 const GLOBAL_NAME_LIMIT = 32;
+const REGISTRATION_TIMEOUT_MS = 30000;
+
+function withTimeout(promise, label, ms = REGISTRATION_TIMEOUT_MS) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms))
+    ]);
+}
 
 function validateForGlobal(commandJson, seenNames) {
     const name = commandJson.name;
@@ -184,11 +192,21 @@ function validateForGlobal(commandJson, seenNames) {
 
 async function registerGlobalCommands(client, commands) {
     try {
-        await client.application.commands.set(commands);
+        await withTimeout(client.application.commands.set(commands), 'Global registration');
         logger.info(`Successfully registered ${commands.length} global commands (usable in DM)`);
         return { registered: commands.length, failed: [] };
     } catch (error) {
         logger.error('Bulk global registration rejected by Discord:', error.message);
+        if (error.message.includes('timed out')) {
+            logger.error('Global bulk registration timed out - skipping to keep the bot responsive.');
+            return { registered: 0, failed: [{ name: '*', error: error.message }] };
+        }
+
+        if (process.env.NODE_ENV === 'production') {
+            logger.error('Production: skipping per-command fallback to avoid a rate-limit storm.');
+            return { registered: 0, failed: [{ name: '*', error: error.message }] };
+        }
+
         logger.error('Falling back to one-by-one registration to identify the offending command(s)...');
 
         const accepted = [];
@@ -354,7 +372,7 @@ const registeredNames = new Set();
             
             const guild = await client.guilds.fetch(guildId);
             
-            const existingCommands = await guild.commands.fetch();
+            const existingCommands = await withTimeout(guild.commands.fetch(), 'Guild command fetch');
             logger.info(`Found ${existingCommands.size} existing guild commands`);
             
             const MAX_COMMANDS = 100;
@@ -368,10 +386,10 @@ const registeredNames = new Set();
 
             try {
                 logger.info(`Registering ${commandsToRegister.length} guild commands...`);
-                await guild.commands.set(commandsToRegister);
+                await withTimeout(guild.commands.set(commandsToRegister), 'Guild registration');
                 logger.info(`Successfully registered ${commandsToRegister.length} guild commands`);
-                
-                const registeredCommands = await guild.commands.fetch();
+
+                const registeredCommands = await withTimeout(guild.commands.fetch(), 'Guild command verification');
                 if (registeredCommands.size !== commandsToRegister.length) {
                     logger.warn(`Warning: Expected ${commandsToRegister.length} commands, but Discord reports ${registeredCommands.size} registered`);
                 } else {

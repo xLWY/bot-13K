@@ -309,7 +309,7 @@ async function replyWithNotice(message, text) {
     }
 }
 
-const DM_SAFE_COMMANDS = new Set(['ping', 'help', 'avatar']);
+const DM_SAFE_COMMANDS = new Set(['ping', 'diag', 'avatar']);
 
 export async function handlePrefixCommand(message, client) {
     if (message.author.bot) return false;
