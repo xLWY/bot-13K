@@ -309,19 +309,27 @@ async function replyWithNotice(message, text) {
     }
 }
 
+const DM_SAFE_COMMANDS = new Set(['ping', 'help', 'avatar']);
+
 export async function handlePrefixCommand(message, client) {
-    if (message.author.bot || !message.guild) return false;
+    if (message.author.bot) return false;
     if (!message.content) return false;
 
-    if (message.content.startsWith('!')) {
+    const isDm = !message.guild;
+
+    if (isDm && !isBotOwner(message.author.id)) return false;
+
+    if (!isDm && message.content.startsWith('!')) {
         logger.debug(`[PREFIX_DEBUG] received "${message.content}" from ${message.author.tag}`);
     }
 
     let guildConfig = null;
-    try {
-        guildConfig = await getGuildConfig(client, message.guild.id);
-    } catch (error) {
-        logger.error('Failed to load guild config for prefix command check:', error);
+    if (!isDm) {
+        try {
+            guildConfig = await getGuildConfig(client, message.guild.id);
+        } catch (error) {
+            logger.error('Failed to load guild config for prefix command check:', error);
+        }
     }
 
     const configuredPrefix = guildConfig?.prefix || BotConfig.prefix || '!';
@@ -338,11 +346,16 @@ export async function handlePrefixCommand(message, client) {
     const command = client.commands.get(commandName);
     if (!command) return false;
 
-    logger.info(`[PREFIX] ${message.author.tag} ran "${configuredPrefix}${commandName}" (owner=${isBotOwner(message.author.id)})`);
+    if (isDm && !DM_SAFE_COMMANDS.has(commandName)) {
+        await replyWithNotice(message, `\`${commandName}\` a besoin d\'un serveur. Utilise la commande dans un salon du serveur.`);
+        return true;
+    }
+
+    logger.info(`[PREFIX] ${message.author.tag} ran "${configuredPrefix}${commandName}" (owner=${isBotOwner(message.author.id)}, dm=${isDm})`);
 
     try {
         const abuseProtection = await enforceAbuseProtection(
-            { guildId: message.guild.id, user: message.author },
+            { guildId: message.guild?.id ?? null, user: message.author },
             command,
             commandName
         );
@@ -410,7 +423,8 @@ export async function handlePrefixCommand(message, client) {
 
         logger.info(`Prefix command executed: ${configuredPrefix}${commandName} by ${message.author.tag}`, {
             event: 'prefix.command.received',
-            guildId: message.guild.id,
+            guildId: message.guild?.id ?? null,
+            isDm,
             userId: message.author.id,
             command: commandName
         });

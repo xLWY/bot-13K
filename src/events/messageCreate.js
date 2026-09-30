@@ -25,9 +25,7 @@ export default {
   async execute(message, client) {
     try {
       
-      if (message.author.bot || !message.guild) return;
-
-      await recordMessageStat(message, client);
+      if (message.author.bot) return;
 
       const handledAsCommand = await handlePrefixCommand(message, client).catch((error) => {
         logger.error('Error handling prefix command:', error);
@@ -35,6 +33,9 @@ export default {
       });
       if (handledAsCommand) return;
 
+      if (!message.guild) return;
+
+      await recordMessageStat(message, client);
       await handleLeveling(message, client);
     } catch (error) {
       logger.error('Error in messageCreate event:', error);
