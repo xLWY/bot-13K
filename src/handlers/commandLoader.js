@@ -3,7 +3,6 @@ import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { Collection } from 'discord.js';
 import { logger } from '../utils/logger.js';
-import { getBotOwnerIds } from '../utils/ownerIds.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -161,14 +160,6 @@ const registeredNames = new Set();
                 if (!registeredNames.has(commandName)) {
                     registeredNames.add(commandName);
                     const commandJson = command.data.toJSON();
-                    const ownerIds = getBotOwnerIds();
-
-                    if (ownerIds.length > 0) {
-                        const existing = Array.isArray(commandJson.allowed_users) ? commandJson.allowed_users : [];
-                        const merged = Array.from(new Set([...existing, ...ownerIds]));
-                        commandJson.allowed_users = merged;
-                    }
-
                     if (DM_ENABLED_COMMANDS.has(commandName)) {
                         commandJson.dm_permission = true;
                     }
@@ -266,13 +257,21 @@ const registeredNames = new Set();
             
             const MAX_COMMANDS = 100;
             let commandsToRegister = commands;
-            
+
             if (commands.length > MAX_COMMANDS) {
                 logger.warn(`Command count (${commands.length}) exceeds Discord limit (${MAX_COMMANDS}), truncating...`);
                 commandsToRegister = commands.slice(0, MAX_COMMANDS);
                 logger.info(`Truncated to ${commandsToRegister.length} commands for registration`);
             }
-            
+
+            try {
+                logger.info(`Registering ${commandsToRegister.length} GLOBAL commands (required for DM)...`);
+                await client.application.commands.set(commandsToRegister);
+                logger.info(`Successfully registered ${commandsToRegister.length} global commands`);
+            } catch (error) {
+                logger.error('Failed to register global commands:', error);
+            }
+
             if (process.env.NODE_ENV !== 'production') {
                 logger.info(`Registering ${totalCommandsWithSubs} commands for guild ${guild.name} (${guild.id})`);
             }
@@ -307,7 +306,7 @@ const registeredNames = new Set();
                 throw error;
             }
         } else {
-            logger.info('Skipping global command registration - bot is guild-only');
+            logger.info('No guildId configured: only global commands are registered');
         }
     } catch (error) {
         logger.error('Error registering commands:', error);
