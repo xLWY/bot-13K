@@ -141,6 +141,81 @@ export async function loadCommands(client) {
 
 
 
+const GLOBAL_DESC_LIMIT = 100;
+const GLOBAL_NAME_LIMIT = 32;
+
+function validateForGlobal(commandJson, seenNames) {
+    const name = commandJson.name;
+    const errors = [];
+
+    if (!name) errors.push('missing name');
+    if (name && !/^[-_\p{L}\p{N}\p{sc=Deva}\p{sc=Thai}]{1,32}$/u.test(name)) {
+        errors.push(`invalid name "${name}"`);
+    }
+    if (name && seenNames.has(name)) errors.push(`duplicate name "${name}"`);
+    if (name) seenNames.add(name);
+
+    if (!commandJson.description) errors.push('missing description');
+    if (commandJson.description && commandJson.description.length > GLOBAL_DESC_LIMIT) {
+        errors.push(`description ${commandJson.description.length}/${GLOBAL_DESC_LIMIT} chars`);
+    }
+
+    for (const option of commandJson.options || []) {
+        if (option.name && option.name.length > GLOBAL_NAME_LIMIT) {
+            errors.push(`option "${option.name}" name too long (${option.name.length})`);
+        }
+        if (!option.description) errors.push(`option "${option.name}" missing description`);
+        if (option.description && option.description.length > GLOBAL_DESC_LIMIT) {
+            errors.push(`option "${option.name}" description ${option.description.length}/${GLOBAL_DESC_LIMIT} chars`);
+        }
+        for (const sub of option.options || []) {
+            if (sub.name && sub.name.length > GLOBAL_NAME_LIMIT) {
+                errors.push(`sub-option "${option.name}/${sub.name}" name too long (${sub.name.length})`);
+            }
+            if (!sub.description) errors.push(`sub-option "${option.name}/${sub.name}" missing description`);
+            if (sub.description && sub.description.length > GLOBAL_DESC_LIMIT) {
+                errors.push(`sub-option "${option.name}/${sub.name}" description ${sub.description.length}/${GLOBAL_DESC_LIMIT} chars`);
+            }
+        }
+    }
+
+    return errors;
+}
+
+async function registerGlobalCommands(client, commands) {
+    try {
+        await client.application.commands.set(commands);
+        logger.info(`Successfully registered ${commands.length} global commands (usable in DM)`);
+        return { registered: commands.length, failed: [] };
+    } catch (error) {
+        logger.error('Bulk global registration rejected by Discord:', error.message);
+        logger.error('Falling back to one-by-one registration to identify the offending command(s)...');
+
+        const accepted = [];
+        const failed = [];
+
+        for (const commandJson of commands) {
+            const candidate = [...accepted, commandJson];
+            try {
+                await client.application.commands.set(candidate);
+                accepted.push(commandJson);
+            } catch (perCommandError) {
+                failed.push({ name: commandJson.name, error: perCommandError.message });
+                logger.error(`  REJECTED "${commandJson.name}": ${perCommandError.message}`);
+            }
+        }
+
+        try {
+            await client.application.commands.set(accepted);
+            logger.info(`Global registration finished: ${accepted.length} accepted, ${failed.length} rejected`);
+        } catch (finalError) {
+            logger.error('Final global registration failed:', finalError.message);
+        }
+
+        return { registered: accepted.length, failed };
+    }
+}
+
 export async function registerCommands(client, guildId) {
     try {
         const commands = [];
@@ -181,7 +256,34 @@ const registeredNames = new Set();
         }
         
         const totalCommandsWithSubs = commands.length + totalSubcommands;
-        
+
+        const seenNames = new Set();
+        const validCommands = [];
+        const rejected = [];
+
+        for (const commandJson of commands) {
+            const errors = validateForGlobal(commandJson, seenNames);
+            if (errors.length > 0) {
+                rejected.push({ name: commandJson.name, errors });
+                logger.error(`Command "${commandJson.name}" is NOT valid for global registration: ${errors.join('; ')}`);
+            } else {
+                validCommands.push(commandJson);
+            }
+        }
+
+        if (rejected.length > 0) {
+            logger.error(`${rejected.length} command(s) rejected locally and excluded from registration`);
+        }
+
+        const globalResult = await registerGlobalCommands(client, validCommands);
+
+        if (globalResult.failed.length > 0) {
+            logger.error('Commands Discord refused despite passing local validation:');
+            for (const item of globalResult.failed) {
+                logger.error(`  - ${item.name}: ${item.error}`);
+            }
+        }
+
         if (guildId) {
             
             logger.info(`Preparing to register ${totalCommandsWithSubs} commands for guild ${guildId}`);
@@ -265,22 +367,8 @@ const registeredNames = new Set();
             }
 
             try {
-                logger.info(`Registering ${commandsToRegister.length} GLOBAL commands (required for DM)...`);
-                await client.application.commands.set(commandsToRegister);
-                logger.info(`Successfully registered ${commandsToRegister.length} global commands`);
-            } catch (error) {
-                logger.error('Failed to register global commands:', error);
-            }
-
-            if (process.env.NODE_ENV !== 'production') {
-                logger.info(`Registering ${totalCommandsWithSubs} commands for guild ${guild.name} (${guild.id})`);
-            }
-            
-            try {
-                logger.info(`Registering ${commandsToRegister.length} new commands...`);
-                
+                logger.info(`Registering ${commandsToRegister.length} guild commands...`);
                 await guild.commands.set(commandsToRegister);
-                
                 logger.info(`Successfully registered ${commandsToRegister.length} guild commands`);
                 
                 const registeredCommands = await guild.commands.fetch();
