@@ -317,8 +317,6 @@ export async function handlePrefixCommand(message, client) {
 
     const isDm = !message.guild;
 
-    if (isDm && !isBotOwner(message.author.id)) return false;
-
     if (!isDm && message.content.startsWith('!')) {
         logger.debug(`[PREFIX_DEBUG] received "${message.content}" from ${message.author.tag}`);
     }
@@ -335,6 +333,11 @@ export async function handlePrefixCommand(message, client) {
     const configuredPrefix = guildConfig?.prefix || BotConfig.prefix || '!';
 
     if (!message.content.startsWith(configuredPrefix)) return false;
+
+    if (isDm && !isBotOwner(message.author.id)) {
+        await replyWithNotice(message, 'en message prive, les commandes sont reservees au owner du bot.');
+        return true;
+    }
 
     const withoutPrefix = message.content.slice(configuredPrefix.length).trim();
     if (!withoutPrefix) return false;

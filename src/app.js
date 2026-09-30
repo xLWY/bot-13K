@@ -90,9 +90,13 @@ GatewayIntentBits.Guilds,
       await this.login(this.config.bot.token);
       startupLog('Discord login successful');
       
-      startupLog('Registering slash commands...');
-      await this.registerCommands();
-      startupLog('Slash commands registration complete');
+      startupLog('ONLINE - bot is connected and handling messages');
+      
+      // Slash registration is deliberately NOT awaited: a slow or failing Discord
+      // command API must never block or prevent the bot from processing messages.
+      this.registerCommands().catch((error) => {
+        logger.error('Slash command registration failed (non-fatal):', error?.message || error);
+      });
       
       const databaseMode = dbStatus.isDegraded
         ? 'Optional in-memory mode (data resets after restart)'
@@ -479,9 +483,18 @@ try {
     process.on('SIGTERM', () => bot.shutdown('SIGTERM'));
     process.on('SIGINT', () => bot.shutdown('SIGINT'));
     
+    let uncaughtCount = 0;
+
     process.on('uncaughtException', (error) => {
+      uncaughtCount += 1;
       logger.error('Uncaught Exception:', error);
-      bot.shutdown('UNCAUGHT_EXCEPTION');
+
+      if (uncaughtCount >= 5) {
+        logger.error(`Too many uncaught exceptions (${uncaughtCount}), shutting down for a clean restart.`);
+        bot.shutdown('UNCAUGHT_EXCEPTION');
+      } else {
+        logger.warn(`Uncaught exception ${uncaughtCount}/5 contained, bot keeps running.`);
+      }
     });
     
     const FATAL_REJECTION_CODES = new Set([
