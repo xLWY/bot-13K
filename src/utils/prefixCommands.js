@@ -313,7 +313,16 @@ const DM_SAFE_COMMANDS = new Set(['ping', 'diag', 'avatar']);
 
 export async function handlePrefixCommand(message, client) {
     if (message.author.bot) return false;
-    if (!message.content) return false;
+
+    logger.info(
+        `[MSG] scope=${message.guild ? 'GUILD' : 'DM'} author=${message.author.id} ` +
+        `owner=${isBotOwner(message.author.id)} raw=${JSON.stringify(message.content)}`
+    );
+
+    if (!message.content) {
+        logger.warn(`[MSG] empty content received (MessageContent intent missing?) author=${message.author.id}`);
+        return false;
+    }
 
     const isDm = !message.guild;
 
@@ -347,6 +356,10 @@ export async function handlePrefixCommand(message, client) {
     if (!commandName) return false;
 
     const command = client.commands.get(commandName);
+    logger.info(
+        `[MSG] prefix="${configuredPrefix}" command="${commandName}" ` +
+        `found=${Boolean(command)} inSafeList=${!isDm || DM_SAFE_COMMANDS.has(commandName)}`
+    );
     if (!command) return false;
 
     if (isDm && !DM_SAFE_COMMANDS.has(commandName)) {
