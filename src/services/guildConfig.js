@@ -4,7 +4,7 @@ import { normalizeGuildConfig, validateGuildConfigOrThrow } from '../utils/schem
 import { wrapServiceBoundary } from '../utils/serviceErrorBoundary.js';
 
 const GUILD_CONFIG_DEFAULTS = {
-    prefix: BotConfig.prefix,
+    prefix: BotConfig.defaultPrefix,
     modRole: null,
     adminRole: null,
     logChannelId: null,

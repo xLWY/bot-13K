@@ -330,7 +330,7 @@ export async function handlePrefixCommand(message, client) {
         }
     }
 
-    const configuredPrefix = guildConfig?.prefix || BotConfig.prefix || '!';
+    const configuredPrefix = guildConfig?.prefix || BotConfig.defaultPrefix || '!';
 
     if (!message.content.startsWith(configuredPrefix)) return false;
 
