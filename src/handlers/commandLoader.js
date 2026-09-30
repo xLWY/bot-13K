@@ -8,6 +8,9 @@ import { getBotOwnerIds } from '../utils/ownerIds.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Commandes autorisees en message prive (slash + prefixe).
+const DM_ENABLED_COMMANDS = new Set(['ping', 'help', 'avatar']);
+
 
 
 
@@ -164,6 +167,10 @@ const registeredNames = new Set();
                         const existing = Array.isArray(commandJson.allowed_users) ? commandJson.allowed_users : [];
                         const merged = Array.from(new Set([...existing, ...ownerIds]));
                         commandJson.allowed_users = merged;
+                    }
+
+                    if (DM_ENABLED_COMMANDS.has(commandName)) {
+                        commandJson.dm_permission = true;
                     }
 
                     commands.push(commandJson);
