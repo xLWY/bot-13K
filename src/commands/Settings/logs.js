@@ -7,11 +7,11 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('logs')
-        .setDescription('* Définir le canal des logs du serveur ou afficher le statut actuel')
+        .setDescription('* Les logs sont envoyes en MP au proprietaire du bot. Definit un canal de secours')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addChannelOption(option =>
             option.setName('channel')
-                .setDescription('Le canal textuel qui recevra tous les logs du serveur')
+                .setDescription('Canal textuel de secours, utilise seulement si le MP echoue')
                 .setRequired(false)
                 .addChannelTypes(ChannelType.GuildText)),
 
@@ -49,15 +49,15 @@ export default {
 
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [successEmbed(
-                        `${channel} est désormais le **canal des logs**. La journalisation est activée pour les ${Object.keys(EVENT_TYPES).length} types d'événements (modération, messages, rôles, membres, tickets, giveaways, reaction roles, leveling...).`,
-                        '📝 Logs Configurés'
+                        `${channel} est désormais le **canal de secours** des logs. Les logs sont envoyes en **message prive au proprietaire du bot** ; ils ne tomberont dans ce salon que si le DM est impossible.\n\n${Object.keys(EVENT_TYPES).length} types d'evenements sont actifs (moderation, messages, roles, membres, tickets, giveaways, reaction roles, leveling...).`,
+                        '\u{1F4DD} Logs Configures'
                     )],
                     flags: MessageFlags.Ephemeral
                 });
 
                 try {
                     await channel.send({
-                        embeds: [successEmbed('Ce canal est désormais le **canal des logs** du serveur. Tous les événements de journalisation apparaîtront ici.', '📝 Canal des Logs Actif')]
+                        embeds: [successEmbed('Ce canal est desormais le **canal de secours** du bot. Les logs partent en message prive au proprietaire ; ce salon ne recoit les logs quen cas dechec du DM.', '\u{1F4DD} Canal de Secours Actif')]
                     });
                 } catch {
                     logger.warn(`[Logs] Could not send confirmation in logs channel ${channel.id} (missing Send/Embed permissions?)`);
@@ -67,25 +67,22 @@ export default {
 
             const status = await getLoggingStatus(client, interaction.guild.id);
 
-            if (!status.enabled || !status.channelId) {
-                return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [infoEmbed('Aucun canal de logs n\'est configuré pour le moment. Utilise `/logs <canal>` pour activer la journalisation sur ce serveur.', '📝 Statut des Logs')],
-                    flags: MessageFlags.Ephemeral
-                });
-            }
-
-            const logChannel = interaction.guild.channels.cache.get(status.channelId);
-            const channelMention = logChannel ? logChannel.toString() : `\`${status.channelId}\``;
-
             const enabledCount = Object.values(EVENT_TYPES).filter(
                 type => status.enabledEvents[type] !== false
             ).length;
             const totalCount = Object.keys(EVENT_TYPES).length;
 
+            const fallbackLine = status.channelId
+                ? (() => {
+                    const ch = interaction.guild.channels.cache.get(status.channelId);
+                    return `Canal de secours : ${ch ? ch.toString() : `\`${status.channelId}\``}.`;
+                })()
+                : 'Aucun canal de secours configure.';
+
             return InteractionHelper.safeEditReply(interaction, {
                 embeds: [infoEmbed(
-                    `Les logs sont **activés** dans ${channelMention}.\n**${enabledCount}/${totalCount}** types d'événements sont actifs.`,
-                    '📝 Statut des Logs'
+                    `Les logs sont envoyes en **message prive** aux proprietaires du bot.\n${fallbackLine}\n**${enabledCount}/${totalCount}** types d'evenements sont actifs.`,
+                    '\u{1F4DD} Statut des Logs'
                 )],
                 flags: MessageFlags.Ephemeral
             });

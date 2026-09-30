@@ -2,6 +2,8 @@ import { EmbedBuilder, ChannelType } from 'discord.js';
 import { getGuildConfig } from './guildConfig.js';
 import { resolveLogMentions } from '../utils/logMentions.js';
 import { logger } from '../utils/logger.js';
+import { sendLogToOwners } from '../utils/ownerLogRelay.js';
+import { getBotOwnerIds } from '../utils/ownerIds.js';
 
 
 
@@ -187,15 +189,31 @@ export async function logEvent({
       return;
     }
 
-    
-    const logChannelId = getLogChannelForEvent(config, eventType);
-    if (!logChannelId) {
+    const resolvedData = await resolveLogEventData(client, guild, data);
+
+    const embed = createLogEmbed(guild, eventType, resolvedData);
+
+    const messageOptions = { embeds: [embed] };
+    if (attachments.length > 0) {
+      messageOptions.files = attachments;
+    }
+
+    const dmResult = await sendLogToOwners(client, () => ({ ...messageOptions }));
+
+    if (dmResult.delivered > 0) {
+      logger.info(`Event DM'd to owner(s): ${eventType} for guild ${guildId} (${dmResult.delivered} DM)`);
       return;
     }
 
-    const channel = guild.channels.cache.get(logChannelId) || 
+    const logChannelId = getLogChannelForEvent(config, eventType);
+    if (!logChannelId) {
+      logger.warn(`logEvent: ${eventType} for guild ${guildId} dropped (no owner DM, no fallback channel)`);
+      return;
+    }
+
+    const channel = guild.channels.cache.get(logChannelId) ||
       await guild.channels.fetch(logChannelId).catch(() => null);
-    
+
     if (!channel || channel.type !== ChannelType.GuildText) {
       logger.warn(`logEvent: Invalid log channel ${logChannelId} for guild ${guildId}`);
       return;
@@ -207,17 +225,8 @@ export async function logEvent({
       return;
     }
 
-    const resolvedData = await resolveLogEventData(client, guild, data);
-
-    const embed = createLogEmbed(guild, eventType, resolvedData);
-    
-    const messageOptions = { embeds: [embed] };
-    if (attachments.length > 0) {
-      messageOptions.files = attachments;
-    }
-
     await channel.send(messageOptions);
-    logger.info(`Event logged: ${eventType} in guild ${guildId}`);
+    logger.info(`Event logged to fallback channel: ${eventType} in guild ${guildId}`);
 
   } catch (error) {
     logger.error(`Error in logEvent:`, error);
@@ -235,7 +244,9 @@ function isLoggingEnabled(config, eventType) {
     return false;
   }
 
-  if (!config.logging || !config.logging.enabled) {
+  const logging = config.logging || {};
+
+  if (logging.enabled === false) {
     return false;
   }
 
@@ -245,7 +256,7 @@ function isLoggingEnabled(config, eventType) {
   }
 
   const category = eventType.split('.')[0];
-  const enabledEvents = config.logging.enabledEvents || {};
+  const enabledEvents = logging.enabledEvents || {};
 
   
   if (enabledEvents[eventType] === false) {
@@ -381,10 +392,12 @@ export async function getLoggingStatus(client, guildId) {
   const logging = config.logging || {};
 
   return {
-    enabled: logging.enabled || false,
-    channelId: logging.channelId || null,
+    enabled: logging.enabled !== false && config.enableLogging !== false,
+    channelId: logging.channelId || config.logChannelId || null,
     enabledEvents: logging.enabledEvents || {},
-    allEventTypes: EVENT_TYPES
+    allEventTypes: EVENT_TYPES,
+    dmMode: true,
+    ownerIds: getBotOwnerIds()
   };
 }
 

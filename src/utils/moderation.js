@@ -1,5 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import { getGuildConfig } from '../services/guildConfig.js';
+import { sendLogToOwners } from './ownerLogRelay.js';
 import { logger } from './logger.js';
 import { getFromDb, setInDb } from './database.js';
 import { getColor } from '../config/bot.js';
@@ -31,9 +32,8 @@ export async function logEvent({ client, guild, guildId, event }) {
     }
     const config = await getGuildConfig(client, guild.id);
     const loggingDisabled = config?.logging?.enabled === false || config?.enableLogging === false;
-    const logChannelId = config?.logging?.channelId || config?.logChannelId;
-    if (!logChannelId || loggingDisabled) {
-      logger.debug(`Logging disabled or no log channel configured for guild ${guild.id}`);
+    if (loggingDisabled) {
+      logger.debug(`Logging disabled for guild ${guild.id}`);
       return;
     }
 
@@ -42,11 +42,8 @@ export async function logEvent({ client, guild, guildId, event }) {
       return;
     }
 
-    const logChannel = guild.channels.cache.get(logChannelId);
-    if (!logChannel) {
-      logger.warn(`Log channel ${logChannelId} not found in guild ${guild.id}`);
-      return;
-    }
+    const logChannelId = config?.logging?.channelId || config?.logChannelId;
+    const logChannel = logChannelId ? guild.channels.cache.get(logChannelId) : null;
 
     
     const actionStyles = {
@@ -83,8 +80,8 @@ export async function logEvent({ client, guild, guildId, event }) {
         )
         .setTimestamp();
 
-      await logChannel.send({ embeds: [dmEmbed] });
-      logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id}`);
+      const route = await deliverLog(client, guild, logChannel, { embeds: [dmEmbed] });
+      logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id} (${route})`);
       return;
     }
 
@@ -144,13 +141,30 @@ export async function logEvent({ client, guild, guildId, event }) {
       });
     }
 
-    await logChannel.send({ embeds: [embed] });
-    
-    logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id}`);
+    const route = await deliverLog(client, guild, logChannel, { embeds: [embed] });
+
+    logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id} (${route})`);
     
   } catch (error) {
     logger.error("Error logging moderation event:", error);
   }
+}
+
+/**
+ * Envoie le log en DM aux proprietaires du bot.
+ * Si aucun owner n'est joignable, bascule sur le salon de logs s'il existe.
+ */
+async function deliverLog(client, guild, logChannel, payload) {
+  const dm = await sendLogToOwners(client, () => ({ ...payload }));
+  if (dm.delivered > 0) {
+    return 'dm';
+  }
+  if (logChannel) {
+    await logChannel.send(payload);
+    return 'channel';
+  }
+  logger.warn(`deliverLog: log lost for guild ${guild?.id} (no owner DM, no fallback channel)`);
+  return 'lost';
 }
 
 
