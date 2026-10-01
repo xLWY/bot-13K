@@ -2,6 +2,7 @@
 import { getGuildConfig } from '../services/guildConfig.js';
 import { EVENT_TYPES } from '../services/loggingService.js';
 import { resolveLogMentions } from './logMentions.js';
+import { sendLogToOwners } from './ownerLogRelay.js';
 import { logger } from './logger.js';
 
 
@@ -31,8 +32,24 @@ export async function logTicketEvent({ client, guildId, event }) {
 
     const config = await getGuildConfig(client, guildId);
 
+    const embed = await createTicketLogEmbed(client, guild, event);
+
+    const messageOptions = { embeds: [embed] };
+
+    if (event.attachments && event.attachments.length > 0) {
+      messageOptions.files = event.attachments;
+    }
+
+    const dmResult = await sendLogToOwners(client, () => ({ ...messageOptions }));
+
+    if (dmResult.delivered > 0) {
+      logger.info(`Ticket event DM'd to owner(s): ${event.type} for guild ${guildId} (${dmResult.delivered} DM)`);
+      return;
+    }
+
     const logChannelId = getLogChannelForEventType(config, event.type);
     if (!logChannelId) {
+      logger.warn(`Ticket event dropped (no owner DM, no fallback channel): ${event.type} for guild ${guildId}`);
       return;
     }
 
@@ -48,16 +65,8 @@ export async function logTicketEvent({ client, guildId, event }) {
       return;
     }
 
-    const embed = await createTicketLogEmbed(client, guild, event);
-    
-    const messageOptions = { embeds: [embed] };
-    
-    if (event.attachments && event.attachments.length > 0) {
-      messageOptions.files = event.attachments;
-    }
-
     await channel.send(messageOptions);
-    logger.info(`Ticket event logged: ${event.type} in guild ${guildId}`);
+    logger.info(`Ticket event logged to fallback channel: ${event.type} in guild ${guildId}`);
 
   } catch (error) {
     logger.error('Error logging ticket event:', error);

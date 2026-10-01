@@ -196,6 +196,25 @@ function normalizeReplyPayload(options) {
     return rest;
 }
 
+async function resolveSendable(message) {
+    const channel = message.channel;
+    if (!channel) return null;
+
+    if (!channel.partial && typeof channel.send === 'function') return channel;
+
+    try {
+        const fetched = await message.client.channels.fetch(channel.id);
+        if (fetched && typeof fetched.send === 'function') {
+            logger.warn(`Resolved partial channel ${channel.id} for reply.`);
+            return fetched;
+        }
+    } catch (error) {
+        logger.warn(`Could not resolve channel ${channel.id}: ${error.message}`);
+    }
+
+    return channel.partial ? null : channel;
+}
+
 /**
  * Builds a lightweight object that mimics a discord.js ChatInputCommandInteraction
  * closely enough for our commands' execute() functions to run unmodified against
@@ -231,29 +250,37 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
         get deferred() { return deferred; },
         get replied() { return replied; },
         deferReply: async () => {
-            replyMessage = await message.channel.send({ content: '... Je m\'en occupe...' });
+            const target = await resolveSendable(message);
+            if (!target) throw new Error('Canal de reponse indisponible.');
+            replyMessage = await target.send({ content: '... Je m\'en occupe...' });
             deferred = true;
             return replyMessage;
         },
         editReply: async (options) => {
             const payload = normalizeReplyPayload(options);
+            const target = await resolveSendable(message);
+            if (!target) throw new Error('Canal de reponse indisponible.');
             if (replyMessage) {
                 replyMessage = await replyMessage.edit(payload);
             } else {
-                replyMessage = await message.channel.send(payload);
+                replyMessage = await target.send(payload);
                 replied = true;
             }
             return replyMessage;
         },
         reply: async (options) => {
             const payload = normalizeReplyPayload(options);
-            replyMessage = await message.reply(payload);
+            const target = await resolveSendable(message);
+            if (!target) throw new Error('Canal de reponse indisponible.');
+            replyMessage = await target.reply(payload);
             replied = true;
             return replyMessage;
         },
         followUp: async (options) => {
             const payload = normalizeReplyPayload(options);
-            return await message.channel.send(payload);
+            const target = await resolveSendable(message);
+            if (!target) throw new Error('Canal de reponse indisponible.');
+            return await target.send(payload);
         },
         deleteReply: async () => {
             if (replyMessage && replyMessage.deletable) {
@@ -299,7 +326,10 @@ async function tryDeletePrefixMessage(message) {
 }
 
 async function replyWithNotice(message, text) {
-    const sent = await message.reply(`<@${message.author.id}> ${text}`).catch(() => null);
+    const sent = await message.reply(`<@${message.author.id}> ${text}`).catch((error) => {
+        logger.warn(`replyWithNotice failed in ${message.guild ? 'guild' : 'DM'}: ${error.code || error.message}`);
+        return null;
+    });
     if (sent) {
         setTimeout(async () => {
             try { await sent.delete(); } catch (_) {
@@ -309,7 +339,7 @@ async function replyWithNotice(message, text) {
     }
 }
 
-const DM_SAFE_COMMANDS = new Set(['ping', 'diag', 'avatar']);
+const DM_SAFE_COMMANDS = new Set(['ping', 'diag', 'help', 'avatar']);
 
 export async function handlePrefixCommand(message, client) {
     if (message.author.bot) return false;

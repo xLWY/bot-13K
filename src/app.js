@@ -1,5 +1,5 @@
 ﻿import 'dotenv/config';
-import { Client, Collection, GatewayIntentBits, ChannelType } from 'discord.js';
+import { Client, Collection, GatewayIntentBits, ChannelType, Partials } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
@@ -34,6 +34,11 @@ GatewayIntentBits.Guilds,
         
         
         GatewayIntentBits.GuildBans,                    
+      ],
+      partials: [
+        Partials.Channel,
+        Partials.Message,
+        Partials.Reaction,
       ],
     });
 
