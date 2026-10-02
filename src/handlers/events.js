@@ -14,25 +14,36 @@ export default async function loadEvents(client) {
     for (const file of eventFiles) {
         const filePath = join(eventsPath, file);
         try {
-            const { default: event } = await import(`file://${filePath}`);
+            const { default: exported } = await import(`file://${filePath}`);
 
-            if (!event?.name || typeof event.execute !== 'function') {
-                logger.warn(`Event ${file} is missing required "name" or "execute" properties.`);
+            // Un fichier peut exporter un evenement unique OU un tableau
+            // d'evenements (plus pratique pour regrouper une famille d'events).
+            const handlers = Array.isArray(exported) ? exported : [exported];
+
+            if (handlers.length === 0) {
+                logger.warn(`Event ${file} exports an empty array.`);
                 continue;
             }
 
-            const safeExecute = async (...args) => {
-                try {
-                    await event.execute(...args, client);
-                } catch (error) {
-                    logger.error(`Error executing event ${event.name}:`, error);
+            for (const event of handlers) {
+                if (!event?.name || typeof event.execute !== 'function') {
+                    logger.warn(`Event ${file} is missing required "name" or "execute" properties.`);
+                    continue;
                 }
-            };
-            
-            if (event.once) {
-                client.once(event.name, safeExecute);
-            } else {
-                client.on(event.name, safeExecute);
+
+                const safeExecute = async (...args) => {
+                    try {
+                        await event.execute(...args, client);
+                    } catch (error) {
+                        logger.error(`Error executing event ${event.name}:`, error);
+                    }
+                };
+
+                if (event.once) {
+                    client.once(event.name, safeExecute);
+                } else {
+                    client.on(event.name, safeExecute);
+                }
             }
         } catch (error) {
             logger.error(`Error loading event ${file}:`, error);

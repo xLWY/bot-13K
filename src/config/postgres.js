@@ -68,13 +68,13 @@ const envBool = (value, fallback) => {
 };
 
 export const pgConfig = {
-    url: rawConnectionUrl || 'postgresql://localhost:5432/titanbot',
+    url: rawConnectionUrl || 'postgresql://localhost:5432/xlwybot',
 
     options: {
 
         host: process.env.POSTGRES_HOST || parsedConnection?.hostname || 'localhost',
         port: parseInt(process.env.POSTGRES_PORT) || parseInt(parsedConnection?.port) || 5432,
-        database: process.env.POSTGRES_DB || decodeURIComponent(parsedConnection?.pathname?.replace(/^\//, '') || '') || 'titanbot',
+        database: process.env.POSTGRES_DB || decodeURIComponent(parsedConnection?.pathname?.replace(/^\//, '') || '') || 'xlwybot',
         user: process.env.POSTGRES_USER || decodeURIComponent(parsedConnection?.username || '') || 'postgres',
         password: (process.env.POSTGRES_PASSWORD || decodeURIComponent(parsedConnection?.password || '') || '').toString(),
         ssl: envBool(process.env.POSTGRES_SSL, parsedConnection ? { rejectUnauthorized: false } : false),
@@ -86,7 +86,7 @@ export const pgConfig = {
         connectionTimeoutMillis: parseInt(process.env.POSTGRES_CONNECTION_TIMEOUT) || 10000,
         
         
-        application_name: 'titanbot',
+        application_name: 'xlwybot',
         statement_timeout: process.env.NODE_ENV === 'production' ? 30000 : 0,
         keepalives: 1,
         keepalives_idle: 30,

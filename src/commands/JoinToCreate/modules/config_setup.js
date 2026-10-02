@@ -13,7 +13,7 @@ import {
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
-import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { 
     getJoinToCreateConfig, 
     updateJoinToCreateConfig,
@@ -30,7 +30,7 @@ export default {
         const currentConfig = await getJoinToCreateConfig(client, guildId);
 
         if (!currentConfig.triggerChannels.includes(triggerChannel.id)) {
-            throw new TitanBotError(
+            throw new XlwyBotError(
                 `Channel ${triggerChannel.id} is not a Join to Create trigger`,
                 ErrorTypes.VALIDATION,
                 `${triggerChannel} n'est pas configuré comme canal déclencheur Join to Create.`
@@ -126,13 +126,13 @@ time: 60000
                         break;
                 }
             } catch (error) {
-                if (error instanceof TitanBotError) {
+                if (error instanceof XlwyBotError) {
                     logger.debug(`Configuration validation error: ${error.message}`, error.context || {});
                 } else {
                     logger.error('Unexpected configuration menu error:', error);
                 }
                 
-                const errorMessage = error instanceof TitanBotError 
+                const errorMessage = error instanceof XlwyBotError 
                     ? error.userMessage || "Une erreur est survenue pendant le traitement de ta sélection."
                     : "Une erreur est survenue pendant le traitement de ta sélection.";
                     
@@ -152,11 +152,11 @@ time: 60000
             }
         });
             } catch (error) {
-            if (error instanceof TitanBotError) {
+            if (error instanceof XlwyBotError) {
                 throw error;
             }
             logger.error('Unexpected error in config_setup:', error);
-            throw new TitanBotError(
+            throw new XlwyBotError(
                 `Config setup failed: ${error.message}`,
                 ErrorTypes.UNKNOWN,
                 "Échec de la configuration du système Join to Create."
@@ -218,13 +218,13 @@ time: 600_000,
 
             await message.delete().catch(() => {});
         } catch (error) {
-            if (error instanceof TitanBotError) {
+            if (error instanceof XlwyBotError) {
                 logger.debug(`Template validation error: ${error.message}`);
             } else {
                 logger.error('Template update error:', error);
             }
             
-            const errorMessage = error instanceof TitanBotError
+            const errorMessage = error instanceof XlwyBotError
                 ? error.userMessage || "Impossible de mettre à jour le modèle de nom."
                 : "Impossible de mettre à jour le modèle de nom.";
                 
@@ -287,13 +287,13 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
 
             await message.delete().catch(() => {});
         } catch (error) {
-            if (error instanceof TitanBotError) {
+            if (error instanceof XlwyBotError) {
                 logger.debug(`User limit validation error: ${error.message}`);
             } else {
                 logger.error('User limit update error:', error);
             }
             
-            const errorMessage = error instanceof TitanBotError
+            const errorMessage = error instanceof XlwyBotError
                 ? error.userMessage || "Impossible de mettre à jour la limite de membres."
                 : "Impossible de mettre à jour la limite de membres.";
                 
@@ -361,13 +361,13 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
 
             await message.delete().catch(() => {});
         } catch (error) {
-            if (error instanceof TitanBotError) {
+            if (error instanceof XlwyBotError) {
                 logger.debug(`Bitrate validation error: ${error.message}`);
             } else {
                 logger.error('Bitrate update error:', error);
             }
             
-            const errorMessage = error instanceof TitanBotError
+            const errorMessage = error instanceof XlwyBotError
                 ? error.userMessage || "Impossible de mettre à jour le débit binaire."
                 : "Impossible de mettre à jour le débit binaire.";
                 
@@ -430,13 +430,13 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
                     await InteractionHelper.sendErrorNotice(buttonInteraction, "Impossible de retirer le canal déclencheur.");
                 }
             } catch (error) {
-                if (error instanceof TitanBotError) {
+                if (error instanceof XlwyBotError) {
                     logger.debug(`Trigger removal validation error: ${error.message}`);
                 } else {
                     logger.error('Remove trigger error:', error);
                 }
                 
-                const errorMessage = error instanceof TitanBotError
+                const errorMessage = error instanceof XlwyBotError
                     ? error.userMessage || "Une erreur est survenue pendant le retrait du canal déclencheur."
                     : "Une erreur est survenue pendant le retrait du canal déclencheur.";
                     

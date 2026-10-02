@@ -1,7 +1,7 @@
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { successEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
-import { TitanBotError, ErrorTypes, handleInteractionError } from '../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes, handleInteractionError } from '../utils/errorHandler.js';
 import { 
     getGuildGiveaways, 
     saveGiveaway, 
@@ -97,7 +97,7 @@ export const giveawayEndHandler = {
         try {
             
             if (!interaction.inGuild()) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'Button used outside guild',
                     ErrorTypes.VALIDATION,
                     'Ce bouton ne peut être utilisé que dans un serveur.',
@@ -114,7 +114,7 @@ export const giveawayEndHandler = {
             const giveaway = guildGiveaways.find(g => g.messageId === interaction.message.id);
 
             if (!giveaway) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'Giveaway not found in database',
                     ErrorTypes.VALIDATION,
                     'Ce concours n\'est plus actif.',
@@ -123,7 +123,7 @@ export const giveawayEndHandler = {
             }
 
             if (giveaway.ended || giveaway.isEnded || isGiveawayEnded(giveaway)) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'Giveaway already ended',
                     ErrorTypes.VALIDATION,
                     'Ce concours est déjà terminé.',
@@ -231,7 +231,7 @@ export const giveawayRerollHandler = {
         try {
             
             if (!interaction.inGuild()) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'Button used outside guild',
                     ErrorTypes.VALIDATION,
                     'Ce bouton ne peut être utilisé que dans un serveur.',
@@ -248,7 +248,7 @@ export const giveawayRerollHandler = {
             const giveaway = guildGiveaways.find(g => g.messageId === interaction.message.id);
 
             if (!giveaway) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'Giveaway not found in database',
                     ErrorTypes.VALIDATION,
                     'Ce concours n\'est plus actif.',
@@ -257,7 +257,7 @@ export const giveawayRerollHandler = {
             }
 
             if (!giveaway.ended && !giveaway.isEnded) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'Giveaway still active',
                     ErrorTypes.VALIDATION,
                     'Ce concours n\'est pas encore terminé. Termine-le d\'abord.',
@@ -268,7 +268,7 @@ export const giveawayRerollHandler = {
             const participants = giveaway.participants || [];
             
             if (participants.length === 0) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'No participants to reroll',
                     ErrorTypes.VALIDATION,
                     'Il n\'y a aucune participation pour refaire un tirage.',
@@ -361,7 +361,7 @@ export const giveawayViewHandler = {
     async execute(interaction, client) {
         try {
             if (!interaction.inGuild()) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'Button used outside guild',
                     ErrorTypes.VALIDATION,
                     'Ce bouton ne peut être utilisé que dans un serveur.',
@@ -373,7 +373,7 @@ export const giveawayViewHandler = {
             const giveaway = guildGiveaways.find(g => g.messageId === interaction.message.id);
 
             if (!giveaway) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'Giveaway not found in database',
                     ErrorTypes.VALIDATION,
                     'Ce concours est introuvable.',

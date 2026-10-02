@@ -21,7 +21,7 @@ import {
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
-import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getWelcomeConfig, saveWelcomeConfig } from '../../../utils/database.js';
 import { botHasPermission } from '../../../utils/permissionGuard.js';
 import { formatWelcomeMessageAsync } from '../../../utils/welcome.js';
@@ -224,14 +224,14 @@ export default {
                             break;
                     }
                 } catch (error) {
-                    if (error instanceof TitanBotError) {
+                    if (error instanceof XlwyBotError) {
                         logger.debug(`Greet config validation error: ${error.message}`);
                     } else {
                         logger.error('Unexpected greet dashboard error:', error);
                     }
 
                     const errorMessage =
-                        error instanceof TitanBotError
+                        error instanceof XlwyBotError
                             ? error.userMessage || 'Une erreur est survenue lors du traitement de ta sélection.'
                             : `Une erreur inattendue est survenue lors de la mise à jour de la configuration. (${error.message})`;
 
@@ -318,7 +318,7 @@ export default {
                     logger.error('Error in greet_dashboard button handler:', error);
                     await InteractionHelper.sendErrorNotice(
                         btnInteraction,
-                        error instanceof TitanBotError
+                        error instanceof XlwyBotError
                             ? (error.userMessage || 'Une erreur est survenue.')
                             : 'Une erreur inattendue est survenue.',
                     ).catch(() => {});
@@ -326,9 +326,9 @@ export default {
             });
 
         } catch (error) {
-            if (error instanceof TitanBotError) throw error;
+            if (error instanceof XlwyBotError) throw error;
             logger.error('Unexpected error in greet_dashboard:', error);
-            throw new TitanBotError(
+            throw new XlwyBotError(
                 `Greet dashboard failed: ${error.message}`,
                 ErrorTypes.UNKNOWN,
                 'Impossible d\'ouvrir le tableau de bord des messages de bienvenue.',

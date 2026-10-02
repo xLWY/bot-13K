@@ -1,6 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { logger } from './logger.js';
-import { TitanBotError, ErrorTypes } from './errorHandler.js';
+import { XlwyBotError, ErrorTypes } from './errorHandler.js';
 import { unwrapReplitData } from './database.js';
 import { 
     createGiveawayEmbed as createGiveawayEmbedService,
@@ -78,7 +78,7 @@ export async function saveGiveaway(client, guildId, giveawayData) {
         }
 
         if (!giveawayData || !giveawayData.messageId) {
-            throw new TitanBotError(
+            throw new XlwyBotError(
                 'Invalid giveaway data: missing messageId',
                 ErrorTypes.VALIDATION,
                 'Impossible d\'enregistrer un giveaway sans ID de message.',
@@ -99,7 +99,7 @@ export async function saveGiveaway(client, guildId, giveawayData) {
         return true;
     } catch (error) {
         logger.error(`Error saving giveaway in guild ${guildId}:`, error);
-        if (error instanceof TitanBotError) {
+        if (error instanceof XlwyBotError) {
             throw error;
         }
         return false;
@@ -121,7 +121,7 @@ export async function deleteGiveaway(client, guildId, messageId) {
         }
 
         if (!messageId) {
-            throw new TitanBotError(
+            throw new XlwyBotError(
                 'Missing messageId parameter',
                 ErrorTypes.VALIDATION,
                 'Impossible de supprimer un giveaway sans ID de message.',
@@ -147,7 +147,7 @@ export async function deleteGiveaway(client, guildId, messageId) {
         return true;
     } catch (error) {
         logger.error(`Error deleting giveaway ${messageId} in guild ${guildId}:`, error);
-        if (error instanceof TitanBotError) {
+        if (error instanceof XlwyBotError) {
             throw error;
         }
         return false;

@@ -65,7 +65,47 @@ const EVENT_TYPES = {
   GIVEAWAY_DELETE: 'giveaway.delete',
   
   
-  COUNTER_UPDATE: 'counter.update'
+  COUNTER_UPDATE: 'counter.update',
+
+  
+  CHANNEL_CREATE: 'channel.create',
+  CHANNEL_UPDATE: 'channel.update',
+  CHANNEL_DELETE: 'channel.delete',
+  CHANNEL_PINS_UPDATE: 'channel.pinsupdate',
+
+  THREAD_CREATE: 'thread.create',
+  THREAD_UPDATE: 'thread.update',
+  THREAD_DELETE: 'thread.delete',
+
+  EMOJI_CREATE: 'emoji.create',
+  EMOJI_UPDATE: 'emoji.update',
+  EMOJI_DELETE: 'emoji.delete',
+
+  STICKER_CREATE: 'sticker.create',
+  STICKER_UPDATE: 'sticker.update',
+  STICKER_DELETE: 'sticker.delete',
+
+  INVITE_CREATE: 'invite.create',
+  INVITE_DELETE: 'invite.delete',
+
+  WEBHOOK_UPDATE: 'webhook.update',
+  GUILD_UPDATE: 'guild.update',
+  GUILD_INTEGRATION_UPDATE: 'guild.integrationupdate',
+
+  STAGE_CREATE: 'stage.create',
+  STAGE_UPDATE: 'stage.update',
+  STAGE_DELETE: 'stage.delete',
+
+  AUTOMOD_RULE_CREATE: 'automod.rulecreate',
+  AUTOMOD_RULE_UPDATE: 'automod.ruleupdate',
+  AUTOMOD_RULE_DELETE: 'automod.ruledelete',
+
+  GUILD_BAN: 'moderation.guildban',
+  GUILD_UNBAN: 'moderation.guildunban',
+  AUDIT_LOG: 'audit.entry',
+
+  MESSAGE_REACTION_ADD: 'reaction.add',
+  MESSAGE_REACTION_REMOVE: 'reaction.remove'
 };
 
 const EVENT_COLORS = {
@@ -105,6 +145,35 @@ const EVENT_COLORS = {
   'giveaway.reroll': 0x3498DB,
   'giveaway.delete': 0xE74C3C,
   'counter.update': 0x0099ff,
+  'channel.create': 0x2ecc71,
+  'channel.update': 0x3498db,
+  'channel.delete': 0xe74c3c,
+  'channel.pinsupdate': 0xf1c40f,
+  'thread.create': 0x2ecc71,
+  'thread.update': 0x3498db,
+  'thread.delete': 0xe74c3c,
+  'emoji.create': 0xf1c40f,
+  'emoji.update': 0x3498db,
+  'emoji.delete': 0xe74c3c,
+  'sticker.create': 0xf1c40f,
+  'sticker.update': 0x3498db,
+  'sticker.delete': 0xe74c3c,
+  'invite.create': 0x2ecc71,
+  'invite.delete': 0xe74c3c,
+  'webhook.update': 0x9b59b6,
+  'guild.update': 0x3498db,
+  'guild.integrationupdate': 0x9b59b6,
+  'stage.create': 0x2ecc71,
+  'stage.update': 0x3498db,
+  'stage.delete': 0xe74c3c,
+  'automod.rulecreate': 0x1abc9c,
+  'automod.ruleupdate': 0xf39c12,
+  'automod.ruledelete': 0xc0392b,
+  'moderation.guildban': 0x721919,
+  'moderation.guildunban': 0x2ecc71,
+  'audit.entry': 0x5865f2,
+  'reaction.add': 0x57f287,
+  'reaction.remove': 0x99aab5,
 };
 
 const EVENT_ICONS = {
@@ -144,7 +213,44 @@ const EVENT_ICONS = {
   'giveaway.reroll': '🔄',
   'giveaway.delete': '🗑️',
   'counter.update': '📊',
+  'channel.create': '➕',
+  'channel.update': '🔄',
+  'channel.delete': '➖',
+  'channel.pinsupdate': '📌',
+  'thread.create': '➕',
+  'thread.update': '🔄',
+  'thread.delete': '➖',
+  'emoji.create': '➕',
+  'emoji.update': '🔄',
+  'emoji.delete': '➖',
+  'sticker.create': '➕',
+  'sticker.update': '🔄',
+  'sticker.delete': '➖',
+  'invite.create': '📨',
+  'invite.delete': '📭',
+  'webhook.update': '🪝',
+  'guild.update': '🏛️',
+  'guild.integrationupdate': '🔗',
+  'stage.create': '🎙️',
+  'stage.update': '🔄',
+  'stage.delete': '🔇',
+  'automod.rulecreate': '🛡️',
+  'automod.ruleupdate': '⚙️',
+  'automod.ruledelete': '🗑️',
+  'moderation.guildban': '🔨',
+  'moderation.guildunban': '♻️',
+  'audit.entry': '📋',
+  'reaction.add': '➕',
+  'reaction.remove': '➖',
 };
+
+// Evenements bruyants : desactives par defaut.
+// Il faut les activer explicitement (enabledEvents[type] === true)
+// via /logs pour eviter de noyer la MP du proprietaire.
+const DEFAULT_OFF_EVENT_TYPES = new Set([
+  EVENT_TYPES.MESSAGE_REACTION_ADD,
+  EVENT_TYPES.MESSAGE_REACTION_REMOVE,
+]);
 
 
 
@@ -265,6 +371,11 @@ function isLoggingEnabled(config, eventType) {
 
   
   if (enabledEvents[`${category}.*`] === false) {
+    return false;
+  }
+
+  
+  if (DEFAULT_OFF_EVENT_TYPES.has(eventType) && enabledEvents[eventType] !== true) {
     return false;
   }
 

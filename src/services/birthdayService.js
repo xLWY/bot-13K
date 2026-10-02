@@ -1,7 +1,7 @@
 import { getGuildConfig } from './guildConfig.js';
 import { getGuildBirthdays, setBirthday as dbSetBirthday, deleteBirthday as dbDeleteBirthday, getMonthName } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
-import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes } from '../utils/errorHandler.js';
 
 
 
@@ -70,7 +70,7 @@ export async function setBirthday(client, guildId, userId, month, day) {
         error: validation.error
       });
       
-      throw new TitanBotError(
+      throw new XlwyBotError(
         validation.error,
         ErrorTypes.VALIDATION,
         validation.error,
@@ -82,7 +82,7 @@ export async function setBirthday(client, guildId, userId, month, day) {
     const success = await dbSetBirthday(client, guildId, userId, month, day);
     
     if (!success) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Failed to save birthday to database',
         ErrorTypes.DATABASE,
         'Impossible de définir ton anniversaire. Réessaie plus tard.',
@@ -211,7 +211,7 @@ export async function deleteBirthday(client, guildId, userId) {
     const success = await dbDeleteBirthday(client, guildId, userId);
     
     if (!success) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Failed to delete birthday from database',
         ErrorTypes.DATABASE,
         'Impossible de supprimer ton anniversaire. Réessaie.',

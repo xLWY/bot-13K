@@ -45,7 +45,7 @@ export default {
 
             const embed = new EmbedBuilder()
                 .setColor(getColor('info'))
-                .setTitle('\u{1F9EA} Diagnostic TitanBot')
+                .setTitle('\u{1F9EA} Diagnostic xlwy bot')
                 .addFields(
                     {
                         name: 'Contexte',

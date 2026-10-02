@@ -1,7 +1,7 @@
 services:
   bot:
     build: .
-    container_name: titanbot
+    container_name: xlwy bot
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -14,16 +14,16 @@ services:
       db:
         condition: service_healthy
     networks:
-      - titan-network
+      - xlwy-network
 
   db:
     image: postgres:15-alpine
-    container_name: titanbot-db
+    container_name: xlwy bot-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-titanbot}
+      - POSTGRES_USER=${POSTGRES_USER:-xlwy bot}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_DB=${POSTGRES_DB:-titanbot}
+      - POSTGRES_DB=${POSTGRES_DB:-xlwy bot}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,10 +32,10 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - titan-network
+      - xlwy-network
 
 networks:
-  titan-network:
+  xlwy-network:
     driver: bridge
 
 volumes:

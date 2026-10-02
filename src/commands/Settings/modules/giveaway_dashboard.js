@@ -17,7 +17,7 @@ import {
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
-import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import {
     getGuildGiveaways,
     saveGiveaway,
@@ -299,7 +299,7 @@ async function openCreateModal(selectInteraction, rootInteraction, client, guild
         logger.debug('Giveaway creation validation error:', error.message);
         await submitted.reply({
             embeds: [warningEmbed(
-                error instanceof TitanBotError ? (error.userMessage || 'Données de concours invalides.') : 'Erreur lors de la création du concours.',
+                error instanceof XlwyBotError ? (error.userMessage || 'Données de concours invalides.') : 'Erreur lors de la création du concours.',
                 '⚠️ Impossible de créer',
             )],
             flags: MessageFlags.Ephemeral,

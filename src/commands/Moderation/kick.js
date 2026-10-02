@@ -4,7 +4,7 @@ import { successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -26,7 +26,7 @@ export default {
     try {
       
       if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
-        throw new TitanBotError(
+        throw new XlwyBotError(
           "User lacks permission",
           ErrorTypes.PERMISSION,
           "Tu n'as pas la permission d'expulser des membres."
@@ -39,7 +39,7 @@ export default {
 
       
       if (targetUser.id === interaction.user.id) {
-        throw new TitanBotError(
+        throw new XlwyBotError(
           "Cannot kick self",
           ErrorTypes.VALIDATION,
           "Tu ne peux pas t'expulser toi-même."
@@ -48,7 +48,7 @@ export default {
 
       
       if (targetUser.id === client.user.id) {
-        throw new TitanBotError(
+        throw new XlwyBotError(
           "Cannot kick bot",
           ErrorTypes.VALIDATION,
           "Tu ne peux pas expulser le bot."
@@ -57,7 +57,7 @@ export default {
 
       
       if (!member) {
-        throw new TitanBotError(
+        throw new XlwyBotError(
           "Target not found",
           ErrorTypes.USER_INPUT,
           "L'utilisateur ciblé n'est actuellement pas dans ce serveur.",
@@ -67,7 +67,7 @@ export default {
 
       
       if (interaction.member.roles.highest.position <= member.roles.highest.position) {
-        throw new TitanBotError(
+        throw new XlwyBotError(
           "Cannot kick user",
           ErrorTypes.PERMISSION,
           "Tu ne peux pas expulser un utilisateur ayant un rôle égal ou supérieur au tien."
@@ -76,7 +76,7 @@ export default {
 
       
       if (!member.kickable) {
-        throw new TitanBotError(
+        throw new XlwyBotError(
           "Bot cannot kick",
           ErrorTypes.PERMISSION,
           "Je ne peux pas expulser cet utilisateur. Vérifie ma position de rôle par rapport à l'utilisateur ciblé."

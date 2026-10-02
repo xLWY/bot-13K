@@ -17,7 +17,7 @@ import {
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
-import { TitanBotError, ErrorTypes } from '../../../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { updateJoinToCreateConfig } from '../../../utils/database.js';
 import {
     getConfiguration,
@@ -460,7 +460,7 @@ async function openCategoryPicker(btnInteraction, rootInteraction, client, guild
                 });
             } catch (error) {
                 await triggerChannel.delete('Échec de la configuration Join to Create').catch(() => {});
-                const message = error instanceof TitanBotError
+                const message = error instanceof XlwyBotError
                     ? error.userMessage
                     : 'La configuration du salon déclencheur a échoué.';
                 await sendNotice(selectInteraction, message).catch(() => {});
@@ -510,7 +510,7 @@ async function handleCreate(btnInteraction, rootInteraction, client, guildId) {
 async function handleToggle(btnInteraction, client, guildId) {
     const cfg = await getConfiguration(client, guildId);
     if (!getTriggerId(cfg)) {
-        throw new TitanBotError(
+        throw new XlwyBotError(
             'No Join to Create trigger configured',
             ErrorTypes.VALIDATION,
             'Crée d\'abord un salon déclencheur.',
@@ -789,7 +789,7 @@ async function handleTemplate(btnInteraction, rootInteraction, client, guildId, 
             await updateJoinToCreateConfig(client, guildId, { channelNameTemplate: answer.value });
         }
     } catch (error) {
-        const message = error instanceof TitanBotError
+        const message = error instanceof XlwyBotError
             ? error.userMessage
             : 'Le modèle de nom est invalide.';
         await sendNotice(answer.interaction, message).catch(() => {});
@@ -831,7 +831,7 @@ async function handleLimit(btnInteraction, rootInteraction, client, guildId, sco
             await updateJoinToCreateConfig(client, guildId, { userLimit: value });
         }
     } catch (error) {
-        const message = error instanceof TitanBotError
+        const message = error instanceof XlwyBotError
             ? error.userMessage
             : 'La limite doit être un nombre entre 0 et 99.';
         await sendNotice(answer.interaction, message).catch(() => {});
@@ -878,7 +878,7 @@ async function handleBitrate(btnInteraction, rootInteraction, client, guildId, s
             await updateJoinToCreateConfig(client, guildId, { bitrate: kbps * 1000 });
         }
     } catch (error) {
-        const message = error instanceof TitanBotError
+        const message = error instanceof XlwyBotError
             ? error.userMessage
             : 'Le débit doit être compris entre 8 et 384 kbps.';
         await sendNotice(answer.interaction, message).catch(() => {});
@@ -1082,13 +1082,13 @@ export default {
 
                     await refreshDashboard(interaction, client, guildId);
                 } catch (error) {
-                    if (error instanceof TitanBotError) {
+                    if (error instanceof XlwyBotError) {
                         logger.debug(`JTC dashboard validation error: ${error.message}`);
                     } else {
                         logger.error('Unexpected JTC dashboard error:', error);
                     }
 
-                    const message = error instanceof TitanBotError
+                    const message = error instanceof XlwyBotError
                         ? error.userMessage || 'Une erreur est survenue lors de la configuration.'
                         : 'Une erreur inattendue est survenue. Réessaie dans un instant.';
 
@@ -1096,9 +1096,9 @@ export default {
                 }
             });
         } catch (error) {
-            if (error instanceof TitanBotError) throw error;
+            if (error instanceof XlwyBotError) throw error;
             logger.error('Unexpected error in jtc_dashboard:', error);
-            throw new TitanBotError(
+            throw new XlwyBotError(
                 `JTC dashboard failed: ${error.message}`,
                 ErrorTypes.UNKNOWN,
                 'Impossible d\'ouvrir le tableau de bord des salons vocaux.',

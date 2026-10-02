@@ -6,7 +6,7 @@
 import { EmbedBuilder } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig, setGuildConfig } from '../services/guildConfig.js';
-import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { addXp } from './xpSystem.js';
 
 
@@ -23,7 +23,7 @@ const MIN_LEVEL = 0;
 
 export function getXpForLevel(level) {
   if (!Number.isInteger(level) || level < 0 || level > MAX_LEVEL) {
-    throw new TitanBotError(
+    throw new XlwyBotError(
       `Invalid level: ${level}. Must be between ${MIN_LEVEL} and ${MAX_LEVEL}`,
       ErrorTypes.VALIDATION,
       'Le niveau doit être un nombre valide.'
@@ -39,7 +39,7 @@ export function getXpForLevel(level) {
 
 export function getLevelFromXp(xp) {
   if (!Number.isInteger(xp) || xp < 0) {
-    throw new TitanBotError(
+    throw new XlwyBotError(
       `Invalid XP: ${xp}`,
       ErrorTypes.VALIDATION,
       'XP doit être un nombre positif ou nul.'
@@ -87,7 +87,7 @@ export async function getLeaderboard(client, guildId, limit = 10) {
   try {
     
     if (!guildId || typeof guildId !== 'string') {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Invalid guild ID',
         ErrorTypes.VALIDATION,
         'L\'ID du serveur est requis.'
@@ -135,8 +135,8 @@ export async function getLeaderboard(client, guildId, limit = 10) {
     
   } catch (error) {
     logger.error('Error getting leaderboard:', error);
-    if (error instanceof TitanBotError) throw error;
-    throw new TitanBotError(
+    if (error instanceof XlwyBotError) throw error;
+    throw new XlwyBotError(
       `Failed to fetch leaderboard: ${error.message}`,
       ErrorTypes.DATABASE,
       'Impossible de récupérer le classement pour le moment.'
@@ -230,7 +230,7 @@ export async function getLevelingConfig(client, guildId) {
 export async function getUserLevelData(client, guildId, userId) {
   try {
     if (!guildId || !userId) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Guild ID and User ID are required',
         ErrorTypes.VALIDATION
       );
@@ -258,8 +258,8 @@ export async function getUserLevelData(client, guildId, userId) {
     };
   } catch (error) {
     logger.error(`Error getting user level data for ${userId}:`, error);
-    if (error instanceof TitanBotError) throw error;
-    throw new TitanBotError(
+    if (error instanceof XlwyBotError) throw error;
+    throw new XlwyBotError(
       `Failed to fetch user data: ${error.message}`,
       ErrorTypes.DATABASE,
       'Impossible de récupérer les données de niveau pour le moment.'
@@ -278,7 +278,7 @@ export async function getUserLevelData(client, guildId, userId) {
 export async function saveUserLevelData(client, guildId, userId, data) {
   try {
     if (!guildId || !userId) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Guild ID and User ID are required',
         ErrorTypes.VALIDATION
       );
@@ -286,7 +286,7 @@ export async function saveUserLevelData(client, guildId, userId, data) {
 
     
     if (!data || typeof data !== 'object') {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Invalid user level data',
         ErrorTypes.VALIDATION
       );
@@ -305,8 +305,8 @@ export async function saveUserLevelData(client, guildId, userId, data) {
     await client.db.set(key, sanitizedData);
   } catch (error) {
     logger.error(`Error saving user level data for ${userId}:`, error);
-    if (error instanceof TitanBotError) throw error;
-    throw new TitanBotError(
+    if (error instanceof XlwyBotError) throw error;
+    throw new XlwyBotError(
       `Failed to save user data: ${error.message}`,
       ErrorTypes.DATABASE,
       'Impossible d\'enregistrer les données de niveau pour le moment.'
@@ -324,7 +324,7 @@ export async function saveUserLevelData(client, guildId, userId, data) {
 export async function saveLevelingConfig(client, guildId, config) {
   try {
     if (!guildId || !config) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Guild ID and config are required',
         ErrorTypes.VALIDATION
       );
@@ -334,7 +334,7 @@ export async function saveLevelingConfig(client, guildId, config) {
     
     
     if (config.xpCooldown && (config.xpCooldown < 0 || config.xpCooldown > 3600)) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'XP cooldown must be between 0 and 3600 seconds',
         ErrorTypes.VALIDATION,
         'Le temps de recharge doit être compris entre 0 et 3600 secondes.'
@@ -342,7 +342,7 @@ export async function saveLevelingConfig(client, guildId, config) {
     }
 
     if (config.xpRange && (config.xpRange.min < 1 || config.xpRange.max < 1 || config.xpRange.min > config.xpRange.max)) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Invalid XP range configuration',
         ErrorTypes.VALIDATION,
         'Le XP minimum doit être inférieur au XP maximum, et les deux doivent être positifs.'
@@ -353,7 +353,7 @@ export async function saveLevelingConfig(client, guildId, config) {
     const persisted = await setGuildConfig(client, guildId, guildConfig);
 
     if (persisted === false) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         `Failed to persist leveling config for guild ${guildId}`,
         ErrorTypes.DATABASE,
         'Impossible d\'enregistrer la configuration. Vérifie la base de données, puis réessaie.'
@@ -363,8 +363,8 @@ export async function saveLevelingConfig(client, guildId, config) {
     logger.info(`Leveling config updated for guild ${guildId}`);
   } catch (error) {
     logger.error(`Error saving leveling config for guild ${guildId}:`, error);
-    if (error instanceof TitanBotError) throw error;
-    throw new TitanBotError(
+    if (error instanceof XlwyBotError) throw error;
+    throw new XlwyBotError(
       `Failed to save config: ${error.message}`,
       ErrorTypes.DATABASE,
       'Impossible d\'enregistrer la configuration pour le moment.'
@@ -384,7 +384,7 @@ export async function addLevels(client, guildId, userId, levels) {
   try {
     const levelingConfig = await getLevelingConfig(client, guildId);
     if (!levelingConfig?.enabled) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Leveling system is disabled on this server',
         ErrorTypes.CONFIGURATION,
         'Le système de niveaux est actuellement désactivé sur ce serveur.'
@@ -393,7 +393,7 @@ export async function addLevels(client, guildId, userId, levels) {
 
     
     if (!Number.isInteger(levels) || levels <= 0) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         `Invalid level amount: ${levels}`,
         ErrorTypes.VALIDATION,
         'Tu dois ajouter un nombre de niveaux positif.'
@@ -404,7 +404,7 @@ export async function addLevels(client, guildId, userId, levels) {
     const newLevel = userData.level + levels;
 
     if (newLevel > MAX_LEVEL) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         `Level ${newLevel} exceeds maximum level ${MAX_LEVEL}`,
         ErrorTypes.VALIDATION,
         `Le niveau maximal est ${MAX_LEVEL}.`
@@ -424,8 +424,8 @@ export async function addLevels(client, guildId, userId, levels) {
     return userData;
   } catch (error) {
     logger.error(`Error adding levels for user ${userId}:`, error);
-    if (error instanceof TitanBotError) throw error;
-    throw new TitanBotError(
+    if (error instanceof XlwyBotError) throw error;
+    throw new XlwyBotError(
       `Failed to add levels: ${error.message}`,
       ErrorTypes.DATABASE,
       'Impossible d\'ajouter les niveaux pour le moment.'
@@ -445,7 +445,7 @@ export async function removeLevels(client, guildId, userId, levels) {
   try {
     const levelingConfig = await getLevelingConfig(client, guildId);
     if (!levelingConfig?.enabled) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Leveling system is disabled on this server',
         ErrorTypes.CONFIGURATION,
         'Le système de niveaux est actuellement désactivé sur ce serveur.'
@@ -454,7 +454,7 @@ export async function removeLevels(client, guildId, userId, levels) {
 
     
     if (!Number.isInteger(levels) || levels <= 0) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         `Invalid level amount: ${levels}`,
         ErrorTypes.VALIDATION,
         'Tu dois retirer un nombre de niveaux positif.'
@@ -477,8 +477,8 @@ export async function removeLevels(client, guildId, userId, levels) {
     return userData;
   } catch (error) {
     logger.error(`Error removing levels for user ${userId}:`, error);
-    if (error instanceof TitanBotError) throw error;
-    throw new TitanBotError(
+    if (error instanceof XlwyBotError) throw error;
+    throw new XlwyBotError(
       `Failed to remove levels: ${error.message}`,
       ErrorTypes.DATABASE,
       'Impossible de retirer les niveaux pour le moment.'
@@ -498,7 +498,7 @@ export async function setUserLevel(client, guildId, userId, level) {
   try {
     const levelingConfig = await getLevelingConfig(client, guildId);
     if (!levelingConfig?.enabled) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Leveling system is disabled on this server',
         ErrorTypes.CONFIGURATION,
         'Le système de niveaux est actuellement désactivé sur ce serveur.'
@@ -507,7 +507,7 @@ export async function setUserLevel(client, guildId, userId, level) {
 
     
     if (!Number.isInteger(level) || level < MIN_LEVEL || level > MAX_LEVEL) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         `Invalid level: ${level}`,
         ErrorTypes.VALIDATION,
         `Le niveau doit être compris entre ${MIN_LEVEL} et ${MAX_LEVEL}.`
@@ -529,8 +529,8 @@ export async function setUserLevel(client, guildId, userId, level) {
     return userData;
   } catch (error) {
     logger.error(`Error setting level for user ${userId}:`, error);
-    if (error instanceof TitanBotError) throw error;
-    throw new TitanBotError(
+    if (error instanceof XlwyBotError) throw error;
+    throw new XlwyBotError(
       `Failed to set level: ${error.message}`,
       ErrorTypes.DATABASE,
       'Impossible de définir le niveau pour le moment.'
@@ -544,7 +544,7 @@ export async function setUserLevel(client, guildId, userId, level) {
 export async function deleteUserLevelData(client, guildId, userId) {
   try {
     if (!guildId || !userId) {
-      throw new TitanBotError(
+      throw new XlwyBotError(
         'Guild ID and User ID are required',
         ErrorTypes.VALIDATION
       );
@@ -556,7 +556,7 @@ export async function deleteUserLevelData(client, guildId, userId) {
     logger.debug(`Deleted level data for user ${userId} in guild ${guildId}`);
   } catch (error) {
     logger.error(`Error deleting level data for user ${userId}:`, error);
-    if (error instanceof TitanBotError) throw error;
+    if (error instanceof XlwyBotError) throw error;
     logger.warn(`Could not delete level data for user ${userId} in guild ${guildId}`);
   }
 }

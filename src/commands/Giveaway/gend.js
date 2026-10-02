@@ -2,7 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { TitanBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
 import { getGuildGiveaways, saveGiveaway } from '../../utils/giveaways.js';
 import { 
     endGiveaway as endGiveawayService,
@@ -30,7 +30,7 @@ export default {
         try {
             
             if (!interaction.inGuild()) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
                     'Cette commande ne peut être utilisée que sur un serveur.',
@@ -40,7 +40,7 @@ export default {
 
             
             if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
                     "Vous devez avoir la permission `Gérer le serveur` pour terminer un concours.",
@@ -54,7 +54,7 @@ export default {
 
             
             if (!messageId || !/^\d+$/.test(messageId)) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     'Invalid message ID format',
                     ErrorTypes.VALIDATION,
                     'Veuillez fournir un identifiant de message valide.',
@@ -66,7 +66,7 @@ export default {
             const giveaway = giveaways.find(g => g.messageId === messageId);
 
             if (!giveaway) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
                     "Aucun concours n'a été trouvé avec cet identifiant de message dans la base de données.",
@@ -94,7 +94,7 @@ export default {
             });
 
             if (!channel || !channel.isTextBased()) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     `Channel not found: ${updatedGiveaway.channelId}`,
                     ErrorTypes.VALIDATION,
                     "Impossible de trouver le salon où le concours était hébergé. L'état du concours a été mis à jour.",
@@ -110,7 +110,7 @@ export default {
                 });
 
             if (!message) {
-                throw new TitanBotError(
+                throw new XlwyBotError(
                     `Message not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
                     "Impossible de trouver le message du concours. L'état du concours a été mis à jour.",

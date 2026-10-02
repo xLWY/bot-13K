@@ -150,7 +150,7 @@ class ShopService {
         const { category, page = 1 } = options;
         
         const embed = new EmbedBuilder()
-            .setTitle('🛒 Boutique TitanBot')
+            .setTitle('🛒 Boutique xlwy bot')
             .setColor('#5865F2')
             .setDescription('Parcours et achète les articles de la boutique. Utilise les boutons pour naviguer.')
             .setFooter({ text: `Page ${page}` });

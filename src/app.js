@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import { Client, Collection, GatewayIntentBits, ChannelType, Partials } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
@@ -16,7 +16,7 @@ import { loadCommands, registerCommands as registerSlashCommands } from './handl
 const presenceDiagWarned = new Map();
 const PRESENCE_DIAG_INTERVAL_MS = 30 * 60 * 1000;
 
-class TitanBot extends Client {
+class XlwyBot extends Client {
   constructor() {
     super({
       intents: [
@@ -33,7 +33,8 @@ GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,             
         
         
-        GatewayIntentBits.GuildBans,                    
+GatewayIntentBits.GuildBans,
+        GatewayIntentBits.GuildModeration,
       ],
       partials: [
         Partials.Channel,
@@ -55,7 +56,7 @@ GatewayIntentBits.Guilds,
 
   async start() {
     try {
-      startupLog('Starting TitanBot...');
+      startupLog('Starting xlwy bot...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       startupLog('Initializing database...');
@@ -201,7 +202,7 @@ GatewayIntentBits.Guilds,
 
     app.get('/', (req, res) => {
       res.status(200).json({ 
-        message: 'TitanBot System Online',
+        message: 'xlwy bot - System Online',
         version: '2.0.0',
         build: 'TF-v5-single-button',
         timestamp: new Date().toISOString()
@@ -482,7 +483,7 @@ GatewayIntentBits.Guilds,
 }
 
 try {
-  const bot = new TitanBot();
+  const bot = new XlwyBot();
   
   const setupShutdown = () => {
     process.on('SIGTERM', () => bot.shutdown('SIGTERM'));
@@ -529,7 +530,7 @@ try {
   process.exit(1);
 }
 
-export default TitanBot;
+export default XlwyBot;
 
 
 

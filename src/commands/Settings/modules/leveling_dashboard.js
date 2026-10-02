@@ -1,4 +1,4 @@
-﻿import { getColor } from '../../../config/bot.js';
+import { getColor } from '../../../config/bot.js';
 import {
     ActionRowBuilder,
     ButtonBuilder,
@@ -15,7 +15,7 @@ import {
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
-import { TitanBotError } from '../../../utils/errorHandler.js';
+import { XlwyBotError } from '../../../utils/errorHandler.js';
 import { getLevelingConfig, saveLevelingConfig } from '../../../services/leveling.js';
 
 const DASHBOARD_TIME = 300_000;
@@ -190,13 +190,13 @@ export default {
 
                     await refreshDashboard(interaction, client, guildId);
                 } catch (error) {
-                    if (error instanceof TitanBotError) {
+                    if (error instanceof XlwyBotError) {
                         logger.debug(`Leveling config validation error: ${error.message}`);
                     } else {
                         logger.error('Unexpected leveling dashboard error:', error);
                     }
 
-                    const message = error instanceof TitanBotError
+                    const message = error instanceof XlwyBotError
                         ? (error.userMessage || 'Une erreur est survenue lors de la configuration.')
                         : `Une erreur inattendue est survenue (${error.message}).`;
 
