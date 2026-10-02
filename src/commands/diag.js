@@ -73,9 +73,9 @@ export default {
                             `Globales enregistrees : \`${globalCount}\``,
                             `Du serveur : \`${guildCommandCount}\``
                         ].join('\n'),
-                        inline: false
-                    }
-                {
+inline: false
+                    },
+                    {
                         name: 'Logs owner (DM)',
                         value: (() => {
                             const health = ownerDmHealth();
