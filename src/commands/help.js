@@ -95,10 +95,23 @@ function buildCategoryPage(categoryName, commands, pageIndex, pageCount) {
     return embed;
 }
 
-function buildOverviewRows() {
-    return [new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('help_overview').setLabel('Toutes les categories').setEmoji('\u{1F5C2}\u{FE0F}').setStyle(ButtonStyle.Primary),
-    )];
+function buildOverviewRows(categories) {
+    const menu = new StringSelectMenuBuilder()
+        .setCustomId('help_category')
+        .setPlaceholder('Aller directement a une categorie...')
+        .addOptions(
+            categories.slice(0, 25).map(([name, commands]) =>
+                new StringSelectMenuOptionBuilder({
+                    label: name,
+                    value: name,
+                    description: `${commands.length} commande(s)`,
+                }),
+            ),
+        );
+
+    return [
+        new ActionRowBuilder().addComponents(menu),
+    ];
 }
 
 function buildNavRows(pageIndex, pageCount, categories, canPrev, canNext) {
@@ -141,7 +154,7 @@ async function renderHelp(interaction, client, state) {
     const total = categories.reduce((sum, [, commands]) => sum + commands.length, 0);
 
     const payload = state.categoryIndex === null
-        ? { embeds: [buildOverview(categories, total)], components: buildOverviewRows() }
+        ? { embeds: [buildOverview(categories, total)], components: buildOverviewRows(categories) }
         : (() => {
             const [name, commands] = categories[state.categoryIndex];
             const pageCount = Math.max(1, Math.ceil(commands.length / PER_PAGE));
@@ -221,7 +234,7 @@ export default {
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [buildOverview(categories, total)],
-                components: buildOverviewRows(),
+                components: buildOverviewRows(categories),
                 flags: MessageFlags.Ephemeral,
             });
 

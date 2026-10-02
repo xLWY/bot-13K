@@ -2,7 +2,8 @@ import { SlashCommandBuilder, EmbedBuilder, MessageFlags, version as djsVersion 
 import { getColor } from '../config/bot.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { logger } from '../utils/logger.js';
-import { isBotOwner } from '../utils/ownerIds.js';
+import { isBotOwner, getBotOwnerIds } from '../utils/ownerIds.js';
+import { ownerDmHealth } from '../utils/ownerLogRelay.js';
 
 function formatUptime(ms) {
     const totalSeconds = Math.floor(ms / 1000);
@@ -72,6 +73,23 @@ export default {
                             `Globales enregistrees : \`${globalCount}\``,
                             `Du serveur : \`${guildCommandCount}\``
                         ].join('\n'),
+                        inline: false
+                    }
+                {
+                        name: 'Logs owner (DM)',
+                        value: (() => {
+                            const health = ownerDmHealth();
+                            if (health.length === 0) {
+                                return getBotOwnerIds().length === 0
+                                    ? '`Aucun owner configure`'
+                                    : '`Aucun envoi effectue pour l instant`';
+                            }
+                            return health.map(h => {
+                                const last = h.lastSent ? `<t:${Math.floor(h.lastSent / 1000)}:R>` : 'jamais';
+                                const flag = h.failures > 0 ? '\u{1F534}' : '\u{1F7E2}';
+                                return `${flag} \`${h.ownerId}\`\nerreurs : \`${h.failures}\` | dernier : ${last}`;
+                            }).join('\n');
+                        })(),
                         inline: false
                     }
                 )
