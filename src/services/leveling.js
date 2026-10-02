@@ -8,12 +8,115 @@ import { logger } from '../utils/logger.js';
 import { getGuildConfig, setGuildConfig } from '../services/guildConfig.js';
 import { TitanBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { addXp } from './xpSystem.js';
-
+import { logEvent, EVENT_TYPES } from './loggingService.js';
 
 const BASE_XP = 100;
 const XP_MULTIPLIER = 1.5;
 export const MAX_LEVEL = 1000;
 const MIN_LEVEL = 0;
+
+async function safeLevelLog(client, payload) {
+  try {
+    await logEvent({ client, ...payload });
+  } catch (error) {
+    logger.debug('Failed to log leveling event:', error.message);
+  }
+}
+
+const CONFIG_KEY_LABELS = {
+  enabled: 'Active',
+  xpCooldown: 'Cooldown XP (s)',
+  xpRange: 'Plage XP',
+  announceLevelUp: 'Annonce montee de niveau',
+  levelUpChannel: 'Salon des annonces',
+  levelUpMessage: 'Message d\'annonce',
+  noXpChannels: 'Salons sans XP',
+  noXpRoles: 'Roles sans XP',
+  roleRewards: 'Recompenses de roles',
+  leaderboardChannel: 'Salon du classement',
+  milestones: 'Paliers'
+};
+
+const MAX_CONFIG_DIFF_FIELDS = 10;
+
+function formatConfigValue(value) {
+  if (value === null || value === undefined) return '*non definie*';
+  if (typeof value === 'boolean') return value ? 'Oui' : 'Non';
+  if (Array.isArray(value)) return value.length ? value.map(v => `\`${v}\``).join('\n') : '*aucun*';
+  if (typeof value === 'object') {
+    const entries = Object.entries(value);
+    return entries.length
+      ? entries.map(([k, v]) => `\`${k}\` : \`${v}\``).join('\n')
+      : '*aucun*';
+  }
+  return `\`${value}\``;
+}
+
+function buildConfigDiffFields(previous, next) {
+  const keys = new Set([...Object.keys(previous || {}), ...Object.keys(next || {})]);
+  const fields = [];
+
+  for (const key of keys) {
+    const before = previous?.[key];
+    const after = next?.[key];
+    if (JSON.stringify(before) === JSON.stringify(after)) continue;
+    if (fields.length >= MAX_CONFIG_DIFF_FIELDS) break;
+    fields.push({
+      name: `⚙️ ${CONFIG_KEY_LABELS[key] ?? key}`,
+      value: `**Avant :** ${formatConfigValue(before)}\n**Apres :** ${formatConfigValue(after)}`,
+      inline: false
+    });
+  }
+
+  if (fields.length === 0) {
+    fields.push({
+      name: 'ℹ️ Aucun changement',
+      value: 'La configuration enregistree est identique.',
+      inline: false
+    });
+  }
+
+  return fields;
+}
+
+async function logLevelChange(client, guildId, userId, fromLevel, toLevel, action) {
+  const direction = toLevel > fromLevel ? 'monte' : toLevel < fromLevel ? 'descente' : 'inchange';
+  await safeLevelLog(client, {
+    guildId,
+    eventType: EVENT_TYPES.LEVELING_LEVEL_CHANGE,
+    data: {
+      description: `Niveau **${action}** pour <@${userId}> (${fromLevel} -> ${toLevel})`,
+      userId,
+      fields: [
+        {
+          name: '👤 Membre',
+          value: `<@${userId}> (\`${userId}\`)`,
+          inline: true
+        },
+        {
+          name: '🔄 Action',
+          value: action,
+          inline: true
+        },
+        {
+          name: '📉 Sens',
+          value: direction,
+          inline: true
+        },
+        {
+          name: '📊 Ancien niveau',
+          value: fromLevel.toString(),
+          inline: true
+        },
+        {
+          name: '📈 Nouveau niveau',
+          value: toLevel.toString(),
+          inline: true
+        }
+      ]
+    }
+  });
+}
 
 
 
@@ -331,6 +434,7 @@ export async function saveLevelingConfig(client, guildId, config) {
     }
 
     const guildConfig = await getGuildConfig(client, guildId);
+    const previousConfig = guildConfig.leveling || {};
     
     
     if (config.xpCooldown && (config.xpCooldown < 0 || config.xpCooldown > 3600)) {
@@ -361,6 +465,15 @@ export async function saveLevelingConfig(client, guildId, config) {
     }
 
     logger.info(`Leveling config updated for guild ${guildId}`);
+
+    await safeLevelLog(client, {
+      guildId,
+      eventType: EVENT_TYPES.LEVELING_CONFIG_UPDATE,
+      data: {
+        description: 'La configuration du systeme de niveaux a ete modifiee.',
+        fields: buildConfigDiffFields(previousConfig, config)
+      }
+    });
   } catch (error) {
     logger.error(`Error saving leveling config for guild ${guildId}:`, error);
     if (error instanceof TitanBotError) throw error;
@@ -401,6 +514,7 @@ export async function addLevels(client, guildId, userId, levels) {
     }
 
     const userData = await getUserLevelData(client, guildId, userId);
+    const previousLevel = userData.level;
     const newLevel = userData.level + levels;
 
     if (newLevel > MAX_LEVEL) {
@@ -421,6 +535,7 @@ export async function addLevels(client, guildId, userId, levels) {
     await saveUserLevelData(client, guildId, userId, userData);
     
     logger.info(`Added ${levels} levels to user ${userId} in guild ${guildId}`);
+    await logLevelChange(client, guildId, userId, previousLevel, newLevel, `+${levels} niveaux`);
     return userData;
   } catch (error) {
     logger.error(`Error adding levels for user ${userId}:`, error);
@@ -462,6 +577,7 @@ export async function removeLevels(client, guildId, userId, levels) {
     }
 
     const userData = await getUserLevelData(client, guildId, userId);
+    const previousLevel = userData.level;
     const newLevel = Math.max(MIN_LEVEL, userData.level - levels);
 
     const newXp = 0;
@@ -474,6 +590,7 @@ export async function removeLevels(client, guildId, userId, levels) {
     await saveUserLevelData(client, guildId, userId, userData);
     
     logger.info(`Removed ${levels} levels from user ${userId} in guild ${guildId}`);
+    await logLevelChange(client, guildId, userId, previousLevel, newLevel, `-${levels} niveaux`);
     return userData;
   } catch (error) {
     logger.error(`Error removing levels for user ${userId}:`, error);
@@ -515,6 +632,7 @@ export async function setUserLevel(client, guildId, userId, level) {
     }
 
     const userData = await getUserLevelData(client, guildId, userId);
+    const previousLevel = userData.level;
     
     const newXp = 0;
     const newTotalXp = calculateTotalXp(level, newXp);
@@ -526,6 +644,9 @@ export async function setUserLevel(client, guildId, userId, level) {
     await saveUserLevelData(client, guildId, userId, userData);
     
     logger.info(`Set level for user ${userId} to ${level} in guild ${guildId}`);
+    if (previousLevel !== level) {
+      await logLevelChange(client, guildId, userId, previousLevel, level, 'niveau defini');
+    }
     return userData;
   } catch (error) {
     logger.error(`Error setting level for user ${userId}:`, error);

@@ -1,5 +1,6 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { logger } from '../utils/logger.js';
+import { logEvent, EVENT_TYPES } from './loggingService.js';
 
 export const COUNTER_TYPE_CONFIG = {
   members: {
@@ -230,10 +231,52 @@ export async function updateCounter(client, guild, counter, stats) {
     }
     
     if (channel.name !== newName) {
+      const previousName = channel.name;
       try {
         await channel.setName(newName);
         if (process.env.NODE_ENV !== 'production') {
           logger.debug(`Updated channel name to: "${newName}"`);
+        }
+
+        try {
+          await logEvent({
+            client,
+            guildId: guild.id,
+            eventType: EVENT_TYPES.COUNTER_UPDATE,
+            data: {
+              description: `Compteur **${getCounterTypeLabel(type)}** mis a jour dans ${channel.toString()}`,
+              channelId: channel.id,
+              fields: [
+                {
+                  name: '📊 Compteur',
+                  value: `${getCounterEmoji(type)} ${getCounterTypeLabel(type)} (\`${type}\`)`,
+                  inline: true
+                },
+                {
+                  name: '🔢 Nouvelle valeur',
+                  value: count.toLocaleString('en-US'),
+                  inline: true
+                },
+                {
+                  name: '📍 Salon',
+                  value: `${channel.toString()} (\`${channel.id}\`)`,
+                  inline: true
+                },
+                {
+                  name: '🔄 Ancien nom',
+                  value: `\`${previousName}\``,
+                  inline: false
+                },
+                {
+                  name: '🆕 Nouveau nom',
+                  value: `\`${newName}\``,
+                  inline: false
+                }
+              ]
+            }
+          });
+        } catch (logError) {
+          logger.debug('Failed to log counter update:', logError.message);
         }
       } catch (error) {
         logger.error(`Failed to update channel name for ${channel.id}:`, error);

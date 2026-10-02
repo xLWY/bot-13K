@@ -3,7 +3,7 @@ const MAX_DISPLAYED_ROLE_PERMISSIONS = 5;
 export function buildRoleAuditFields(role, { includeMemberCount = false } = {}) {
   const fields = [
     {
-      name: '🏷️ Nom du rôle',
+      name: '📝 Nom du rôle',
       value: role.name,
       inline: true
     },
@@ -23,7 +23,7 @@ export function buildRoleAuditFields(role, { includeMemberCount = false } = {}) 
   if (permissions.length > 0) {
     const displayPerms = permissions.slice(0, MAX_DISPLAYED_ROLE_PERMISSIONS).join(', ');
     fields.push({
-      name: '🔐 Permissions',
+      name: '🔑 Permissions',
       value: permissions.length > MAX_DISPLAYED_ROLE_PERMISSIONS
         ? `${displayPerms}... (+${permissions.length - MAX_DISPLAYED_ROLE_PERMISSIONS} de plus)`
         : displayPerms,
@@ -33,7 +33,7 @@ export function buildRoleAuditFields(role, { includeMemberCount = false } = {}) 
 
   fields.push(
     {
-      name: '✅ Affiché séparément',
+      name: '👥 Affiché séparément',
       value: role.hoist ? 'Oui' : 'Non',
       inline: true
     },
@@ -43,7 +43,7 @@ export function buildRoleAuditFields(role, { includeMemberCount = false } = {}) 
       inline: true
     },
     {
-      name: '📍 Position',
+      name: '📊 Position',
       value: role.position.toString(),
       inline: true
     }

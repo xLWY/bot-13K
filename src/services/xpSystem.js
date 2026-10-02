@@ -15,6 +15,24 @@ import { Mutex } from '../utils/mutex.js';
 
 
 
+const DEFAULT_XP_CHANGE_LOG_THRESHOLD = 500;
+
+function formatMilestoneValue(value) {
+  if (value === null || value === undefined || value === '') return '*aucune*';
+  if (typeof value === 'boolean') return value ? 'Oui' : 'Non';
+  if (typeof value === 'string') {
+    const roleId = /^\d{17,20}$/.test(value) ? `<@&${value}>` : value;
+    return roleId;
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value);
+    return entries.length
+      ? entries.map(([k, v]) => `\`${k}\` : \`${v}\``).join('\n')
+      : '*aucune*';
+  }
+  return `\`${value}\``;
+}
+
 export async function addXp(client, guild, member, xpToAdd) {
   const lockKey = `leveling:${guild.id}:${member.user.id}`;
   return await Mutex.runExclusive(lockKey, async () => {
@@ -99,6 +117,104 @@ export async function addXp(client, guild, member, xpToAdd) {
         }
       }
       
+      const xpChangeThreshold = Number.isFinite(config.xpChangeLogThreshold)
+        ? config.xpChangeLogThreshold
+        : DEFAULT_XP_CHANGE_LOG_THRESHOLD;
+
+      if (xpToAdd >= xpChangeThreshold) {
+        try {
+          await logEvent({
+            client,
+            guildId: guild.id,
+            eventType: EVENT_TYPES.LEVELING_XP_CHANGE,
+            data: {
+              description: `+${xpToAdd} XP attribue a <@${member.user.id}>`,
+              userId: member.user.id,
+              fields: [
+                {
+                  name: '👤 Membre',
+                  value: `<@${member.user.id}> (${member.user.id})`,
+                  inline: true
+                },
+                {
+                  name: '✨ XP ajoute',
+                  value: `+${xpToAdd.toLocaleString('en-US')}`,
+                  inline: true
+                },
+                {
+                  name: '📊 XP sur le niveau',
+                  value: levelData.xp.toLocaleString('en-US'),
+                  inline: true
+                },
+                {
+                  name: '🏆 XP total',
+                  value: levelData.totalXp.toLocaleString('en-US'),
+                  inline: true
+                },
+                {
+                  name: '📈 Niveau',
+                  value: levelData.level.toString(),
+                  inline: true
+                },
+                {
+                  name: 'ℹ️ Seuil de log',
+                  value: `\`${xpChangeThreshold}\` XP (l'XP de message n'est pas logue)`,
+                  inline: false
+                }
+              ]
+            }
+          });
+        } catch (logError) {
+          logger.debug('Failed to log xp change event:', logError.message);
+        }
+      }
+
+      const milestones = config.milestones && typeof config.milestones === 'object'
+        ? config.milestones
+        : {};
+
+      for (const milestoneKey of Object.keys(milestones)) {
+        const milestoneLevel = Number(milestoneKey);
+        if (!Number.isFinite(milestoneLevel)) continue;
+        if (initialLevel >= milestoneLevel || levelData.level < milestoneLevel) continue;
+
+        try {
+          await logEvent({
+            client,
+            guildId: guild.id,
+            eventType: EVENT_TYPES.LEVELING_MILESTONE,
+            data: {
+              description: `<@${member.user.id}> a atteint le palier **${milestoneLevel}**`,
+              userId: member.user.id,
+              fields: [
+                {
+                  name: '👤 Membre',
+                  value: `<@${member.user.id}> (${member.user.id})`,
+                  inline: true
+                },
+                {
+                  name: '🏅 Palier',
+                  value: milestoneLevel.toString(),
+                  inline: true
+                },
+                {
+                  name: '📈 Niveau actuel',
+                  value: levelData.level.toString(),
+                  inline: true
+                },
+                {
+                  name: '🎁 Recompense',
+                  value: formatMilestoneValue(milestones[milestoneKey]),
+                  inline: false
+                }
+              ]
+            }
+          });
+        } catch (logError) {
+          logger.debug('Failed to log leveling milestone event:', logError.message);
+        }
+      }
+
       await saveUserLevelData(client, guild.id, member.user.id, levelData);
       
       return {
