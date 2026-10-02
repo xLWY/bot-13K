@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Commandes autorisees en message prive (slash + prefixe).
-const DM_ENABLED_COMMANDS = new Set(['ping', 'diag', 'help', 'avatar']);
+const DM_ENABLED_COMMANDS = new Set(['ping', 'diag', 'logtest', 'help', 'avatar']);
 
 
 
