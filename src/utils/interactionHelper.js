@@ -22,7 +22,7 @@ function sanitizeEditReplyOptions(options = {}) {
 
 export class InteractionHelper {
         static patchInteractionResponses(interaction) {
-            if (!interaction || interaction.__xlwyResponsePatched) {
+            if (!interaction || interaction.__lwResponsePatched) {
                 return;
             }
 
@@ -46,7 +46,7 @@ export class InteractionHelper {
                 return await originalFollowUp(options);
             };
 
-            interaction.__xlwyResponsePatched = true;
+            interaction.__lwResponsePatched = true;
         }
 
     

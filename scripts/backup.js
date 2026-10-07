@@ -104,7 +104,7 @@ async function run() {
 
   const outputPath = args.output
     ? path.resolve(args.output)
-    : path.join(backupDir, `xlwy bot-backup-${createTimestamp()}.dump`);
+    : path.join(backupDir, `lwbot-backup-${createTimestamp()}.dump`);
 
   const dumpArgs = [
     '--format=custom',

@@ -1,7 +1,7 @@
 import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
-import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
+import { LWError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { addJoinToCreateTrigger, getJoinToCreateConfig } from '../../../utils/database.js';
 
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
@@ -64,11 +64,11 @@ export default {
                 }
             }
         } catch (error) {
-            if (error instanceof XlwyBotError) {
+            if (error instanceof LWError) {
                 throw error;
             }
             logger.error('Error in JoinToCreate setup:', error);
-            throw new XlwyBotError(
+            throw new LWError(
                 `Setup failed: ${error.message}`,
                 ErrorTypes.DISCORD_API,
                 "Échec de la configuration du système Join to Create."

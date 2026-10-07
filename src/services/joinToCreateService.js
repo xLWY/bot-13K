@@ -12,7 +12,7 @@ import {
     formatChannelName as formatChannelNameUtil
 } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
-import { XlwyBotError, ErrorTypes } from '../utils/errorHandler.js';
+import { LWError, ErrorTypes } from '../utils/errorHandler.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 import { ChannelType, PermissionFlagsBits } from 'discord.js';
 
@@ -38,7 +38,7 @@ const ALLOWED_TEMPLATE_PLACEHOLDERS = new Set([
 
 export function validateChannelNameTemplate(template) {
     if (!template || typeof template !== 'string') {
-        throw new XlwyBotError(
+        throw new LWError(
             'Invalid channel template: must be a non-empty string',
             ErrorTypes.VALIDATION,
             'Le modèle de nom de salon doit être un texte valide.'
@@ -49,7 +49,7 @@ export function validateChannelNameTemplate(template) {
     const normalizedTemplate = template.normalize('NFKC').replace(CONTROL_AND_INVISIBLE_CHARS_REGEX, '').trim();
 
     if (normalizedTemplate.length > CHANNEL_NAME_MAX_LENGTH) {
-        throw new XlwyBotError(
+        throw new LWError(
             'Channel template exceeds maximum length',
             ErrorTypes.VALIDATION,
             `Le modèle de nom de salon ne peut pas dépasser ${CHANNEL_NAME_MAX_LENGTH} caractères.`
@@ -58,7 +58,7 @@ export function validateChannelNameTemplate(template) {
 
     // Check for Discord-forbidden channel name characters (only @#: and backticks are problematic)
     if (/[@#:`]/.test(normalizedTemplate)) {
-        throw new XlwyBotError(
+        throw new LWError(
             'Channel template contains forbidden characters',
             ErrorTypes.VALIDATION,
             'Le modèle de salon ne peut pas contenir les caractères @, #, : ou les accents grave.'
@@ -68,7 +68,7 @@ export function validateChannelNameTemplate(template) {
     const placeholders = normalizedTemplate.match(/\{[^}]+\}/g) || [];
     for (const placeholder of placeholders) {
         if (!ALLOWED_TEMPLATE_PLACEHOLDERS.has(placeholder)) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Channel template contains unknown placeholders',
                 ErrorTypes.VALIDATION,
                 `Placeholder inconnu : ${placeholder}. Les placeholders autorisés sont ${Array.from(ALLOWED_TEMPLATE_PLACEHOLDERS).join(', ')}`
@@ -89,7 +89,7 @@ export function validateBitrate(bitrate) {
     const bitrateNum = parseInt(bitrate);
 
     if (isNaN(bitrateNum)) {
-        throw new XlwyBotError(
+        throw new LWError(
             'Bitrate must be a valid number',
             ErrorTypes.VALIDATION,
             'Veuillez saisir un nombre valide pour le débit binaire.'
@@ -97,7 +97,7 @@ export function validateBitrate(bitrate) {
     }
 
     if (bitrateNum < 8 || bitrateNum > 384) {
-        throw new XlwyBotError(
+        throw new LWError(
             'Bitrate out of valid range',
             ErrorTypes.VALIDATION,
             'Le débit binaire doit être compris entre 8 et 384 kbps.'
@@ -117,7 +117,7 @@ export function validateUserLimit(limit) {
     const limitNum = parseInt(limit);
 
     if (isNaN(limitNum)) {
-        throw new XlwyBotError(
+        throw new LWError(
             'User limit must be a valid number',
             ErrorTypes.VALIDATION,
             'Veuillez saisir un nombre valide pour la limite d\'utilisateurs.'
@@ -125,7 +125,7 @@ export function validateUserLimit(limit) {
     }
 
     if (limitNum < 0 || limitNum > 99) {
-        throw new XlwyBotError(
+        throw new LWError(
             'User limit out of valid range',
             ErrorTypes.VALIDATION,
             'La limite d\'utilisateurs doit être comprise entre 0 (aucune limite) et 99.'
@@ -148,7 +148,7 @@ export function formatChannelName(template, variables) {
         validateChannelNameTemplate(safeTemplate);
 
         if (!variables || typeof variables !== 'object') {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Invalid variables object for channel formatting',
                 ErrorTypes.VALIDATION
             );
@@ -222,7 +222,7 @@ export function formatChannelName(template, variables) {
 export async function initializeJoinToCreate(client, guildId, channelId, options = {}) {
     try {
         if (!client || !client.db) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Database service not available',
                 ErrorTypes.DATABASE,
                 'Une erreur système est survenue. Réessaie.'
@@ -230,7 +230,7 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
         }
 
         if (!guildId || !channelId) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Missing required guild or channel ID',
                 ErrorTypes.VALIDATION,
                 'Informations de serveur ou de salon invalides.'
@@ -251,7 +251,7 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
         const config = await getJoinToCreateConfig(client, guildId);
 
         if (config.triggerChannels.includes(channelId)) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Channel already configured as Join to Create trigger',
                 ErrorTypes.VALIDATION,
                 'Ce salon est déjà configuré comme déclencheur Join to Create.'
@@ -259,7 +259,7 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
         }
 
         if (Array.isArray(config.triggerChannels) && config.triggerChannels.length > 0) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Guild already has a Join to Create trigger configured',
                 ErrorTypes.VALIDATION,
                 'Ce serveur a déjà un canal Join to Create configuré. Utilise `/jointocreate dashboard` pour le modifier, ou retire-le avant d\'en créer un nouveau.',
@@ -296,10 +296,10 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
         return config;
 
     } catch (error) {
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
-        throw new XlwyBotError(
+        throw new LWError(
             `Failed to initialize Join to Create: ${error.message}`,
             ErrorTypes.DATABASE,
             'Échec de la configuration du système Join to Create.'
@@ -318,7 +318,7 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
 export async function updateChannelConfig(client, guildId, channelId, updates) {
     try {
         if (!client || !client.db) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Database service not available',
                 ErrorTypes.DATABASE,
                 'Le service de base de données est actuellement indisponible. Réessaie plus tard.'
@@ -328,7 +328,7 @@ export async function updateChannelConfig(client, guildId, channelId, updates) {
         const config = await getJoinToCreateConfig(client, guildId);
 
         if (!config.triggerChannels.includes(channelId)) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Channel is not configured as a Join to Create trigger',
                 ErrorTypes.VALIDATION,
                 'Ce salon n\'est pas configuré comme déclencheur Join to Create.'
@@ -365,10 +365,10 @@ export async function updateChannelConfig(client, guildId, channelId, updates) {
         return config.channelOptions[channelId];
 
     } catch (error) {
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
-        throw new XlwyBotError(
+        throw new LWError(
             `Failed to update channel config: ${error.message}`,
             ErrorTypes.DATABASE,
             'Échec de la mise à jour de la configuration.'
@@ -386,7 +386,7 @@ export async function updateChannelConfig(client, guildId, channelId, updates) {
 export async function removeTriggerChannel(client, guildId, channelId) {
     try {
         if (!client || !client.db) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Database service not available',
                 ErrorTypes.DATABASE,
                 'Le service de base de données est actuellement indisponible. Réessaie plus tard.'
@@ -397,7 +397,7 @@ export async function removeTriggerChannel(client, guildId, channelId) {
 
         const index = config.triggerChannels.indexOf(channelId);
         if (index === -1) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Channel not found in Join to Create triggers',
                 ErrorTypes.VALIDATION,
                 'This channel is not configured as a Join to Create trigger.'
@@ -427,10 +427,10 @@ export async function removeTriggerChannel(client, guildId, channelId) {
         return true;
 
     } catch (error) {
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
-        throw new XlwyBotError(
+        throw new LWError(
             `Failed to remove trigger channel: ${error.message}`,
             ErrorTypes.DATABASE,
             'Échec de la suppression du salon déclencheur.'
@@ -448,7 +448,7 @@ export async function removeTriggerChannel(client, guildId, channelId) {
 export async function getConfiguration(client, guildId) {
     try {
         if (!client || !client.db) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Database service not available',
                 ErrorTypes.DATABASE,
                 'Le service de base de données est actuellement indisponible. Réessaie plus tard.'
@@ -458,10 +458,10 @@ export async function getConfiguration(client, guildId) {
         return await getJoinToCreateConfig(client, guildId);
 
     } catch (error) {
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
-        throw new XlwyBotError(
+        throw new LWError(
             `Failed to retrieve configuration: ${error.message}`,
             ErrorTypes.DATABASE,
             'Échec de la récupération des paramètres.'
@@ -499,7 +499,7 @@ export async function getChannelConfiguration(client, guildId, channelId) {
         const config = await getConfiguration(client, guildId);
 
         if (!config.triggerChannels || !Array.isArray(config.triggerChannels) || !config.triggerChannels.includes(channelId)) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Channel is not a valid Join to Create trigger',
                 ErrorTypes.VALIDATION,
                 'Ce salon n\'est pas configuré comme déclencheur Join to Create.'
@@ -512,10 +512,10 @@ export async function getChannelConfiguration(client, guildId, channelId) {
         };
 
     } catch (error) {
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
-        throw new XlwyBotError(
+        throw new LWError(
             `Failed to get channel configuration: ${error.message}`,
             ErrorTypes.DATABASE,
             'Échec de la récupération de la configuration du salon. Réessaie.'
@@ -578,7 +578,7 @@ export async function logConfigurationChange(client, guildId, userId, action, de
 export async function createTemporaryChannel(guild, member, options = {}) {
     try {
         if (!guild || !member) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Invalid guild or member',
                 ErrorTypes.VALIDATION
             );
@@ -638,10 +638,10 @@ export async function createTemporaryChannel(guild, member, options = {}) {
         };
 
     } catch (error) {
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
-        throw new XlwyBotError(
+        throw new LWError(
             `Failed to create temporary channel: ${error.message}`,
             ErrorTypes.DISCORD_API,
             'Impossible de créer ton salon vocal temporaire. Contacte un administrateur.'

@@ -16,7 +16,7 @@ import { loadCommands, registerCommands as registerSlashCommands } from './handl
 const presenceDiagWarned = new Map();
 const PRESENCE_DIAG_INTERVAL_MS = 30 * 60 * 1000;
 
-class XlwyBot extends Client {
+class LWBot extends Client {
   constructor() {
     super({
       intents: [
@@ -56,7 +56,7 @@ GatewayIntentBits.GuildBans,
 
   async start() {
     try {
-      startupLog('Starting xlwy bot...');
+      startupLog('Starting LW Bot...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       startupLog('Initializing database...');
@@ -202,7 +202,7 @@ GatewayIntentBits.GuildBans,
 
     app.get('/', (req, res) => {
       res.status(200).json({ 
-        message: 'xlwy bot - System Online',
+        message: 'LW Bot - System Online',
         version: '2.0.0',
         build: 'TF-v5-single-button',
         timestamp: new Date().toISOString()
@@ -483,7 +483,7 @@ GatewayIntentBits.GuildBans,
 }
 
 try {
-  const bot = new XlwyBot();
+  const bot = new LWBot();
   
   const setupShutdown = () => {
     process.on('SIGTERM', () => bot.shutdown('SIGTERM'));
@@ -530,7 +530,7 @@ try {
   process.exit(1);
 }
 
-export default XlwyBot;
+export default LWBot;
 
 
 

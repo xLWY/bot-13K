@@ -1,6 +1,6 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
-import { XlwyBotError, ErrorTypes } from '../utils/errorHandler.js';
+import { LWError, ErrorTypes } from '../utils/errorHandler.js';
 import { getColor } from '../config/bot.js';
 import { getEndedGiveaways, markGiveawayEnded } from '../utils/database.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
@@ -42,7 +42,7 @@ function cleanupInteractionCache(force = false) {
 
 export function parseDuration(durationString) {
     if (!durationString || typeof durationString !== 'string') {
-        throw new XlwyBotError(
+        throw new LWError(
             'Invalid duration format provided',
             ErrorTypes.VALIDATION,
             'Veuillez fournir une durée valide (ex. : 1h, 30m, 5d, 10s).',
@@ -54,7 +54,7 @@ export function parseDuration(durationString) {
     const match = durationString.trim().match(regex);
 
     if (!match) {
-        throw new XlwyBotError(
+        throw new LWError(
             `Invalid duration format: ${durationString}`,
             ErrorTypes.VALIDATION,
             'Format de durée invalide. Utilisez : 1h, 30m, 5d, 10s (min : 10s, max : 30d)',
@@ -66,7 +66,7 @@ export function parseDuration(durationString) {
     const unit = match[2].toLowerCase();
 
     if (amount <= 0 || amount > 999) {
-        throw new XlwyBotError(
+        throw new LWError(
             `Duration amount out of range: ${amount}`,
             ErrorTypes.VALIDATION,
             'La durée doit être comprise entre 1 et 999.',
@@ -89,7 +89,7 @@ export function parseDuration(durationString) {
             ms = amount * 24 * 60 * 60 * 1000;
             break;
         default:
-            throw new XlwyBotError(
+            throw new LWError(
                 `Unknown duration unit: ${unit}`,
                 ErrorTypes.VALIDATION,
                 'Utilisez s (secondes), m (minutes), h (heures) ou d (jours).',
@@ -99,7 +99,7 @@ export function parseDuration(durationString) {
 
     const maxDuration = 30 * 24 * 60 * 60 * 1000; 
     if (ms > maxDuration) {
-        throw new XlwyBotError(
+        throw new LWError(
             `Duration exceeds maximum: ${ms}ms > ${maxDuration}ms`,
             ErrorTypes.VALIDATION,
             'La durée maximale est de 30 jours.',
@@ -109,7 +109,7 @@ export function parseDuration(durationString) {
 
     const minDuration = 10 * 1000; 
     if (ms < minDuration) {
-        throw new XlwyBotError(
+        throw new LWError(
             `Duration below minimum: ${ms}ms < ${minDuration}ms`,
             ErrorTypes.VALIDATION,
             'La durée minimale est de 10 secondes.',
@@ -127,7 +127,7 @@ export function parseDuration(durationString) {
 
 export function validatePrize(prize) {
     if (!prize || typeof prize !== 'string') {
-        throw new XlwyBotError(
+        throw new LWError(
             'Prize must be a non-empty string',
             ErrorTypes.VALIDATION,
             'Veuillez fournir une description de lot valide.',
@@ -137,7 +137,7 @@ export function validatePrize(prize) {
 
     const trimmed = prize.trim();
     if (trimmed.length === 0 || trimmed.length > 256) {
-        throw new XlwyBotError(
+        throw new LWError(
             `Prize length out of range: ${trimmed.length}`,
             ErrorTypes.VALIDATION,
             'Le lot doit faire entre 1 et 256 caractères.',
@@ -155,7 +155,7 @@ export function validatePrize(prize) {
 
 export function validateWinnerCount(winnerCount) {
     if (!Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount > 10) {
-        throw new XlwyBotError(
+        throw new LWError(
             `Invalid winner count: ${winnerCount}`,
             ErrorTypes.VALIDATION,
             'Le nombre de gagnants doit être compris entre 1 et 10.',
@@ -205,7 +205,7 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
         return embed;
     } catch (error) {
         logger.error('Error creating giveaway embed:', error);
-        throw new XlwyBotError(
+        throw new LWError(
             'Failed to create giveaway embed',
             ErrorTypes.UNKNOWN,
             'Une erreur interne est survenue lors du formatage du concours.',
@@ -244,7 +244,7 @@ export function createGiveawayButtons(ended = false) {
         return row;
     } catch (error) {
         logger.error('Error creating giveaway buttons:', error);
-        throw new XlwyBotError(
+        throw new LWError(
             'Failed to create giveaway buttons',
             ErrorTypes.UNKNOWN,
             'Une erreur interne est survenue lors de la création des boutons interactifs.',
@@ -269,7 +269,7 @@ export function selectWinners(participants, winnerCount) {
     const uniqueParticipants = [...new Set(participants)];
 
     if (!Number.isInteger(winnerCount) || winnerCount < 1) {
-        throw new XlwyBotError(
+        throw new LWError(
             'Invalid winner count for selection',
             ErrorTypes.VALIDATION,
             'Le nombre de gagnants doit être d\'au moins 1.',
@@ -289,7 +289,7 @@ export function selectWinners(participants, winnerCount) {
         return shuffled.slice(0, requested);
     } catch (error) {
         logger.error('Error selecting winners:', error);
-        throw new XlwyBotError(
+        throw new LWError(
             'Failed to select winners',
             ErrorTypes.UNKNOWN,
             'Une erreur est survenue lors de la sélection des gagnants.',
@@ -344,7 +344,7 @@ export function recordUserInteraction(userId, giveawayId) {
 export async function endGiveaway(client, giveaway, guildId, endedBy) {
     try {
         if (!giveaway) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Giveaway object is null or undefined',
                 ErrorTypes.VALIDATION,
                 'Impossible de terminer un concours inexistant.',
@@ -353,7 +353,7 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
         }
 
         if (giveaway.ended === true || giveaway.isEnded === true) {
-            throw new XlwyBotError(
+            throw new LWError(
                 `Giveaway ${giveaway.messageId} is already ended`,
                 ErrorTypes.VALIDATION,
                 'Ce concours est déjà terminé.',
@@ -384,12 +384,12 @@ export async function endGiveaway(client, giveaway, guildId, endedBy) {
             participantCount: participants.length
         };
     } catch (error) {
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             logger.debug(`Giveaway end validation error: ${error.message}`, error.context || {});
             throw error;
         }
         logger.error('Error ending giveaway:', error);
-        throw new XlwyBotError(
+        throw new LWError(
             'Failed to end giveaway',
             ErrorTypes.UNKNOWN,
             'Une erreur est survenue lors de la fin du concours.',

@@ -1,7 +1,7 @@
 services:
   bot:
     build: .
-    container_name: xlwy bot
+    container_name: lwbot
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -14,16 +14,16 @@ services:
       db:
         condition: service_healthy
     networks:
-      - xlwy-network
+      - lwbot-network
 
   db:
     image: postgres:15-alpine
-    container_name: xlwy bot-db
+    container_name: lwbot-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-xlwy bot}
+      - POSTGRES_USER=${POSTGRES_USER:-lwbot}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_DB=${POSTGRES_DB:-xlwy bot}
+      - POSTGRES_DB=${POSTGRES_DB:-lwbot}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,10 +32,10 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - xlwy-network
+      - lwbot-network
 
 networks:
-  xlwy-network:
+  lwbot-network:
     driver: bridge
 
 volumes:

@@ -2,7 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelT
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { LWError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
 import { saveGiveaway } from '../../utils/giveaways.js';
 import { 
     parseDuration, 
@@ -53,7 +53,7 @@ export default {
         try {
             
             if (!interaction.inGuild()) {
-                throw new XlwyBotError(
+                throw new LWError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
                     'Cette commande ne peut être utilisée que sur un serveur.',
@@ -63,7 +63,7 @@ export default {
 
             
             if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                throw new XlwyBotError(
+                throw new LWError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
                     "Vous devez avoir la permission `Gérer le serveur` pour lancer un concours.",
@@ -86,7 +86,7 @@ export default {
 
             
             if (!targetChannel.isTextBased()) {
-                throw new XlwyBotError(
+                throw new LWError(
                     'Target channel is not text-based',
                     ErrorTypes.VALIDATION,
                     'Le salon doit être un salon textuel.',

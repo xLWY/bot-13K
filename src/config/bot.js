@@ -24,8 +24,8 @@ export const botConfig = {
     // 5 = Competing
     activities: [
       {
-        // Text users will see (example: "Playing /help | xlwy bot").
-        name: "Made by xlwy",
+        // Text users will see (example: "Playing /help | LW Bot").
+        name: "Made by LW",
         // Activity type number (0 = Playing).
         type: 0, 
       },
@@ -139,7 +139,7 @@ export const botConfig = {
     },
     footer: {
       // Default footer text used in bot embeds.
-      text: "xlwy bot",
+      text: "LW Bot",
       // Footer icon URL (null = no icon).
       icon: null,
     },

@@ -19,7 +19,7 @@ import {
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
-import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
+import { LWError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
 import { getGuildConfigKey } from '../../../utils/database.js';
 import { getUserTicketCount, buildTicketTypeButtons, resolveTicketTypes } from '../../../services/ticket.js';
@@ -302,14 +302,14 @@ export default {
                             break;
                     }
                 } catch (error) {
-                    if (error instanceof XlwyBotError) {
+                    if (error instanceof LWError) {
                         logger.debug(`Ticket config validation error: ${error.message}`);
                     } else {
                         logger.error('Unexpected ticket config menu error:', error);
                     }
 
                     const errorMessage =
-                        error instanceof XlwyBotError
+                        error instanceof LWError
                             ? error.userMessage || 'Une erreur est survenue lors du traitement de votre sélection.'
                             : 'Une erreur inattendue est survenue lors de la mise à jour de la configuration.';
 
@@ -335,13 +335,13 @@ export default {
                     }
                 } catch (error) {
                     if (error.code === 40060) return;
-                    if (error instanceof XlwyBotError) {
+                    if (error instanceof LWError) {
                         logger.debug(`Ticket config button error: ${error.message}`);
                     } else {
                         logger.error('Unexpected ticket config button error:', error);
                     }
                     const errorMessage =
-                        error instanceof XlwyBotError
+                        error instanceof LWError
                             ? error.userMessage || 'Une erreur est survenue lors du traitement de votre action.'
                             : 'Une erreur inattendue est survenue lors de la mise à jour de la configuration.';
 
@@ -351,9 +351,9 @@ export default {
             });
 
         } catch (error) {
-            if (error instanceof XlwyBotError) throw error;
+            if (error instanceof LWError) throw error;
             logger.error('Unexpected error in ticket_config:', error);
-            throw new XlwyBotError(
+            throw new LWError(
                 `Ticket config failed: ${error.message}`,
                 ErrorTypes.UNKNOWN,
                 'Impossible d\'ouvrir le tableau de bord de configuration des tickets.',

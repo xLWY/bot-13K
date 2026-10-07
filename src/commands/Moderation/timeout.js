@@ -3,7 +3,7 @@ import { isBotOwner } from '../../utils/ownerIds.js';
 import { successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
-import { XlwyBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { LWError, ErrorTypes } from '../../utils/errorHandler.js';
 
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -53,7 +53,7 @@ export default {
 
         try {
             if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-                throw new XlwyBotError(
+                throw new LWError(
                     "User lacks permission",
                     ErrorTypes.PERMISSION,
                     "Tu as besoin de la permission `Modérer les membres` pour définir un timeout."
@@ -66,21 +66,21 @@ export default {
             const reason = interaction.options.getString("reason") || "Aucune raison fournie";
 
             if (targetUser.id === interaction.user.id) {
-                throw new XlwyBotError(
+                throw new LWError(
                     "Cannot timeout self",
                     ErrorTypes.VALIDATION,
                     "Tu ne peux pas te mettre en timeout toi-même."
                 );
             }
             if (targetUser.id === client.user.id) {
-                throw new XlwyBotError(
+                throw new LWError(
                     "Cannot timeout bot",
                     ErrorTypes.VALIDATION,
                     "Tu ne peux pas mettre le bot en timeout."
                 );
             }
             if (!member) {
-                throw new XlwyBotError(
+                throw new LWError(
                     "Target not found",
                     ErrorTypes.USER_INPUT,
                     "L'utilisateur ciblé n'est actuellement pas dans ce serveur."
@@ -88,7 +88,7 @@ export default {
             }
 
             if (!member.moderatable) {
-                throw new XlwyBotError(
+                throw new LWError(
                     "Cannot timeout member",
                     ErrorTypes.PERMISSION,
                     "Je ne peux pas mettre cet utilisateur en timeout. Il a peut-être un rôle plus élevé que moi ou que toi."

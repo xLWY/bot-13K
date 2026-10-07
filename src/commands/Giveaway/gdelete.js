@@ -2,7 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { LWError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
 import { getGuildGiveaways, deleteGiveaway } from '../../utils/giveaways.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 
@@ -25,7 +25,7 @@ export default {
         try {
             
             if (!interaction.inGuild()) {
-                throw new XlwyBotError(
+                throw new LWError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
                     'Cette commande ne peut être utilisée que sur un serveur.',
@@ -35,7 +35,7 @@ export default {
 
             
             if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                throw new XlwyBotError(
+                throw new LWError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
                     "Vous devez avoir la permission `Gérer le serveur` pour supprimer un concours.",
@@ -49,7 +49,7 @@ export default {
 
             
             if (!messageId || !/^\d+$/.test(messageId)) {
-                throw new XlwyBotError(
+                throw new LWError(
                     'Invalid message ID format',
                     ErrorTypes.VALIDATION,
                     'Veuillez fournir un identifiant de message valide.',
@@ -61,7 +61,7 @@ export default {
             const giveaway = giveaways.find(g => g.messageId === messageId);
 
             if (!giveaway) {
-                throw new XlwyBotError(
+                throw new LWError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
                     "Aucun concours n'a été trouvé avec cet identifiant de message.",
@@ -120,7 +120,7 @@ export default {
             );
 
             if (!removedFromDatabase) {
-                throw new XlwyBotError(
+                throw new LWError(
                     `Failed to delete giveaway from database: ${messageId}`,
                     ErrorTypes.UNKNOWN,
                     "Le concours n'a pas pu être retiré de la base de données. Veuillez réessayer.",
@@ -132,7 +132,7 @@ export default {
             const stillExistsInDatabase = giveawaysAfterDelete.some(g => g.messageId === messageId);
 
             if (stillExistsInDatabase) {
-                throw new XlwyBotError(
+                throw new LWError(
                     `Giveaway still exists after deletion: ${messageId}`,
                     ErrorTypes.UNKNOWN,
                     "La suppression n'a pas été enregistrée dans la base de données. Veuillez réessayer.",

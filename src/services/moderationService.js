@@ -1,6 +1,6 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { logger } from '../utils/logger.js';
-import { XlwyBotError, ErrorTypes } from '../utils/errorHandler.js';
+import { LWError, ErrorTypes } from '../utils/errorHandler.js';
 import { logModerationAction } from '../utils/moderation.js';
 
 
@@ -78,7 +78,7 @@ export class ModerationService {
   }) {
     try {
       if (!guild || !user || !moderator) {
-        throw new XlwyBotError(
+        throw new LWError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
           'Le serveur, l\'utilisateur et le modérateur sont requis'
@@ -97,12 +97,12 @@ export class ModerationService {
       if (targetMember) {
         const botCheck = this.validateBotHierarchy(guild.client, targetMember, 'ban');
         if (!botCheck.valid) {
-          throw new XlwyBotError(botCheck.error, ErrorTypes.PERMISSION, botCheck.error);
+          throw new LWError(botCheck.error, ErrorTypes.PERMISSION, botCheck.error);
         }
 
         const modCheck = this.validateHierarchy(moderator, targetMember, 'ban');
         if (!modCheck.valid) {
-          throw new XlwyBotError(modCheck.error, ErrorTypes.PERMISSION, modCheck.error);
+          throw new LWError(modCheck.error, ErrorTypes.PERMISSION, modCheck.error);
         }
       } else {
         // If target is not in guild, we can't check their roles easily.
@@ -114,7 +114,7 @@ export class ModerationService {
         ]);
 
         if (!isOwner && !hasHighPerms) {
-            throw new XlwyBotError(
+            throw new LWError(
                 'You do not have sufficient permissions to ban users who are not in the server.',
                 ErrorTypes.PERMISSION,
                 'Tu as besoin des permissions "Gérer le serveur" ou "Administrateur" pour bannir des utilisateurs qui ne sont pas actuellement sur le serveur.'
@@ -171,7 +171,7 @@ export class ModerationService {
   }) {
     try {
       if (!guild || !member || !moderator) {
-        throw new XlwyBotError(
+        throw new LWError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
           'Le serveur, le membre et le modérateur sont requis'
@@ -181,17 +181,17 @@ export class ModerationService {
       
       const botCheck = this.validateBotHierarchy(guild.client, member, 'kick');
       if (!botCheck.valid) {
-        throw new XlwyBotError(botCheck.error, ErrorTypes.PERMISSION, botCheck.error);
+        throw new LWError(botCheck.error, ErrorTypes.PERMISSION, botCheck.error);
       }
 
       const modCheck = this.validateHierarchy(moderator, member, 'kick');
       if (!modCheck.valid) {
-        throw new XlwyBotError(modCheck.error, ErrorTypes.PERMISSION, modCheck.error);
+        throw new LWError(modCheck.error, ErrorTypes.PERMISSION, modCheck.error);
       }
 
       
       if (!member.kickable) {
-        throw new XlwyBotError(
+        throw new LWError(
           'Cannot kick member',
           ErrorTypes.PERMISSION,
           'Je n\'ai pas la permission d\'expulser ce membre'
@@ -245,7 +245,7 @@ export class ModerationService {
   }) {
     try {
       if (!guild || !member || !moderator || !durationMs) {
-        throw new XlwyBotError(
+        throw new LWError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
           'Le serveur, le membre, le modérateur et la durée sont requis'
@@ -255,17 +255,17 @@ export class ModerationService {
       
       const botCheck = this.validateBotHierarchy(guild.client, member, 'timeout');
       if (!botCheck.valid) {
-        throw new XlwyBotError(botCheck.error, ErrorTypes.PERMISSION, botCheck.error);
+        throw new LWError(botCheck.error, ErrorTypes.PERMISSION, botCheck.error);
       }
 
       const modCheck = this.validateHierarchy(moderator, member, 'timeout');
       if (!modCheck.valid) {
-        throw new XlwyBotError(modCheck.error, ErrorTypes.PERMISSION, modCheck.error);
+        throw new LWError(modCheck.error, ErrorTypes.PERMISSION, modCheck.error);
       }
 
       
       if (!member.moderatable) {
-        throw new XlwyBotError(
+        throw new LWError(
           'Cannot timeout member',
           ErrorTypes.PERMISSION,
           'Je ne peux pas mettre ce membre en timeout'
@@ -322,7 +322,7 @@ export class ModerationService {
   }) {
     try {
       if (!guild || !member || !moderator) {
-        throw new XlwyBotError(
+        throw new LWError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
           'Le serveur, le membre et le modérateur sont requis'
@@ -331,7 +331,7 @@ export class ModerationService {
 
       
       if (!member.moderatable) {
-        throw new XlwyBotError(
+        throw new LWError(
           'Cannot modify member',
           ErrorTypes.PERMISSION,
           'Je ne peux pas modifier ce membre'
@@ -340,7 +340,7 @@ export class ModerationService {
 
       
       if (!member.isCommunicationDisabled()) {
-        throw new XlwyBotError(
+        throw new LWError(
           'User not timed out',
           ErrorTypes.VALIDATION,
           `${member.user.tag} n'est actuellement pas en timeout`
@@ -391,7 +391,7 @@ export class ModerationService {
   }) {
     try {
       if (!guild || !user || !moderator) {
-        throw new XlwyBotError(
+        throw new LWError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
           'Le serveur, l\'utilisateur et le modérateur sont requis'
@@ -403,7 +403,7 @@ export class ModerationService {
       const banInfo = bans.get(user.id);
 
       if (!banInfo) {
-        throw new XlwyBotError(
+        throw new LWError(
           'User not banned',
           ErrorTypes.VALIDATION,
           `${user.tag} n'est actuellement pas banni de ce serveur`

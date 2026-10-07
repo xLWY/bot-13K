@@ -9,7 +9,7 @@ import { botConfig } from '../bot.js';
 const { currency } = botConfig.economy;
 
 export const shopConfig = {
-    name: 'xlwy bot Shop',
+    name: 'LW Bot Shop',
     currency: currency.name,
     currencyName: currency.name,
     currencyNamePlural: currency.namePlural || `${currency.name}s`,

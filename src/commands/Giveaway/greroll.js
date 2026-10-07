@@ -2,7 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { LWError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
 import { getGuildGiveaways, saveGiveaway } from '../../utils/giveaways.js';
 import { 
     selectWinners,
@@ -28,7 +28,7 @@ export default {
         try {
             
             if (!interaction.inGuild()) {
-                throw new XlwyBotError(
+                throw new LWError(
                     'Giveaway command used outside guild',
                     ErrorTypes.VALIDATION,
                     'Cette commande ne peut être utilisée que sur un serveur.',
@@ -38,7 +38,7 @@ export default {
 
             
             if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                throw new XlwyBotError(
+                throw new LWError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
                     "Vous devez avoir la permission `Gérer le serveur` pour relancer le tirage d'un concours.",
@@ -52,7 +52,7 @@ export default {
 
             
             if (!messageId || !/^\d+$/.test(messageId)) {
-                throw new XlwyBotError(
+                throw new LWError(
                     'Invalid message ID format',
                     ErrorTypes.VALIDATION,
                     'Veuillez fournir un identifiant de message valide.',
@@ -69,7 +69,7 @@ export default {
             const giveaway = giveaways.find(g => g.messageId === messageId);
 
             if (!giveaway) {
-                throw new XlwyBotError(
+                throw new LWError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
                     "Aucun concours n'a été trouvé avec cet identifiant de message dans la base de données.",
@@ -79,7 +79,7 @@ export default {
 
             
             if (!giveaway.isEnded && !giveaway.ended) {
-                throw new XlwyBotError(
+                throw new LWError(
                     `Giveaway still active: ${messageId}`,
                     ErrorTypes.VALIDATION,
                     "Ce concours est encore actif. Utilisez `/gend` pour le terminer d'abord.",
@@ -90,7 +90,7 @@ export default {
             const participants = giveaway.participants || [];
             
             if (participants.length < giveaway.winnerCount) {
-                throw new XlwyBotError(
+                throw new LWError(
                     `Insufficient participants for reroll: ${participants.length} < ${giveaway.winnerCount}`,
                     ErrorTypes.VALIDATION,
                     "Pas assez de participations pour tirer le nombre de gagnants requis.",

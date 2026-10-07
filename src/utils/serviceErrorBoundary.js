@@ -1,4 +1,4 @@
-import { createError, ErrorTypes, XlwyBotError } from './errorHandler.js';
+import { createError, ErrorTypes, LWError } from './errorHandler.js';
 import { resolveErrorCode, getErrorMetadata } from './errorRegistry.js';
 
 function normalizeBoundaryContext(context = {}) {
@@ -43,7 +43,7 @@ function inferErrorType(error, fallbackType = ErrorTypes.UNKNOWN) {
 }
 
 export function ensureTypedServiceError(error, options = {}) {
-  if (error instanceof XlwyBotError) {
+  if (error instanceof LWError) {
     return error;
   }
 

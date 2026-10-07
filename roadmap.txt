@@ -1,4 +1,4 @@
-xlwy bot Roadmap / Structure Overview 
+LW Bot Roadmap / Structure Overview 
 
 Goal
 - Keep this as a practical map of the codebase.

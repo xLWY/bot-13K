@@ -2,7 +2,7 @@ import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, LabelBuilder } from 'discord.js';
 import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { XlwyBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { LWError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import {
     initializeJoinToCreate,
@@ -82,7 +82,7 @@ export default {
         try {
             
             if (!hasManageGuildPermission(interaction.member)) {
-                throw new XlwyBotError(
+                throw new LWError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
                     "Tu dois avoir la permission **Gérer le serveur** pour utiliser cette commande."
@@ -106,9 +106,9 @@ export default {
             try {
                 let errorMessage = "Une erreur est survenue pendant l'exécution de la commande.";
                 
-                if (error instanceof XlwyBotError) {
+                if (error instanceof LWError) {
                     errorMessage = error.userMessage || "Une erreur est survenue. Veuillez réessayer.";
-                    logger.debug(`XlwyBotError [${error.type}]: ${error.message}`, error.context || {});
+                    logger.debug(`LWError [${error.type}]: ${error.message}`, error.context || {});
                 } else {
                     logger.error('Unexpected error in jointocreate command:', error);
                     errorMessage = "Une erreur inattendue est survenue. Veuillez réessayer ou contacter le support.";
@@ -160,7 +160,7 @@ async function handleSetupSubcommand(interaction, client) {
                 const primaryTrigger = activeTriggerChannels[0];
                 const errorMessage = `Ce serveur possède déjà un salon Join to Create : ${primaryTrigger}\n\nUtilise \`/jointocreate dashboard\` pour le modifier, ou supprime-le d'abord avant d'en créer un nouveau.`;
 
-                throw new XlwyBotError(
+                throw new LWError(
                     'Guild already has a Join to Create channel',
                     ErrorTypes.VALIDATION,
                     errorMessage,
@@ -226,10 +226,10 @@ async function handleSetupSubcommand(interaction, client) {
 
     } catch (error) {
         logger.error('Error in handleSetupSubcommand:', error);
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
-        throw new XlwyBotError(
+        throw new LWError(
             `Setup failed: ${error.message}`,
             ErrorTypes.DISCORD_API,
             "Échec de la configuration du système Join to Create. Vérifie les permissions du robot."
@@ -302,7 +302,7 @@ async function handleConfigSubcommand(interaction, client) {
         const message = await interaction.fetchReply();
 
         if (!message || typeof message.createMessageComponentCollector !== 'function') {
-            throw new XlwyBotError(
+            throw new LWError(
                 'Failed to fetch interaction reply for collector setup',
                 ErrorTypes.DISCORD_API,
                 "Impossible d'ouvrir les contrôles de configuration. Relance \`/jointocreate dashboard\`."
@@ -338,11 +338,11 @@ async function handleConfigSubcommand(interaction, client) {
                     await handleChannelDeletion(buttonInteraction, triggerChannel, currentConfig, client);
                 }
             } catch (error) {
-                const userMessage = error instanceof XlwyBotError
+                const userMessage = error instanceof LWError
                     ? error.userMessage || "Une erreur est survenue."
                     : "Une erreur est survenue pendant le traitement de ta demande.";
 
-                if (error instanceof XlwyBotError) {
+                if (error instanceof LWError) {
                     logger.debug(`Button interaction validation error: ${error.message}`, error.context || {});
                 } else {
                     logger.error('Unexpected error in config button interaction:', error);
@@ -370,10 +370,10 @@ async function handleConfigSubcommand(interaction, client) {
         });
 
     } catch (error) {
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
-        throw new XlwyBotError(
+        throw new LWError(
             `Config failed: ${error.message}`,
             ErrorTypes.DATABASE,
             "Échec du chargement de la configuration."
@@ -456,11 +456,11 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
         if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
             return;
         }
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
         logger.error('Unexpected error in name template modal:', error);
-        throw new XlwyBotError(
+        throw new LWError(
             `Modal error: ${error.message}`,
             ErrorTypes.UNKNOWN,
             "Une erreur est survenue pendant la modification du modèle."
@@ -525,11 +525,11 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig, 
         if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
             return;
         }
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
         logger.error('Unexpected error in user limit modal:', error);
-        throw new XlwyBotError(
+        throw new LWError(
             `Modal error: ${error.message}`,
             ErrorTypes.UNKNOWN,
             "Une erreur est survenue pendant la modification de la limite."
@@ -594,11 +594,11 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig, cl
         if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
             return;
         }
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
         logger.error('Unexpected error in bitrate modal:', error);
-        throw new XlwyBotError(
+        throw new LWError(
             `Modal error: ${error.message}`,
             ErrorTypes.UNKNOWN,
             "Une erreur est survenue pendant la modification du débit binaire."
@@ -694,11 +694,11 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
         });
 
     } catch (error) {
-        if (error instanceof XlwyBotError) {
+        if (error instanceof LWError) {
             throw error;
         }
         logger.error('Unexpected error in handleChannelDeletion:', error);
-        throw new XlwyBotError(
+        throw new LWError(
             `Deletion error: ${error.message}`,
             ErrorTypes.UNKNOWN,
             "Une erreur est survenue pendant la suppression du canal."
