@@ -1,6 +1,6 @@
 {
   "name": "lw-bot",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "Modular Ultimate Community Bot by Touchpoint Support",
   "main": "src/app.js",
   "type": "module",

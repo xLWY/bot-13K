@@ -99,8 +99,8 @@ LW Bot is fully containerized for easy deployment.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/<your-username>/LWBot.git
-   cd LWBot
+   git clone https://github.com/xLWY/bot-13K.git
+   cd bot-13K
    ```
 
 2. **Configure environment variables:**
@@ -118,7 +118,7 @@ This will start both the bot and a persistent PostgreSQL database.
 The bot is automatically published to GitHub Container Registry on every push to main.
 
 ```bash
-docker pull ghcr.io/<your-username>/LWBot:main
+docker pull ghcr.io/xLWY/bot-13K:main
 ```
 
 <a name="manual-installation-steps"></a>
@@ -131,8 +131,8 @@ docker pull ghcr.io/<your-username>/LWBot:main
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/<your-username>/LWBot.git
-   cd LWBot
+   git clone https://github.com/xLWY/bot-13K.git
+   cd bot-13K
    ```
 
 2. **Install Dependencies**
@@ -193,7 +193,7 @@ docker pull ghcr.io/<your-username>/LWBot:main
 
 5. **Test Database Connection**
    ```bash
-   npm run test-postgres
+   npm test
    ```
 
 6. **Start the Bot**
