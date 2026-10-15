@@ -1,7 +1,7 @@
 /**
  * Centralized Error Handling System
  * 
- * This module provides structured error handling for the LW Bot application.
+ * This module provides structured error handling for the xlwy bot application.
  * 
  * PHILOSOPHY:
  * - All errors are categorized by type for consistent handling
@@ -10,7 +10,7 @@
  * - Errors contain context information for debugging
  * 
  * USAGE:
- * - Throw LWError for application-specific errors
+ * - Throw XlwyBotError for application-specific errors
  * - Use handleInteractionError for interaction errors
  * - Errors are automatically formatted and sent to user
  * 
@@ -47,10 +47,10 @@ export const ErrorTypes = {
 
 
 
-export class LWError extends Error {
+export class XlwyBotError extends Error {
     constructor(message, type = ErrorTypes.UNKNOWN, userMessage = null, context = {}) {
         super(message);
-        this.name = 'LWError';
+        this.name = 'XlwyBotError';
         this.type = type;
         this.userMessage = userMessage;
         this.context = context;
@@ -63,7 +63,7 @@ export class LWError extends Error {
 
 
 export function categorizeError(error) {
-    if (error instanceof LWError) {
+    if (error instanceof XlwyBotError) {
         return error.type;
     }
 
@@ -329,12 +329,12 @@ export function createError(message, type = ErrorTypes.UNKNOWN, userMessage = nu
         errorCode: context?.errorCode || getDefaultErrorCodeByType(type)
     };
 
-    return new LWError(message, type, userMessage, normalizedContext);
+    return new XlwyBotError(message, type, userMessage, normalizedContext);
 }
 
 export default {
     ErrorTypes,
-    LWError,
+    XlwyBotError,
     categorizeError,
     getUserMessage,
     handleInteractionError,

@@ -1,6 +1,6 @@
-# LW Bot - Ultimate Discord Bot
+# xlwy bot - Ultimate Discord Bot
 
-**LW Bot** is a powerful, feature-rich Discord bot designed to enhance your server experience with comprehensive moderation tools, engaging economy systems, utility features, and much more. Built with modern Discord.js v14 and PostgreSQL for optimal performance and data persistence.
+**xlwy bot** is a powerful, feature-rich Discord bot designed to enhance your server experience with comprehensive moderation tools, engaging economy systems, utility features, and much more. Built with modern Discord.js v14 and PostgreSQL for optimal performance and data persistence.
 
 [![Support Server](https://img.shields.io/badge/-Support%20Server-%235865F2?logo=discord&logoColor=white&style=flat-square&logoWidth=20)](https://discord.gg/8kJBYhTGW9)
 [![Discord.js](https://img.shields.io/npm/v/discord.js?style=flat-square&labelColor=%23202225&color=%23202225&logo=npm&logoColor=white&logoWidth=20)](https://www.npmjs.com/package/discord.js)
@@ -18,7 +18,7 @@
 <a name="features-overview"></a>
 ## Features Overview
 
-LW Bot offers a complete suite of tools for Discord server management and community engagement:
+xlwy bot offers a complete suite of tools for Discord server management and community engagement:
 
 <table>
 <tr>
@@ -91,11 +91,11 @@ LW Bot offers a complete suite of tools for Discord server management and commun
 
 ### Video Tutorial
 For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
-[**LW Bot Setup Tutorial**](https://www.youtube.com/@TouchDisc)
+[**xlwy bot Setup Tutorial**](https://www.youtube.com/@TouchDisc)
 
 ## Docker Deployment (Recommended)
 
-LW Bot is fully containerized for easy deployment.
+xlwy bot is fully containerized for easy deployment.
 
 1. **Clone the repository:**
    ```bash
@@ -152,10 +152,10 @@ docker pull ghcr.io/xLWY/bot-13K:main
    GUILD_ID=your_discord_guild_id_here
 
    # PostgreSQL Configuration (Primary Database)
-   POSTGRES_URL=postgresql://postgres:yourpassword@localhost:5432/lwbot
+   POSTGRES_URL=postgresql://postgres:yourpassword@localhost:5432/xlwybot
    POSTGRES_HOST=localhost
    POSTGRES_PORT=5432
-   POSTGRES_DB=lwbot
+   POSTGRES_DB=xlwybot
    POSTGRES_USER=postgres
    POSTGRES_PASSWORD=yourpassword
    ```
@@ -164,7 +164,7 @@ docker pull ghcr.io/xLWY/bot-13K:main
    - `NODE_ENV=production`
    - `LOG_LEVEL=warn` for a clean production console (critical issues + startup status)
    - `LOG_LEVEL=info` if you want more detailed operational logs
-   - If your chosen `PORT` is already used, LW Bot automatically tries the next port(s)
+   - If your chosen `PORT` is already used, xlwy bot automatically tries the next port(s)
 
    Environment options reference:
    - `NODE_ENV`: `development`, `production`, `test` (any non-`production` value is treated as non-production)
@@ -185,10 +185,10 @@ docker pull ghcr.io/xLWY/bot-13K:main
 4. **Setup PostgreSQL Database** (Optional but recommended)
    ```bash
    # Create database and user
-   createdb lwbot
-   createuser lwbot
-   psql -c "ALTER USER lwbot PASSWORD 'yourpassword';"
-   psql -c "GRANT ALL PRIVILEGES ON DATABASE lwbot TO lwbot;"
+   createdb xlwybot
+   createuser xlwybot
+   psql -c "ALTER USER xlwybot PASSWORD 'yourpassword';"
+   psql -c "GRANT ALL PRIVILEGES ON DATABASE xlwybot TO xlwybot;"
    ```
 
 5. **Test Database Connection**
@@ -203,7 +203,7 @@ docker pull ghcr.io/xLWY/bot-13K:main
 <a name="bot-intents"></a>
 
 ## Required Bot Intents
-LW Bot requires the following Discord intents:
+xlwy bot requires the following Discord intents:
 - **Guilds**
 - **Guild Messages**
 - **Message Content**
@@ -232,7 +232,7 @@ LW Bot requires the following Discord intents:
 <a name="contributing"></a>
 ## Contributing
 
-We welcome contributions to LW Bot! Here's how you can help:
+We welcome contributions to xlwy bot! Here's how you can help:
 
 1. **Fork the repository**
 2. **Create a feature branch**
@@ -248,10 +248,10 @@ We welcome contributions to LW Bot! Here's how you can help:
 
 ## License
 
-LW Bot is released under the MIT License. See [LICENSE](LICENSE) for details.
+xlwy bot is released under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Thank You
 
-Thank you for choosing LW Bot for your Discord server! We're constantly working to improve and add new features based on community feedback.
+Thank you for choosing xlwy bot for your Discord server! We're constantly working to improve and add new features based on community feedback.
 
 *Last updated: May 2026*
