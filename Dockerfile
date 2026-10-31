@@ -8,7 +8,8 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --omit=dev
+# `npm install` (instead of `npm ci`) tolerates a lockfile that is slightly out of sync
+RUN npm install --omit=dev --no-audit --no-fund
 
 # Bundle app source
 RUN echo "cache bust v3"
