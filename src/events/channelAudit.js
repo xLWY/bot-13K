@@ -1,6 +1,22 @@
 import { Events, ChannelType } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
+import { getServerCounters } from '../services/serverstatsService.js';
 import { logger } from '../utils/logger.js';
+
+/**
+ * Counter channels (serverstats) are renamed automatically whenever a member
+ * count changes. Logging those renames would flood the owner with one message
+ * per presence/voice change, so they are ignored here.
+ */
+async function isCounterChannel(client, channel) {
+  try {
+    const counters = await getServerCounters(client, channel.guild.id);
+    return counters.some((counter) => counter.channelId === channel.id);
+  } catch (error) {
+    logger.debug(`Could not check if channel ${channel.id} is a counter:`, error.message);
+    return false;
+  }
+}
 
 const CHANNEL_TYPE_NAMES = {
   [ChannelType.GuildText]: 'Texte',
@@ -108,6 +124,7 @@ export default [
     async execute(before, after, client) {
       try {
         if (!after.guild) return;
+        if (await isCounterChannel(client ?? after.client, after)) return;
         const changes = changedFields(before, after);
         if (changes.length === 0) return;
 
