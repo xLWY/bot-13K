@@ -51,6 +51,7 @@ GatewayIntentBits.GuildBans,
     this.modals = new Collection();
     this.cooldowns = new Collection();
     this.db = null;
+    this.keepAliveTimer = null;
     this.rest = new REST({ version: '10' }).setToken(config.bot.token);
   }
 
@@ -217,6 +218,7 @@ GatewayIntentBits.GuildBans,
         startupLog(`✅ Web Server running on ${host}:${port}`);
         startupLog(`Health endpoint: http://localhost:${port}/health`);
         startupLog(`Ready endpoint: http://localhost:${port}/ready`);
+        this.startKeepAlive();
       });
 
       server.on('error', (error) => {
@@ -244,6 +246,44 @@ GatewayIntentBits.GuildBans,
     };
 
     startServer(configuredPort, 0);
+  }
+
+  /**
+   * Render (free plan) spins a web service down after 15 minutes without
+   * inbound traffic. A Discord gateway connection is outbound, so it does not
+   * count. Pinging our own public /health endpoint every 10 minutes keeps the
+   * service awake without any external cron/monitor.
+   *
+   * Render injects RENDER_EXTERNAL_URL automatically. Disable with KEEP_ALIVE=false.
+   */
+  startKeepAlive() {
+    if (this.keepAliveTimer || process.env.KEEP_ALIVE === 'false') return;
+
+    const baseUrl = process.env.KEEP_ALIVE_URL || process.env.RENDER_EXTERNAL_URL;
+    if (!baseUrl) {
+      logger.debug('Keep-alive disabled (no RENDER_EXTERNAL_URL / KEEP_ALIVE_URL set).');
+      return;
+    }
+
+    const url = `${baseUrl.replace(/\/+$/, '')}/health`;
+    const intervalMs = Math.max(60_000, Number(process.env.KEEP_ALIVE_INTERVAL_MS || 10 * 60 * 1000));
+
+    const ping = async () => {
+      try {
+        const res = await fetch(url, {
+          headers: { 'user-agent': 'xlwy-bot-keepalive' },
+        });
+        logger.debug(`Keep-alive ping ${url} -> ${res.status}`);
+      } catch (error) {
+        logger.warn(`Keep-alive ping failed: ${error?.message || error}`);
+      }
+    };
+
+    this.keepAliveTimer = setInterval(ping, intervalMs);
+    const kickoff = setTimeout(ping, 30_000);
+    if (typeof kickoff.unref === 'function') kickoff.unref();
+
+    startupLog(`Keep-alive enabled: ${url} every ${Math.round(intervalMs / 60000)} min`);
   }
 
   setupCronJobs() {
@@ -445,6 +485,12 @@ GatewayIntentBits.GuildBans,
       logger.info('Stopping cron jobs...');
       cron.getTasks().forEach(task => task.stop());
       logger.info('✅ Cron jobs stopped');
+
+      if (this.keepAliveTimer) {
+        clearInterval(this.keepAliveTimer);
+        this.keepAliveTimer = null;
+        logger.info('✅ Keep-alive stopped');
+      }
 
       // Close database connection
       if (this.db && this.db.db) {

@@ -32,7 +32,6 @@ export default {
 
             const roundTrip = round((message?.createdTimestamp || sentAt) - sentAt);
             const heartbeat = round(client.ws.ping);
-            const now = Date.now();
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [
@@ -42,7 +41,7 @@ export default {
                         .addFields(
                             { name: '\u{1F3E1} Websocket', value: `\`${heartbeat} ms\``, inline: true },
                             { name: '\u{23F1} Aller-retour', value: `\`${roundTrip} ms\``, inline: true },
-                            { name: '\u{1F5B1}\u{FE0F} Uptime', value: `\`${formatUptime(now - client.uptime)}\``, inline: true },
+                            { name: '\u{1F5B1}\u{FE0F} Uptime', value: `\`${formatUptime(client.uptime)}\``, inline: true },
                         )
                         .setFooter({ text: `discord.js v${djsVersion}` })
                         .setTimestamp()
