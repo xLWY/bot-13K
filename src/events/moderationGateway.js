@@ -36,6 +36,40 @@ const AUDIT_ACTIONS = new Set([
   AuditLogEvent.MessageUnpin,
 ]);
 
+const AUDIT_ACTION_LABELS = {
+  [AuditLogEvent.ChannelCreate]: 'Salon créé',
+  [AuditLogEvent.ChannelUpdate]: 'Salon modifié',
+  [AuditLogEvent.ChannelDelete]: 'Salon supprimé',
+  [AuditLogEvent.ChannelOverwriteCreate]: 'Permission de salon créée',
+  [AuditLogEvent.ChannelOverwriteUpdate]: 'Permission de salon modifiée',
+  [AuditLogEvent.ChannelOverwriteDelete]: 'Permission de salon supprimée',
+  [AuditLogEvent.MemberBan]: 'Membre banni',
+  [AuditLogEvent.MemberUnban]: 'Membre débanni',
+  [AuditLogEvent.MemberKick]: 'Membre expulsé',
+  [AuditLogEvent.MemberRoleUpdate]: 'Rôles d\'un membre modifiés',
+  [AuditLogEvent.MemberMove]: 'Membre déplacé',
+  [AuditLogEvent.MemberDisconnect]: 'Membre déconnecté',
+  [AuditLogEvent.RoleCreate]: 'Rôle créé',
+  [AuditLogEvent.RoleUpdate]: 'Rôle modifié',
+  [AuditLogEvent.RoleDelete]: 'Rôle supprimé',
+  [AuditLogEvent.InviteCreate]: 'Invitation créée',
+  [AuditLogEvent.InviteDelete]: 'Invitation supprimée',
+  [AuditLogEvent.WebhookCreate]: 'Webhook créé',
+  [AuditLogEvent.WebhookUpdate]: 'Webhook modifié',
+  [AuditLogEvent.WebhookDelete]: 'Webhook supprimé',
+  [AuditLogEvent.EmojiCreate]: 'Émoji créé',
+  [AuditLogEvent.EmojiUpdate]: 'Émoji modifié',
+  [AuditLogEvent.EmojiDelete]: 'Émoji supprimé',
+  [AuditLogEvent.IntegrationCreate]: 'Intégration créée',
+  [AuditLogEvent.IntegrationUpdate]: 'Intégration modifiée',
+  [AuditLogEvent.IntegrationDelete]: 'Intégration supprimée',
+  [AuditLogEvent.AutoModerationRuleCreate]: 'Règle AutoMod créée',
+  [AuditLogEvent.AutoModerationRuleUpdate]: 'Règle AutoMod modifiée',
+  [AuditLogEvent.AutoModerationRuleDelete]: 'Règle AutoMod supprimée',
+  [AuditLogEvent.MessagePin]: 'Message épinglé',
+  [AuditLogEvent.MessageUnpin]: 'Message désépinglé',
+};
+
 function truncate(value, max = 900) {
   const str = String(value ?? '');
   return str.length > max ? `${str.substring(0, max - 3)}...` : str;

@@ -19,11 +19,10 @@ export default [
           guildId: emoji.guild.id,
           eventType: EVENT_TYPES.EMOJI_CREATE,
           data: {
-            description: `Emoji ajoute : ${emoji.toString()}`,
+            description: `Émoji ajouté : ${emoji.toString()}`,
             fields: [
               { name: '😀 Nom', value: emoji.name, inline: true },
-              { name: '🆔 ID', value: emoji.id, inline: true },
-              { name: '🔗 Animated', value: emoji.animated ? 'Oui' : 'Non', inline: true },
+              { name: '🔗 Animé', value: emoji.animated ? 'Oui' : 'Non', inline: true },
             ],
           },
         });
@@ -45,7 +44,7 @@ export default [
         }
         if (before.roles.cache.size !== after.roles.cache.size) {
           changes.push({
-            name: '🎭 Roles autorises',
+            name: '🎭 Rôles autorisés',
             value: `${before.roles.cache.size} → ${after.roles.cache.size}`,
             inline: true,
           });
@@ -56,8 +55,8 @@ export default [
           guildId: after.guild.id,
           eventType: EVENT_TYPES.EMOJI_UPDATE,
           data: {
-            description: `Emoji modifie : ${after.toString()}`,
-            fields: [{ name: '🆔 ID', value: after.id, inline: true }, ...changes],
+            description: `Émoji modifié : ${after.toString()}`,
+            fields: changes,
           },
         });
       } catch (error) {
@@ -77,10 +76,9 @@ export default [
           guildId: emoji.guild.id,
           eventType: EVENT_TYPES.EMOJI_DELETE,
           data: {
-            description: `Emoji supprime : ${emoji.name}`,
+            description: `Émoji supprimé : ${emoji.name}`,
             fields: [
               { name: '😀 Nom', value: emoji.name, inline: true },
-              { name: '🆔 ID', value: emoji.id, inline: true },
             ],
           },
         });
@@ -101,11 +99,11 @@ export default [
           guildId: sticker.guild.id,
           eventType: EVENT_TYPES.STICKER_CREATE,
           data: {
-            description: `Sticker ajoute : ${sticker.name}`,
+            description: `Sticker ajouté : ${sticker.name}`,
             fields: [
               { name: '🏷️ Nom', value: sticker.name, inline: true },
               { name: '📝 Description', value: truncate(sticker.description || '*aucune*'), inline: false },
-              { name: '🏷️ Tags', value: truncate(sticker.tags || '*aucun*', 200), inline: false },
+              { name: '🏷️ Étiquettes', value: truncate(sticker.tags || '*aucune*', 200), inline: false },
             ],
           },
         });
@@ -126,7 +124,7 @@ export default [
           guildId: after.guild.id,
           eventType: EVENT_TYPES.STICKER_UPDATE,
           data: {
-            description: `Sticker modifie : ${after.name}`,
+            description: `Sticker modifié : ${after.name}`,
             fields: [
               { name: '🏷️ Nom', value: after.name, inline: true },
               { name: '📝 Description', value: truncate(after.description || '*aucune*'), inline: false },
@@ -150,7 +148,7 @@ export default [
           guildId: sticker.guild.id,
           eventType: EVENT_TYPES.STICKER_DELETE,
           data: {
-            description: `Sticker supprime : ${sticker.name}`,
+            description: `Sticker supprimé : ${sticker.name}`,
             fields: [{ name: '🏷️ Nom', value: sticker.name, inline: true }],
           },
         });
@@ -171,7 +169,7 @@ export default [
           guildId: invite.guild.id,
           eventType: EVENT_TYPES.INVITE_CREATE,
           data: {
-            description: `Invitation creee : ${invite.code}`,
+            description: `Invitation créée : ${invite.code}`,
             fields: [
               { name: '🔗 Code', value: `\`${invite.code}\``, inline: true },
               {
@@ -180,7 +178,7 @@ export default [
                 inline: true,
               },
               { name: '⏱️ Expiration', value: invite.expiresAt ? `<t:${Math.floor(invite.expiresTimestamp / 1000)}:R>` : '*jamais*', inline: true },
-              { name: '🔢 Utilisations max', value: invite.maxUses ? invite.maxUses.toString() : '*illimite*', inline: true },
+              { name: '🔢 Utilisations max', value: invite.maxUses ? invite.maxUses.toString() : '*illimité*', inline: true },
             ],
           },
         });
@@ -201,7 +199,7 @@ export default [
           guildId: invite.guild.id,
           eventType: EVENT_TYPES.INVITE_DELETE,
           data: {
-            description: `Invitation supprimee : ${invite.code}`,
+            description: `Invitation supprimée : ${invite.code}`,
             fields: [
               { name: '🔗 Code', value: `\`${invite.code}\``, inline: true },
               {
@@ -230,11 +228,10 @@ export default [
           guildId: webhook.guild.id,
           eventType: EVENT_TYPES.WEBHOOK_UPDATE,
           data: {
-            description: `Webhook modifie : ${webhook.name}`,
+            description: `Webhook modifié : ${webhook.name}`,
             channelId: webhook.channelId,
             fields: [
               { name: '🪝 Nom', value: webhook.name, inline: true },
-              { name: '🆔 ID', value: webhook.id, inline: true },
               { name: '📍 Salon', value: `<#${webhook.channelId}>`, inline: true },
               { name: '🔗 URL', value: truncate(webhook.url, 200), inline: false },
             ],
@@ -257,14 +254,14 @@ export default [
         }
         if (before.ownerId !== after.ownerId) {
           changes.push({
-            name: '👑 Proprietaire',
+            name: '👑 Propriétaire',
             value: `<@${before.ownerId}> → <@${after.ownerId}>`,
             inline: false,
           });
         }
         if (before.verificationLevel !== after.verificationLevel) {
           changes.push({
-            name: '🛡️ Verification',
+            name: '🛡️ Vérification',
             value: `${before.verificationLevel} → ${after.verificationLevel}`,
             inline: true,
           });
@@ -290,7 +287,7 @@ export default [
           guildId: after.id,
           eventType: EVENT_TYPES.GUILD_UPDATE,
           data: {
-            description: 'Informations du serveur modifiees.',
+            description: 'Les informations du serveur ont été modifiées.',
             fields: changes,
           },
         });
@@ -311,8 +308,8 @@ export default [
           guildId: guild.id,
           eventType: EVENT_TYPES.GUILD_INTEGRATION_UPDATE,
           data: {
-            description: 'Les integrations du serveur ont ete modifiees.',
-            fields: [{ name: '🏛️ Serveur', value: `${guild.name} (\`${guild.id}\`)`, inline: false }],
+            description: 'Les intégrations du serveur ont été modifiées.',
+            fields: [{ name: '🏛️ Serveur', value: guild.name, inline: false }],
           },
         });
       } catch (error) {

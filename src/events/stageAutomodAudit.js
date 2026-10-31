@@ -7,6 +7,37 @@ function truncate(value, max = 800) {
   return str.length > max ? `${str.substring(0, max - 3)}...` : str;
 }
 
+const STAGE_PRIVACY_LABELS = {
+  1: 'Publique',
+  2: 'Privée',
+};
+
+const AUTOMOD_TRIGGER_LABELS = {
+  1: 'Mot-clé',
+  3: 'Spam',
+  4: 'Préréglage de mots-clés',
+  5: 'Mention spam',
+  6: 'Profil de membre',
+};
+
+const AUTOMOD_ACTION_LABELS = {
+  1: 'Bloquer le message',
+  2: 'Envoyer une alerte',
+  3: 'Exclusion temporaire',
+};
+
+function stagePrivacyLabel(level) {
+  return STAGE_PRIVACY_LABELS[level] ?? 'Inconnu';
+}
+
+function automodTriggerLabel(type) {
+  return AUTOMOD_TRIGGER_LABELS[type] ?? 'Inconnu';
+}
+
+function automodActionLabel(type) {
+  return AUTOMOD_ACTION_LABELS[type] ?? 'Inconnue';
+}
+
 export default [
   {
     name: Events.StageInstanceCreate,
@@ -19,12 +50,12 @@ export default [
           guildId: stage.guild.id,
           eventType: EVENT_TYPES.STAGE_CREATE,
           data: {
-            description: `Scene creee : ${stage.channel?.toString() ?? stage.channelId}`,
+            description: `Scène créée : ${stage.channel?.toString() ?? 'salon inconnu'}`,
             channelId: stage.channelId,
             fields: [
               { name: '📍 Salon', value: stage.channel ? stage.channel.toString() : `<#${stage.channelId}>`, inline: true },
               { name: '📝 Sujet', value: truncate(stage.topic || '*aucun*', 200), inline: false },
-              { name: '🔒 Mode', value: stage.privacyLevel === 2 ? 'Publique' : 'Privee', inline: true },
+              { name: '🔒 Mode', value: stagePrivacyLabel(stage.privacyLevel), inline: true },
             ],
           },
         });
@@ -47,7 +78,7 @@ export default [
         if (before.privacyLevel !== after.privacyLevel) {
           changes.push({
             name: '🔒 Mode',
-            value: `${before.privacyLevel === 2 ? 'Publique' : 'Privee'} → ${after.privacyLevel === 2 ? 'Publique' : 'Privee'}`,
+            value: `${stagePrivacyLabel(before.privacyLevel)} → ${stagePrivacyLabel(after.privacyLevel)}`,
             inline: true,
           });
         }
@@ -57,7 +88,7 @@ export default [
           guildId: after.guild.id,
           eventType: EVENT_TYPES.STAGE_UPDATE,
           data: {
-            description: `Scene modifiee : ${after.channel?.toString() ?? after.channelId}`,
+            description: `Scène modifiée : ${after.channel?.toString() ?? 'salon inconnu'}`,
             channelId: after.channelId,
             fields: changes,
           },
@@ -79,7 +110,7 @@ export default [
           guildId: stage.guild.id,
           eventType: EVENT_TYPES.STAGE_DELETE,
           data: {
-            description: `Scene terminee : ${stage.channel?.toString() ?? stage.channelId}`,
+            description: `Scène terminée : ${stage.channel?.toString() ?? 'salon inconnu'}`,
             channelId: stage.channelId,
             fields: [
               { name: '📝 Sujet', value: truncate(stage.topic || '*aucun*', 200), inline: false },
@@ -103,12 +134,12 @@ export default [
           guildId: rule.guild.id,
           eventType: EVENT_TYPES.AUTOMOD_RULE_CREATE,
           data: {
-            description: `Regle AutoMod creee : **${rule.name}**`,
+            description: `Règle AutoMod créée : **${rule.name}**`,
             fields: [
-              { name: '🛡️ Regle', value: rule.name, inline: true },
-              { name: '🔢 Declencheur', value: `${rule.triggerType}`, inline: true },
+              { name: '🛡️ Règle', value: rule.name, inline: true },
+              { name: '🔢 Déclencheur', value: automodTriggerLabel(rule.triggerType), inline: true },
               { name: '📍 Salon', value: rule.channelId ? `<#${rule.channelId}>` : '*tous*', inline: true },
-              { name: '🚫 Action', value: `${rule.actionType}`, inline: true },
+              { name: '🚫 Action', value: automodActionLabel(rule.actionType), inline: true },
             ],
           },
         });
@@ -129,11 +160,11 @@ export default [
           guildId: after.guild.id,
           eventType: EVENT_TYPES.AUTOMOD_RULE_UPDATE,
           data: {
-            description: `Regle AutoMod modifiee : **${after.name}**`,
+            description: `Règle AutoMod modifiée : **${after.name}**`,
             fields: [
-              { name: '🛡️ Regle', value: after.name, inline: true },
-              { name: '🔢 Declencheur', value: `${before.triggerType} → ${after.triggerType}`, inline: true },
-              { name: '🚫 Action', value: `${before.actionType} → ${after.actionType}`, inline: true },
+              { name: '🛡️ Règle', value: after.name, inline: true },
+              { name: '🔢 Déclencheur', value: `${automodTriggerLabel(before.triggerType)} → ${automodTriggerLabel(after.triggerType)}`, inline: true },
+              { name: '🚫 Action', value: `${automodActionLabel(before.actionType)} → ${automodActionLabel(after.actionType)}`, inline: true },
             ],
           },
         });
@@ -154,10 +185,10 @@ export default [
           guildId: rule.guild.id,
           eventType: EVENT_TYPES.AUTOMOD_RULE_DELETE,
           data: {
-            description: `Regle AutoMod supprimee : **${rule.name}**`,
+            description: `Règle AutoMod supprimée : **${rule.name}**`,
             fields: [
-              { name: '🛡️ Regle', value: rule.name, inline: true },
-              { name: '🔢 Declencheur', value: `${rule.triggerType}`, inline: true },
+              { name: '🛡️ Règle', value: rule.name, inline: true },
+              { name: '🔢 Déclencheur', value: automodTriggerLabel(rule.triggerType), inline: true },
             ],
           },
         });
