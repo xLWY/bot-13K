@@ -247,7 +247,10 @@ const EVENT_ICONS = {
 // Evenements bruyants : desactives par defaut.
 // Il faut les activer explicitement (enabledEvents[type] === true)
 // via /logs pour eviter de noyer la MP du proprietaire.
+// audit.entry double les logs deja envoyes par les evenements dedies
+// (salons, roles, bans, etc.), donc il est coupe par defaut.
 const DEFAULT_OFF_EVENT_TYPES = new Set([
+  EVENT_TYPES.AUDIT_LOG,
   EVENT_TYPES.MESSAGE_REACTION_ADD,
   EVENT_TYPES.MESSAGE_REACTION_REMOVE,
 ]);

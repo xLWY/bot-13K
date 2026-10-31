@@ -1,6 +1,7 @@
 import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
+import { getCachedMessage } from '../utils/messageCache.js';
 
 const SAMPLE_SIZE = 5;
 const MAX_CONTENT_LENGTH = 250;
@@ -33,14 +34,22 @@ export default {
       const channelLabel = channel ? channel.toString() : `\`${channelId}\``;
 
       const sampled = [];
+      const authorIds = new Set();
       for (const message of messages.values()) {
-        if (sampled.length >= SAMPLE_SIZE) break;
-        const content = message.content
-          ? (message.content.length > MAX_CONTENT_LENGTH
-            ? `${message.content.substring(0, MAX_CONTENT_LENGTH - 3)}...`
-            : message.content)
-          : '*(vide)*';
-        sampled.push(`**${message.author?.tag ?? 'inconnu'}** : ${content}`);
+        const cached = getCachedMessage(message.id);
+        const authorId = message.author?.id ?? cached?.authorId ?? null;
+        if (authorId) authorIds.add(authorId);
+
+        if (sampled.length >= SAMPLE_SIZE) continue;
+
+        const rawContent = message.content || cached?.content || '';
+        const content = rawContent
+          ? (rawContent.length > MAX_CONTENT_LENGTH
+            ? `${rawContent.substring(0, MAX_CONTENT_LENGTH - 3)}...`
+            : rawContent)
+          : '*(vide / non disponible)*';
+        const authorTag = message.author?.tag ?? cached?.authorTag ?? 'inconnu';
+        sampled.push(`**${authorTag}** : ${content}`);
       }
 
       const fields = [
@@ -56,7 +65,7 @@ export default {
         },
         {
           name: '👥 Auteurs distincts',
-          value: new Set([...messages.values()].map(m => m.author?.id)).size.toString(),
+          value: authorIds.size.toString(),
           inline: true
         }
       ];

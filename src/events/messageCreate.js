@@ -11,6 +11,7 @@ import { checkRateLimit } from '../utils/rateLimiter.js';
 import { handlePrefixCommand } from '../utils/prefixCommands.js';
 import { recordMessage } from '../services/statsService.js';
 import { isBotOwner } from '../utils/ownerIds.js';
+import { cacheMessage } from '../utils/messageCache.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -27,6 +28,11 @@ export default {
     try {
       
       if (message.author.bot) return;
+
+      // Garde une copie du message pour les logs de suppression/edition.
+      if (message.guild) {
+        cacheMessage(message);
+      }
 
       if (!message.guild) {
         logger.info(
