@@ -30,46 +30,39 @@ export default {
       
       if (newMessage.author) {
         fields.push({
-          name: '👤 Author',
-          value: `<@${newMessage.author.id}> (${newMessage.author.id})`,
+          name: '👤 Auteur',
+          value: `<@${newMessage.author.id}>`,
           inline: true
         });
       }
 
       
       fields.push({
-        name: '💬 Channel',
-        value: `${newMessage.channel.toString()} (${newMessage.channel.id})`,
+        name: '💬 Salon',
+        value: newMessage.channel.toString(),
         inline: true
       });
 
       
-      const oldContent = oldContentRaw || '*(empty message)*';
+      const oldContent = oldContentRaw || '*(message vide)*';
       const oldContentTruncated = oldContent.length > MAX_LOGGED_EDIT_CONTENT_LENGTH 
         ? oldContent.substring(0, MAX_LOGGED_EDIT_CONTENT_LENGTH - 3) + '...' 
         : oldContent;
       fields.push({
-        name: '📝 Old Content',
+        name: '📝 Ancien contenu',
         value: oldContentTruncated,
         inline: false
       });
 
       
-      const newContent = newMessage.content || '*(empty message)*';
+      const newContent = newMessage.content || '*(message vide)*';
       const newContentTruncated = newContent.length > MAX_LOGGED_EDIT_CONTENT_LENGTH 
         ? newContent.substring(0, MAX_LOGGED_EDIT_CONTENT_LENGTH - 3) + '...' 
         : newContent;
       fields.push({
-        name: '📝 New Content',
+        name: '📝 Nouveau contenu',
         value: newContentTruncated,
         inline: false
-      });
-
-      
-      fields.push({
-        name: '🆔 Message ID',
-        value: newMessage.id,
-        inline: true
       });
 
       await logEvent({
@@ -77,7 +70,7 @@ export default {
         guildId: newMessage.guild.id,
         eventType: EVENT_TYPES.MESSAGE_EDIT,
         data: {
-          description: `A message was edited in ${newMessage.channel.toString()}`,
+          description: `Un message a été modifié dans ${newMessage.channel.toString()}`,
           userId: newMessage.author?.id,
           channelId: newMessage.channel.id,
           fields

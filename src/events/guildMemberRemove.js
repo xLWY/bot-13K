@@ -24,17 +24,17 @@ export default {
                     userId: user.id,
                     fields: [
                         {
-                            name: '👤 Member',
-                            value: `<@${user.id}> (${user.id})`,
+                            name: '👤 Membre',
+                            value: `<@${user.id}>`,
                             inline: true
                         },
                         {
-                            name: '👥 Member Count',
+                            name: '👥 Membres',
                             value: guild.memberCount.toString(),
                             inline: true
                         },
                         {
-                            name: '📅 Joined',
+                            name: '📅 A rejoint',
                             value: `<t:${Math.floor((member.joinedTimestamp || 0) / 1000)}:R>`,
                             inline: true
                         }

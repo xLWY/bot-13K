@@ -19,12 +19,12 @@ export default {
 
       if (usernameChanged) {
         fields.push({
-          name: '🏷️ Old Username',
+          name: '🏷️ Ancien nom',
           value: oldUser.username,
           inline: true
         });
         fields.push({
-          name: '🏷️ New Username',
+          name: '🏷️ Nouveau nom',
           value: newUser.username,
           inline: true
         });
@@ -32,12 +32,12 @@ export default {
 
       if (discriminatorChanged) {
         fields.push({
-          name: '🔢 Old Tag',
+          name: '🔢 Ancien tag',
           value: `#${oldUser.discriminator}`,
           inline: true
         });
         fields.push({
-          name: '🔢 New Tag',
+          name: '🔢 Nouveau tag',
           value: `#${newUser.discriminator}`,
           inline: true
         });
@@ -52,12 +52,12 @@ export default {
           guildId: guild.id,
           eventType: EVENT_TYPES.MEMBER_NAME_CHANGE,
           data: {
-            description: `<@${newUser.id}> updated their username`,
+            description: `<@${newUser.id}> a modifié son nom d'utilisateur`,
             userId: newUser.id,
             fields: [
               {
-                name: '👤 User',
-                value: `<@${newUser.id}> (${newUser.id})`,
+                name: '👤 Utilisateur',
+                value: `<@${newUser.id}>`,
                 inline: true
               },
               ...fields

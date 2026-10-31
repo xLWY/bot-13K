@@ -31,23 +31,13 @@ export default {
               guildId: message.guild.id,
               eventType: EVENT_TYPES.REACTION_ROLE_DELETE,
               data: {
-                description: `Reaction role message was deleted manually and removed from database.`,
+                description: `Le message de rôles par réaction a été supprimé manuellement et retiré de la base de données.`,
                 channelId: message.channel?.id,
                 fields: [
                   {
-                    name: '🗑️ Message ID',
-                    value: message.id,
+                    name: '📍 Salon',
+                    value: message.channel ? message.channel.toString() : 'Inconnu',
                     inline: true
-                  },
-                  {
-                    name: '📍 Channel',
-                    value: message.channel ? `${message.channel.toString()} (${message.channel.id})` : 'Unknown',
-                    inline: true
-                  },
-                  {
-                    name: '🧹 Cleanup',
-                    value: 'Database entry removed automatically',
-                    inline: false
                   }
                 ]
               }
@@ -73,16 +63,16 @@ export default {
       
       if (authorId) {
         fields.push({
-          name: '👤 Author',
-          value: `<@${authorId}> (${authorId})`,
+          name: '👤 Auteur',
+          value: `<@${authorId}>`,
           inline: true
         });
       }
 
       
       fields.push({
-        name: '💬 Channel',
-        value: channelId ? `${channelLabel} (${channelId})` : '*inconnu*',
+        name: '💬 Salon',
+        value: channelId ? channelLabel : '*inconnu*',
         inline: true
       });
 
@@ -92,7 +82,7 @@ export default {
         : (cached?.content ?? '');
 
       fields.push({
-        name: '📝 Content',
+        name: '📝 Contenu',
         value: rawContent
           ? truncate(rawContent)
           : '*pas de texte — embed/pièce jointe, ou message antérieur au démarrage du bot*',
@@ -100,17 +90,10 @@ export default {
       });
 
       
-      fields.push({
-        name: '🆔 Message ID',
-        value: message.id,
-        inline: true
-      });
-
-      
       const createdTimestamp = message.createdTimestamp ?? cached?.createdTimestamp ?? null;
       if (createdTimestamp) {
         fields.push({
-          name: '📅 Created',
+          name: '📅 Créé',
           value: `<t:${Math.floor(createdTimestamp / 1000)}:R>`,
           inline: true
         });
@@ -127,7 +110,7 @@ export default {
           .map(a => (a.url ? `[${truncate(a.name, 60)}](${a.url})` : truncate(a.name, 60)));
         const extra = attachmentList.length > 5 ? `\n... +${attachmentList.length - 5}` : '';
         fields.push({
-          name: `📎 Attachments (${attachmentList.length})`,
+          name: `📎 Pièces jointes (${attachmentList.length})`,
           value: truncate(`${shown.join('\n')}${extra}`),
           inline: false
         });
@@ -138,7 +121,7 @@ export default {
         guildId: message.guild.id,
         eventType: EVENT_TYPES.MESSAGE_DELETE,
         data: {
-          description: `A message was deleted in ${channelLabel}`,
+          description: `Un message a été supprimé dans ${channelLabel}`,
           userId: authorId ?? undefined,
           channelId: channelId ?? undefined,
           fields

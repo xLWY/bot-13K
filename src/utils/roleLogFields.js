@@ -11,11 +11,6 @@ export function buildRoleAuditFields(role, { includeMemberCount = false } = {}) 
       name: '🎨 Couleur',
       value: role.hexColor || '#000000',
       inline: true
-    },
-    {
-      name: '🆔 ID du rôle',
-      value: role.id,
-      inline: true
     }
   ];
 

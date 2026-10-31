@@ -21,14 +21,14 @@ async function isCounterChannel(client, channel) {
 const CHANNEL_TYPE_NAMES = {
   [ChannelType.GuildText]: 'Texte',
   [ChannelType.GuildVoice]: 'Vocal',
-  [ChannelType.GuildCategory]: 'Categorie',
+  [ChannelType.GuildCategory]: 'Catégorie',
   [ChannelType.GuildAnnouncement]: 'Annonces',
   [ChannelType.AnnouncementThread]: 'Fil d\'annonces',
   [ChannelType.PublicThread]: 'Fil public',
-  [ChannelType.PrivateThread]: 'Fil prive',
-  [ChannelType.GuildStageVoice]: 'Scene',
+  [ChannelType.PrivateThread]: 'Fil privé',
+  [ChannelType.GuildStageVoice]: 'Scène',
   [ChannelType.GuildForum]: 'Forum',
-  [ChannelType.GuildMedia]: 'Media',
+  [ChannelType.GuildMedia]: 'Média',
 };
 
 function channelTypeName(type) {
@@ -37,9 +37,8 @@ function channelTypeName(type) {
 
 function baseChannelFields(channel) {
   return [
-    { name: '📍 Salon', value: `${channel.toString()} (\`${channel.id}\`)`, inline: true },
+    { name: '📍 Salon', value: channel.toString(), inline: true },
     { name: '📂 Type', value: channelTypeName(channel.type), inline: true },
-    { name: '🆔 ID', value: channel.id, inline: true },
   ];
 }
 
@@ -50,8 +49,8 @@ function changedFields(before, after) {
   }
   if (before.parentId !== after.parentId) {
     changes.push({
-      name: '📁 Categorie',
-      value: `\`${before.parentId ?? 'aucune'}\` → \`${after.parentId ?? 'aucune'}\``,
+      name: '📁 Catégorie',
+      value: `${before.parentId ? `<#${before.parentId}>` : '*aucune*'} → ${after.parentId ? `<#${after.parentId}>` : '*aucune*'}`,
       inline: true,
     });
   }
@@ -64,7 +63,7 @@ function changedFields(before, after) {
   }
   if (before.rateLimitPerUser !== after.rateLimitPerUser) {
     changes.push({
-      name: '🐢 Slowmode',
+      name: '🐢 Mode lent',
       value: `${before.rateLimitPerUser ?? 0}s → ${after.rateLimitPerUser ?? 0}s`,
       inline: true,
     });
@@ -73,7 +72,7 @@ function changedFields(before, after) {
   const afterPerms = after.permissionOverwrites?.cache?.size ?? 0;
   if (beforePerms !== afterPerms) {
     changes.push({
-      name: '🔐 Surpermissions',
+      name: '🔐 Permissions',
       value: `${beforePerms} → ${afterPerms}`,
       inline: true,
     });
@@ -83,11 +82,11 @@ function changedFields(before, after) {
 
 function threadFields(thread) {
   return [
-    { name: '🧵 Fil', value: `${thread.toString()} (\`${thread.id}\`)`, inline: true },
+    { name: '🧵 Fil', value: thread.toString(), inline: true },
     { name: '📂 Type', value: channelTypeName(thread.type), inline: true },
     {
-      name: '🔒 Etat',
-      value: `${thread.locked ? 'Verrouille' : 'Ouvert'}${thread.archived ? ' / archive' : ''}`,
+      name: '🔒 État',
+      value: `${thread.locked ? 'Verrouillé' : 'Ouvert'}${thread.archived ? ' / archivé' : ''}`,
       inline: true,
     },
   ];
@@ -106,7 +105,7 @@ export default [
           guildId: channel.guild.id,
           eventType: EVENT_TYPES.CHANNEL_CREATE,
           data: {
-            description: `Salon cree : ${channel.toString()}`,
+            description: `Salon créé : ${channel.toString()}`,
             channelId: channel.id,
             fields: baseChannelFields(channel),
           },
@@ -133,7 +132,7 @@ export default [
           guildId: after.guild.id,
           eventType: EVENT_TYPES.CHANNEL_UPDATE,
           data: {
-            description: `Salon modifie : ${after.toString()}`,
+            description: `Salon modifié : ${after.toString()}`,
             channelId: after.id,
             fields: [...changes, ...baseChannelFields(after)].slice(0, 25),
           },
@@ -157,16 +156,18 @@ export default [
           eventType: EVENT_TYPES.CHANNEL_PINS_UPDATE,
           data: {
             description: pinnedMessage
-              ? `Message epingle dans ${channel.toString()}`
-              : `Message de-ingle dans ${channel.toString()}`,
+              ? `Message épinglé dans ${channel.toString()}`
+              : `Message désépinglé dans ${channel.toString()}`,
             channelId: channel.id,
             fields: [
-              { name: '📍 Salon', value: `${channel.toString()} (\`${channel.id}\`)`, inline: true },
+              { name: '📍 Salon', value: channel.toString(), inline: true },
               {
                 name: '📌 Message',
-                value: pinnedMessage
-                  ? `<#${pinnedMessage.id}>\n\`${(pinnedMessage.content || '*(vide)*').substring(0, 500)}\``
-                  : '*message de-ingle*',
+                value: pinnedMessage && typeof pinnedMessage === 'object' && pinnedMessage.content
+                  ? `\`${pinnedMessage.content.substring(0, 500)}\``
+                  : pinnedMessage
+                    ? '*message épinglé*'
+                    : '*message désépinglé*',
                 inline: false,
               },
             ],
@@ -190,7 +191,7 @@ export default [
           guildId: thread.guild.id,
           eventType: EVENT_TYPES.THREAD_CREATE,
           data: {
-            description: `Fil cree : ${thread.toString()}`,
+            description: `Fil créé : ${thread.toString()}`,
             channelId: thread.id,
             fields: threadFields(thread),
           },
@@ -233,7 +234,7 @@ export default [
           guildId: after.guild.id,
           eventType: EVENT_TYPES.THREAD_UPDATE,
           data: {
-            description: `Fil modifie : ${after.toString()}`,
+            description: `Fil modifié : ${after.toString()}`,
             channelId: after.id,
             fields: [...changes, ...threadFields(after)].slice(0, 25),
           },
@@ -256,11 +257,10 @@ export default [
           guildId: thread.guild.id,
           eventType: EVENT_TYPES.THREAD_DELETE,
           data: {
-            description: `Fil supprime : ${thread.name ?? 'Fil inconnu'}`,
+            description: `Fil supprimé : ${thread.name ?? 'Fil inconnu'}`,
             channelId: thread.id,
             fields: [
               { name: '📝 Nom', value: thread.name ?? '*inconnu*', inline: true },
-              { name: '🆔 ID', value: thread.id, inline: true },
               { name: '💬 Messages', value: (thread.messageCount ?? 0).toString(), inline: true },
             ],
           },

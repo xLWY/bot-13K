@@ -18,7 +18,7 @@ export default {
         guildId: role.guild.id,
         eventType: EVENT_TYPES.ROLE_CREATE,
         data: {
-          description: `A new role was created: ${role.toString()}`,
+          description: `Un nouveau rôle a été créé : ${role.toString()}`,
           fields
         }
       });

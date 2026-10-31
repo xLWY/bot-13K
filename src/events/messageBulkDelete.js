@@ -31,7 +31,7 @@ export default {
       if (!guild) return;
 
       const channel = messages.first()?.channel ?? guild.channels.cache.get(channelId);
-      const channelLabel = channel ? channel.toString() : `\`${channelId}\``;
+      const channelLabel = channel ? channel.toString() : 'salon inconnu';
 
       const sampled = [];
       const authorIds = new Set();
@@ -60,7 +60,7 @@ export default {
         },
         {
           name: '📍 Salon',
-          value: `${channelLabel} (\`${channelId}\`)`,
+          value: channelLabel,
           inline: true
         },
         {

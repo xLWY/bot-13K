@@ -11,13 +11,13 @@ import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 const CHANNEL_TYPE_NAMES = {
     [ChannelType.GuildText]: 'Texte',
     [ChannelType.GuildVoice]: 'Vocal',
-    [ChannelType.GuildCategory]: 'Categorie',
+    [ChannelType.GuildCategory]: 'Catégorie',
     [ChannelType.GuildAnnouncement]: 'Annonces',
     [ChannelType.PublicThread]: 'Fil public',
-    [ChannelType.PrivateThread]: 'Fil prive',
-    [ChannelType.GuildStageVoice]: 'Scene',
+    [ChannelType.PrivateThread]: 'Fil privé',
+    [ChannelType.GuildStageVoice]: 'Scène',
     [ChannelType.GuildForum]: 'Forum',
-    [ChannelType.GuildMedia]: 'Media'
+    [ChannelType.GuildMedia]: 'Média'
 };
 
 export default {
@@ -36,11 +36,10 @@ export default {
                 guildId,
                 eventType: EVENT_TYPES.CHANNEL_DELETE,
                 data: {
-                    description: `Salon supprime : ${channel.name ?? 'inconnu'}`,
+                    description: `Salon supprimé : ${channel.name ?? 'inconnu'}`,
                     channelId: channel.id,
                     fields: [
                         { name: '\u{1F4DD} Nom', value: channel.name ?? '*inconnu*', inline: true },
-                        { name: '\u{1F194} ID', value: channel.id, inline: true },
                         {
                             name: '\u{1F4C2} Type',
                             value: CHANNEL_TYPE_NAMES[channel.type] ?? `Type ${channel.type}`,
@@ -48,7 +47,7 @@ export default {
                         },
                         ...(channel.parentId
                             ? [{
-                                name: '\u{1F4C1} Categorie',
+                                name: '\u{1F4C1} Catégorie',
                                 value: `<#${channel.parentId}>`,
                                 inline: true
                             }]

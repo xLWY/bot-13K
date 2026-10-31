@@ -14,22 +14,22 @@ export default {
 
       
       fields.push({
-        name: '👤 Member',
-        value: `<@${newMember.user.id}> (${newMember.user.id})`,
+        name: '👤 Membre',
+        value: `<@${newMember.user.id}>`,
         inline: true
       });
 
       
       if (oldMember.nickname !== newMember.nickname) {
         fields.push({
-          name: '🏷️ Old Nickname',
-          value: oldMember.nickname || '*(no nickname)*',
+          name: '🏷️ Ancien pseudo',
+          value: oldMember.nickname || '*(aucun pseudo)*',
           inline: true
         });
 
         fields.push({
-          name: '🏷️ New Nickname',
-          value: newMember.nickname || '*(no nickname)*',
+          name: '🏷️ Nouveau pseudo',
+          value: newMember.nickname || '*(aucun pseudo)*',
           inline: true
         });
 
@@ -38,7 +38,7 @@ export default {
           guildId: newMember.guild.id,
           eventType: EVENT_TYPES.MEMBER_NAME_CHANGE,
           data: {
-            description: `Member nickname changed: <@${newMember.user.id}>`,
+            description: `Le pseudo de <@${newMember.user.id}> a été modifié`,
             userId: newMember.user.id,
             fields
           }

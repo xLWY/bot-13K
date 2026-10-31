@@ -18,7 +18,7 @@ export default {
         guildId: role.guild.id,
         eventType: EVENT_TYPES.ROLE_DELETE,
         data: {
-          description: `A role was deleted: ${role.name}`,
+          description: `Un rôle a été supprimé : ${role.name}`,
           fields
         }
       });

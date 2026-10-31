@@ -108,6 +108,75 @@ const EVENT_TYPES = {
   MESSAGE_REACTION_REMOVE: 'reaction.remove'
 };
 
+// Libellés français utilisés dans les titres des logs.
+const EVENT_LABELS = {
+  'moderation.ban': "Bannissement",
+  'moderation.kick': "Expulsion",
+  'moderation.mute': "Exclusion temporaire",
+  'moderation.warn': "Avertissement",
+  'moderation.purge': "Messages supprimés",
+  'ticket.create': "Ticket ouvert",
+  'ticket.close': "Ticket fermé",
+  'ticket.claim': "Ticket pris en charge",
+  'ticket.priority': "Priorité du ticket",
+  'ticket.transcript': "Transcript du ticket",
+  'ticket.delete': "Ticket supprimé",
+  'leveling.levelup': "Niveau supérieur",
+  'leveling.milestone': "Palier atteint",
+  'leveling.xpchange': "XP modifiée",
+  'leveling.levelchange': "Niveau modifié",
+  'leveling.configupdate': "Configuration des niveaux",
+  'configuration.change': "Configuration modifiée",
+  'message.delete': "Message supprimé",
+  'message.edit': "Message modifié",
+  'message.bulkdelete': "Messages supprimés en masse",
+  'role.create': "Rôle créé",
+  'role.delete': "Rôle supprimé",
+  'role.update': "Rôle modifié",
+  'member.join': "Arrivée d'un membre",
+  'member.leave': "Départ d'un membre",
+  'member.namechange': "Nom modifié",
+  'reactionrole.add': "Rôle de réaction ajouté",
+  'reactionrole.remove': "Rôle de réaction retiré",
+  'reactionrole.create': "Rôle de réaction créé",
+  'reactionrole.delete': "Rôle de réaction supprimé",
+  'reactionrole.update': "Rôles de réaction modifiés",
+  'giveaway.create': "Concours créé",
+  'giveaway.winner': "Gagnant du concours",
+  'giveaway.reroll': "Concours retiré au sort",
+  'giveaway.delete': "Concours supprimé",
+  'counter.update': "Compteur mis à jour",
+  'channel.create': "Salon créé",
+  'channel.update': "Salon modifié",
+  'channel.delete': "Salon supprimé",
+  'channel.pinsupdate': "Épingles du salon",
+  'thread.create': "Fil créé",
+  'thread.update': "Fil modifié",
+  'thread.delete': "Fil supprimé",
+  'emoji.create': "Émoji ajouté",
+  'emoji.update': "Émoji modifié",
+  'emoji.delete': "Émoji supprimé",
+  'sticker.create': "Sticker ajouté",
+  'sticker.update': "Sticker modifié",
+  'sticker.delete': "Sticker supprimé",
+  'invite.create': "Invitation créée",
+  'invite.delete': "Invitation supprimée",
+  'webhook.update': "Webhook modifié",
+  'guild.update': "Serveur modifié",
+  'guild.integrationupdate': "Intégrations modifiées",
+  'stage.create': "Scène créée",
+  'stage.update': "Scène modifiée",
+  'stage.delete': "Scène terminée",
+  'automod.rulecreate': "Règle AutoMod créée",
+  'automod.ruleupdate': "Règle AutoMod modifiée",
+  'automod.ruledelete': "Règle AutoMod supprimée",
+  'moderation.guildban': "Membre banni",
+  'moderation.guildunban': "Membre débanni",
+  'audit.entry': "Entrée d'audit",
+  'reaction.add': "Réaction ajoutée",
+  'reaction.remove': "Réaction retirée",
+};
+
 const EVENT_COLORS = {
   'moderation.ban': 0x721919,
   'moderation.kick': 0xFFA500,
@@ -414,29 +483,59 @@ function getLogChannelForEvent(config, eventType) {
 
 
 
+const TRAILING_DISCORD_ID_RE = /\s*\(`?\d{17,20}`?\)/g;
+
+function cleanLogText(value) {
+  return typeof value === 'string' ? value.replace(TRAILING_DISCORD_ID_RE, '') : value;
+}
+
+function isIdOnlyFieldName(name) {
+  const plain = String(name ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+  return [
+    'id',
+    'message id',
+    'id du message',
+    'id du role',
+    'role id',
+    'user id',
+    'channel id',
+  ].includes(plain);
+}
+
 async function resolveLogEventData(client, guild, data) {
     if (!data || typeof data !== 'object') {
         return data;
     }
 
     const resolvedTitle = typeof data.title === 'string'
-        ? await resolveLogMentions(client, guild, data.title)
+        ? cleanLogText(await resolveLogMentions(client, guild, data.title))
         : data.title;
 
     const resolvedDescription = typeof data.description === 'string'
-        ? await resolveLogMentions(client, guild, data.description)
+        ? cleanLogText(await resolveLogMentions(client, guild, data.description))
         : data.description;
 
     const resolvedFields = Array.isArray(data.fields)
-        ? await Promise.all(data.fields.map(async field => {
-            const name = typeof field?.name === 'string'
-                ? await resolveLogMentions(client, guild, field.name)
-                : field?.name;
-            const value = typeof field?.value === 'string'
-                ? await resolveLogMentions(client, guild, field.value)
-                : field?.value;
-            return { ...field, name, value };
-        }))
+        ? await Promise.all(
+            data.fields
+                .filter(field => !isIdOnlyFieldName(field?.name))
+                .map(async field => {
+                    const name = typeof field?.name === 'string'
+                        ? await resolveLogMentions(client, guild, field.name)
+                        : field?.name;
+                    const value = typeof field?.value === 'string'
+                        ? cleanLogText(await resolveLogMentions(client, guild, field.value))
+                        : field?.value;
+                    return { ...field, name, value };
+                })
+        )
         : data.fields;
 
     return {
@@ -489,10 +588,11 @@ function formatEventType(eventType) {
     return 'Événement inconnu';
   }
 
-  return eventType
-    .split('.')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+  return EVENT_LABELS[eventType]
+    || eventType
+      .split('.')
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
 }
 
 
