@@ -289,7 +289,10 @@ GatewayIntentBits.GuildBans,
   setupCronJobs() {
     cron.schedule('0 6 * * *', () => checkBirthdays(this));
     cron.schedule('* * * * *', () => checkGiveaways(this));
-    cron.schedule('* * * * *', () => this.updateAllCounters());
+    // Counter renames are rate limited by Discord (2 per 10 min per channel).
+    // The service queues/throttles them, and this sweep only needs to run
+    // occasionally to catch changes that no event reported.
+    cron.schedule('*/5 * * * *', () => this.updateAllCounters());
     cron.schedule('*/5 * * * *', () => this.refreshOnlineCounterData());
     cron.schedule('*/5 * * * *', () => this.cleanupTemporaryChannels());
   }
@@ -314,7 +317,6 @@ GatewayIntentBits.GuildBans,
           }
         } else {
           presenceDiagWarned.delete(guild.id);
-          await guild.members.fetch();
         }
       } catch (error) {
         logger.debug(`Presence refresh failed for guild ${guild.id}:`, error.message);
@@ -334,16 +336,17 @@ GatewayIntentBits.GuildBans,
 
           if (!channel) {
             await unregisterTemporaryChannel(this, guildId, channelId);
-            logger.info(`Cleaned up stale temporary channel registration ${channelId} in guild ${guildId}`);
+            logger.info(`Nettoyage d'un salon temporaire fantôme : ${channelId}`);
             continue;
           }
 
-          if (channel.type === ChannelType.GuildVoice && channel.members.size === 0) {
-            await channel.delete('Temporary voice channel empty (auto cleanup)').catch((error) => {
-              logger.warn(`Failed to delete empty temporary channel ${channelId}:`, error.message);
+          const humanMembers = channel.members.filter((member) => !member.user.bot);
+          if (channel.type === ChannelType.GuildVoice && humanMembers.size === 0) {
+            await channel.delete('Salon vocal temporaire vide (nettoyage automatique)').catch((error) => {
+              logger.warn(`Impossible de supprimer le salon temporaire vide ${channelId} :`, error.message);
             });
             await unregisterTemporaryChannel(this, guildId, channelId);
-            logger.info(`Deleted empty temporary voice channel ${channel.name} (${channelId}) in guild ${guildId}`);
+            logger.info(`Salon vocal temporaire vide supprimé : ${channel.name}`);
           }
         }
       } catch (error) {
@@ -371,7 +374,7 @@ GatewayIntentBits.GuildBans,
           const channel = await resolveCounterChannel(guild, counter.channelId);
           if (!channel) {
             logger.warn(
-              `Counter ${counter.id} (type: ${counter.type}) in guild ${guildId} points to missing channel ${counter.channelId} - kept in config, not deleted`,
+              `Compteur ${counter.type} : salon introuvable (configuration conservée)`,
             );
             continue;
           }

@@ -96,7 +96,7 @@ export async function handleCreate(interaction, client) {
         }
 
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [successEmbed(`✅ **Compteur créé avec succès !**\n\n**Type :** ${getCounterTypeLabel(type)}\n**Type de salon :** ${targetChannel.type === ChannelType.GuildVoice ? 'vocal' : 'texte'}\n**Catégorie :** ${category}\n**Salon :** ${targetChannel}\n**Nom du salon :** ${targetChannel.name}\n**Identifiant du compteur :** \`${newCounter.id}\`\n\nLe compteur sera automatiquement actualisé toutes les 15 minutes.\n\nUtilise \`/serverstats list\` pour voir tous les compteurs.`)]
+            embeds: [successEmbed(`✅ **Compteur créé avec succès !**\n\n**Type :** ${getCounterTypeLabel(type)}\n**Type de salon :** ${targetChannel.type === ChannelType.GuildVoice ? 'vocal' : 'texte'}\n**Catégorie :** ${category}\n**Salon :** ${targetChannel}\n**Nom du salon :** ${targetChannel.name}\n\nLe compteur sera actualisé automatiquement (au maximum toutes les 6 minutes).\n\nUtilise \`/serverstats list\` pour voir tous les compteurs.`)]
         }).catch(logger.error);
 
     } catch (error) {

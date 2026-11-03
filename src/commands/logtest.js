@@ -8,7 +8,7 @@ import { logger } from '../utils/logger.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('logtest')
-        .setDescription('* Teste l envoi des logs en message prive (owner)')
+        .setDescription("* Teste l'envoi des logs en message privé (propriétaire)")
         .setDMPermission(true),
 
     category: 'debug',
@@ -16,7 +16,7 @@ export default {
     async execute(interaction, config, client) {
         if (!isBotOwner(interaction.user.id)) {
             await InteractionHelper.safeReply(interaction, {
-                content: '`logtest` est reserve au owner du bot.',
+                content: '`logtest` est réservé au propriétaire du bot.',
                 flags: MessageFlags.Ephemeral,
             });
             return;
@@ -30,8 +30,8 @@ export default {
                 .setTitle('\u{1F4E4} Test de log')
                 .setDescription('Si tu lis ceci, les logs en message prive fonctionnent.')
                 .addFields(
-                    { name: 'Salon d origine', value: `\`${interaction.guildId ?? 'DM'}\``, inline: true },
-                    { name: 'Declenche', value: `\`${interaction.user.tag}\``, inline: true },
+                    { name: 'Salon d\'origine', value: `\`${interaction.guild?.name ?? 'MP'}\``, inline: true },
+                    { name: 'Déclenché par', value: `\`${interaction.user.tag}\``, inline: true },
                     { name: 'Horodatage', value: `<t:${Math.floor(Date.now() / 1000)}:f>`, inline: true },
                 )
                 .setTimestamp();
@@ -40,30 +40,30 @@ export default {
 
             const health = ownerDmHealth();
             const healthLine = health.length === 0
-                ? '`aucune donnee`'
-                : health.map(h => `\`${h.ownerId}\` erreurs=${h.failures}`).join(' | ');
+                ? '`aucune donnée`'
+                : health.map(h => `erreurs=${h.failures}`).join(' | ');
 
             let verdict;
             if (ownerIds.length === 0) {
-                verdict = '\u{1F534} **Aucun owner configure** - verifie `OWNER_IDS` sur Railway.';
+                verdict = '\u{1F534} **Aucun propriétaire configuré** — vérifie `OWNER_IDS` sur Render.';
             } else if (result.delivered > 0) {
-                verdict = `\u{1F7E2} **DM livre a ${result.delivered} owner(s)** - les logs arrivent.`;
+                verdict = `\u{1F7E2} **DM livré à ${result.delivered} propriétaire(s)** — les logs arrivent.`;
             } else {
-                verdict = '\u{1F534} **Echec de l envoi en MP.**\n' +
-                    'Ouvre les DM du bot et active **Partage de serveur** dans ses parametres.';
+                verdict = '\u{1F534} **Échec de l\'envoi en MP.**\n' +
+                    'Ouvre les DM du bot et active **Partage de serveur** dans ses paramètres.';
             }
 
             await InteractionHelper.safeReply(interaction, {
                 embeds: [
                     new EmbedBuilder()
                         .setColor(result.delivered > 0 ? getColor('success') : getColor('error'))
-                        .setTitle('\u{1F9EA} Resultat du test')
+                        .setTitle('\u{1F9EA} Résultat du test')
                         .setDescription(verdict)
                         .addFields(
-                            { name: 'Owners configures', value: ownerIds.length ? ownerIds.map(id => `\`${id}\``).join('\n') : '`aucun`', inline: false },
-                            { name: 'DM livres', value: `\`${result.delivered}\``, inline: true },
-                            { name: 'DM echoues', value: `\`${result.failed}\``, inline: true },
-                            { name: 'Etat', value: healthLine, inline: false },
+                            { name: 'Propriétaires configurés', value: ownerIds.length ? `\`${ownerIds.length}\`` : '`aucun`', inline: false },
+                            { name: 'DM livrés', value: `\`${result.delivered}\``, inline: true },
+                            { name: 'DM échoués', value: `\`${result.failed}\``, inline: true },
+                            { name: 'État', value: healthLine, inline: false },
                         )
                         .setTimestamp(),
                 ],

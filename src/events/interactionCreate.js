@@ -96,10 +96,10 @@ async function fallbackTicketButton(interaction, client) {
       }).catch(() => {});
     }
 
-    return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.'));
+    return await InteractionHelper.sendErrorNotice(interaction, (result.error || 'Impossible de créer le ticket.'));
   } catch (error) {
     logger.error('Fallback ticket button failed:', error);
-    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de créer le ticket.');
+    await InteractionHelper.sendErrorNotice(interaction, 'Impossible de créer le ticket.');
   }
 }
 
@@ -229,10 +229,10 @@ async function fallbackTicketModal(interaction, client) {
       });
     }
 
-    return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.'));
+    return await InteractionHelper.sendErrorNotice(interaction, (result.error || 'Impossible de créer le ticket.'));
   } catch (error) {
     logger.error('Fallback ticket modal failed:', error);
-    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Une erreur est survenue lors de la création de votre ticket.');
+    await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la création de votre ticket.');
   }
 }
 
@@ -296,7 +296,7 @@ async function closeTicketFallback(channel, closer) {
         await ticketMessage.edit({
           embeds: [
             createEmbed({
-              title: ticketNumber ? `🎫 Ticket #${ticketNumber}` : '🎫 Ticket Fermé',
+              title: ticketNumber ? `🎫 Ticket #${ticketNumber}` : '🎫 Ticket fermé',
               description: `🔒 Ce ticket a été **fermé**.\n\nMerci d'avoir utilisé notre support !`,
               color: '#e74c3c',
               timestamp: false,
@@ -311,7 +311,7 @@ async function closeTicketFallback(channel, closer) {
       await channel.send({
         embeds: [
           createEmbed({
-            title: '🔒 Ticket Fermé',
+            title: '🔒 Ticket fermé',
             description: `Ce ticket a été fermé par ${closer}.`,
             color: '#e74c3c',
           }),
@@ -363,7 +363,7 @@ async function deleteTicketFallback(interaction) {
     }
 
     await interaction.editReply({
-      embeds: [successEmbed('Le ticket va être supprimé.', '✅ Ticket Supprimé')],
+      embeds: [successEmbed('Le ticket va être supprimé.', '✅ Ticket supprimé')],
     });
 
     setTimeout(async () => {
@@ -374,7 +374,7 @@ async function deleteTicketFallback(interaction) {
   } catch (error) {
     const detail = error?.message || String(error);
     logger.error('Fallback deleteTicket failed:', detail);
-    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de supprimer le ticket.');
+    await InteractionHelper.sendErrorNotice(interaction, 'Impossible de supprimer le ticket.');
   }
 }
 
@@ -425,7 +425,7 @@ async function reopenTicketFallback(interaction) {
       await channel.send({
         embeds: [
           createEmbed({
-            title: ticketNumber ? `🎫 Ticket #${ticketNumber}` : '🎫 Ticket Réouvert',
+            title: ticketNumber ? `🎫 Ticket #${ticketNumber}` : '🎫 Ticket rouvert',
             description: `☎️ Ce ticket a été **rouvert** par ${interaction.member}.`,
             color: 'info',
           }),
@@ -443,12 +443,12 @@ async function reopenTicketFallback(interaction) {
     } catch (_) {}
 
     await interaction.editReply({
-      embeds: [successEmbed('Le ticket a été rouvert.', '☎️ Ticket Rouvert')],
+      embeds: [successEmbed('Le ticket a été rouvert.', '☎️ Ticket rouvert')],
     });
   } catch (error) {
     const detail = error?.message || String(error);
     logger.error('Fallback reopenTicket failed:', detail);
-    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de rouvrir le ticket.');
+    await InteractionHelper.sendErrorNotice(interaction, 'Impossible de rouvrir le ticket.');
   }
 }
 
@@ -462,14 +462,14 @@ async function fallbackTicketClose(interaction, client) {
 
     if (result.success) {
       return await interaction.editReply({
-        embeds: [successEmbed('Le ticket a été fermé.', '✅ Ticket Fermé')],
+        embeds: [successEmbed('Le ticket a été fermé.', '✅ Ticket fermé')],
       });
     }
 
-    return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de fermer le ticket.'));
+    return await InteractionHelper.sendErrorNotice(interaction, (result.error || 'Impossible de fermer le ticket.'));
   } catch (error) {
     logger.error('Fallback ticket close failed:', error);
-    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de fermer le ticket.');
+    await InteractionHelper.sendErrorNotice(interaction, 'Impossible de fermer le ticket.');
   }
 }
 
@@ -504,10 +504,10 @@ async function fallbackTicketSelect(interaction, client) {
       }).catch(() => {});
     }
 
-    return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.'));
+    return await InteractionHelper.sendErrorNotice(interaction, (result.error || 'Impossible de créer le ticket.'));
   } catch (error) {
     logger.error('Fallback ticket select failed:', error);
-    await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible de créer le ticket.');
+    await InteractionHelper.sendErrorNotice(interaction, 'Impossible de créer le ticket.');
   }
 }
 

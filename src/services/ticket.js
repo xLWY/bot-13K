@@ -384,7 +384,7 @@ export async function closeTicket(channel, closer, reason = 'Aucun motif précis
             title: '🎫 Votre ticket a été fermé',
             description: `Votre ticket **${channel.name}** a été fermé.\n\n**Motif :** ${reason}\n**Fermé par :** ${closer.tag}\n**Fermé le :** <t:${Math.floor(Date.now() / 1000)}:F>\n\nMerci d'avoir utilisé notre support ! Si vous avez d'autres questions, n'hésitez pas à créer un nouveau ticket.`,
             color: '#e74c3c',
-            footer: { text: `Ticket ID: ${ticketData.id}` }
+            footer: ticketData.ticketNumber ? { text: `Ticket #${ticketData.ticketNumber}` } : null
           });
 
           await ticketCreator.send({ embeds: [dmEmbed] });
@@ -463,10 +463,10 @@ try {
     }
 
     const closeEmbed = createEmbed({
-      title: '🔒 Ticket Fermé',
+      title: '🔒 Ticket fermé',
       description: `Ce ticket a été fermé par ${closer}.\n**Motif :** ${reason}${dmOnClose ? '\n\n📩 Un message a été envoyé au créateur du ticket.' : ''}`,
       color: '#e74c3c',
-      footer: { text: `Ticket ID: ${ticketData.id}` }
+      footer: ticketData.ticketNumber ? { text: `Ticket #${ticketData.ticketNumber}` } : null
     });
 
     const controlRow = new ActionRowBuilder().addComponents(
@@ -564,7 +564,7 @@ export async function claimTicket(channel, claimer) {
     }
 
     const claimEmbed = createEmbed({
-      title: '🙋 Ticket Réclamé',
+      title: '🙋 Ticket réclamé',
       description: `${claimer} a réclamé ce ticket !`,
       color: '#2ecc71',
     });
@@ -581,7 +581,7 @@ export async function claimTicket(channel, claimer) {
     const claimStatusMessage = messages.find(
       (m) =>
         m.embeds.length > 0 &&
-        (m.embeds[0].title === '🙋 Ticket Réclamé' || m.embeds[0].title === '🔓 Ticket Non Réclamé'),
+        (m.embeds[0].title === '🙋 Ticket réclamé' || m.embeds[0].title === '🔓 Ticket libéré'),
     );
 
     if (claimStatusMessage) {
@@ -702,7 +702,7 @@ export async function reopenTicket(channel, reopener) {
     }
 
     const reopenEmbed = createEmbed({
-      title: '🔓 Ticket Rouvert',
+      title: '🔓 Ticket rouvert',
       description: `${reopener} a rouvert ce ticket !`,
       color: '#2ecc71',
     });
@@ -711,7 +711,7 @@ export async function reopenTicket(channel, reopener) {
     const closeStatusMessage = messages.find(
       (m) =>
         m.embeds.length > 0 &&
-        m.embeds[0].title === '🔒 Ticket Fermé' &&
+        m.embeds[0].title === '🔒 Ticket fermé' &&
         m.components.length > 0 &&
         m.components[0].components.some((c) => c.customId === 'ticket_reopen'),
     );
@@ -803,7 +803,7 @@ const author = escape(msg.author?.tag ?? msg.author?.username ?? 'Inconnu');
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Transcript – #${escape(channel.name)}</title>
+<title>Transcription – #${escape(channel.name)}</title>
 <style>
 body{font-family:sans-serif;background:#36393f;color:#dcddde;margin:0;padding:16px}
 h1{color:#fff;font-size:1.2rem;margin-bottom:8px}
@@ -816,7 +816,7 @@ td{padding:4px 8px;border-bottom:1px solid #40444b;vertical-align:top}
 </style>
 </head>
 <body>
-<h1>📜 Transcript – #${escape(channel.name)}</h1>
+<h1>📜 Transcription – #${escape(channel.name)}</h1>
 <p style="color:#72767d">${messages.length} message(s) exportés le ${new Date().toUTCString()}</p>
 <table>
 <thead><tr><th>Horodatage (UTC)</th><th>Auteur</th><th>Message</th></tr></thead>
@@ -860,10 +860,10 @@ export async function deleteTicket(channel, deleter) {
     }
 
     const deleteEmbed = createEmbed({
-      title: '🗑️ Ticket Supprimé',
+      title: '🗑️ Ticket supprimé',
       description: `Ce ticket sera définitivement supprimé dans ${TICKET_DELETE_DELAY_SECONDS} secondes.`,
       color: '#e74c3c',
-      footer: { text: `Ticket ID: ${ticketData.id}` },
+      footer: ticketData.ticketNumber ? { text: `Ticket #${ticketData.ticketNumber}` } : null,
     });
 
     await channel.send({ embeds: [deleteEmbed] });
@@ -920,11 +920,11 @@ export async function deleteTicket(channel, deleter) {
               });
             } else {
               const transcriptEmbed = new EmbedBuilder()
-                .setTitle('📜 Transcript du ticket')
-                .setDescription(`Transcript du ticket #${ticketData.ticketNumber || ticketData.id}`)
+                .setTitle('📜 Transcription du ticket')
+                .setDescription(`Transcription du ticket ${ticketData.ticketNumber ? `#${ticketData.ticketNumber}` : `#${channel.name}`}`)
                 .setColor('#3498db')
                 .addFields(
-                  { name: 'ID du ticket', value: `\`${ticketData.ticketNumber || ticketData.id}\``, inline: true },
+                  { name: 'Ticket', value: ticketData.ticketNumber ? `#${ticketData.ticketNumber}` : channel.name, inline: true },
                   { name: 'Salon', value: `#${channel.name}`, inline: true },
                   { name: 'Généré le', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false },
                 );
@@ -957,7 +957,7 @@ export async function deleteTicket(channel, deleter) {
         }
 
         try {
-          await channel.delete('Ticket deleted permanently');
+          await channel.delete('Ticket supprimé définitivement');
           await deleteTicketData(channel.guild.id, channel.id);
           logger.info('✅ Channel deleted', {
             channelId: channel.id,
@@ -1051,7 +1051,7 @@ export async function unclaimTicket(channel, unclaimer) {
     }
 
     const unclaimEmbed = createEmbed({
-      title: '🔓 Ticket Non Réclamé',
+      title: '🔓 Ticket libéré',
       description: `${unclaimer} ne réclame plus ce ticket !`,
       color: '#f39c12',
     });
@@ -1060,7 +1060,7 @@ export async function unclaimTicket(channel, unclaimer) {
     const claimMessage = messages.find(
       (m) =>
         m.embeds.length > 0 &&
-        (m.embeds[0].title === '🙋 Ticket Réclamé' || m.embeds[0].title === '🔓 Ticket Non Réclamé'),
+        (m.embeds[0].title === '🙋 Ticket réclamé' || m.embeds[0].title === '🔓 Ticket libéré'),
     );
 
     if (claimMessage) {

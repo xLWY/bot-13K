@@ -4,27 +4,27 @@ import { logEvent, EVENT_TYPES } from './loggingService.js';
 
 export const COUNTER_TYPE_CONFIG = {
   members: {
-    label: 'Members + Bots',
+    label: 'Membres + bots',
     baseName: 'Membres',
     emoji: '👥'
   },
   members_only: {
-    label: 'Members Only',
+    label: 'Membres uniquement',
     baseName: 'Membres',
     emoji: '👤'
   },
   bots: {
-    label: 'Bots Only',
+    label: 'Bots uniquement',
     baseName: 'Bots',
     emoji: '🤖'
   },
   online: {
-    label: 'Online Members',
+    label: 'Membres en ligne',
     baseName: 'En ligne',
     emoji: '🌐'
   },
   voice: {
-    label: 'In Voice',
+    label: 'Membres en vocal',
     baseName: 'Vocal',
     emoji: '🔊'
   }
@@ -32,8 +32,8 @@ export const COUNTER_TYPE_CONFIG = {
 
 function getCounterConfig(type) {
   return COUNTER_TYPE_CONFIG[type] || {
-    label: 'Unknown',
-    baseName: 'Counter',
+    label: 'Inconnu',
+    baseName: 'Compteur',
     emoji: '❓'
   };
 }
@@ -50,10 +50,22 @@ export function getCounterEmoji(type) {
   return getCounterConfig(type).emoji;
 }
 
+const memberFetchAt = new Map();
+const MEMBER_FETCH_MIN_INTERVAL_MS = 10 * 60 * 1000;
+
 export async function getGuildCounterStats(guild) {
   let memberCollection = guild.members.cache;
+  const expectedMembers = typeof guild.memberCount === 'number' ? guild.memberCount : 0;
+  const lastFetch = memberFetchAt.get(guild.id) ?? 0;
 
-  if (memberCollection.size === 0) {
+  // A partially filled member cache gives a wrong bot count, so refresh it
+  // when possible — but never more than once every 10 minutes per guild.
+  const needsMemberFetch =
+    memberCollection.size === 0 ||
+    (expectedMembers > 0 && memberCollection.size < expectedMembers);
+
+  if (needsMemberFetch && Date.now() - lastFetch >= MEMBER_FETCH_MIN_INTERVAL_MS) {
+    memberFetchAt.set(guild.id, Date.now());
     try {
       memberCollection = await guild.members.fetch();
     } catch (error) {
@@ -77,13 +89,19 @@ export async function getGuildCounterStats(guild) {
     return !isBot;
   }).size;
 
-  const onlineCount = presenceBasedOnline > 0
+  // The presence cache is authoritative when it has data; the member cache is
+  // only a fallback (e.g. right after a restart).
+  const onlineCount = guild.presences.cache.size > 0
     ? presenceBasedOnline
     : memberBasedOnline;
 
-const voiceCount = guild.voiceStates?.cache
-  ? guild.voiceStates.cache.filter((state) => Boolean(state.channelId)).size
-  : 0;
+  const voiceCount = guild.voiceStates?.cache
+    ? guild.voiceStates.cache.filter((state) => {
+        if (!state.channelId) return false;
+        const isBot = state.member?.user?.bot ?? guild.client.users.cache.get(state.id)?.bot ?? false;
+        return !isBot;
+      }).size
+    : 0;
 
   return {
     totalCount,
@@ -116,14 +134,19 @@ export async function getCounterCount(guild, type, stats) {
 
 
 function isValidCounterShape(counter) {
+  if (!counter || typeof counter !== 'object') {
+    return false;
+  }
+
+  const hasId = (typeof counter.id === 'string' || typeof counter.id === 'number') &&
+    String(counter.id).length > 0;
+  const hasChannelId = (typeof counter.channelId === 'string' || typeof counter.channelId === 'number') &&
+    String(counter.channelId).length > 0;
+
   return Boolean(
-    counter &&
-    typeof counter === 'object' &&
-    typeof counter.id === 'string' &&
-    counter.id.length > 0 &&
+    hasId &&
     typeof counter.type === 'string' &&
-    typeof counter.channelId === 'string' &&
-    counter.channelId.length > 0
+    hasChannelId
   );
 }
 
@@ -179,6 +202,165 @@ export async function resolveCounterChannel(guild, channelId) {
   }
 }
 
+// Discord only allows 2 channel renames per 10 minutes per channel. Renaming on
+// every presence/voice change therefore ends in 429 errors and stale names.
+// Updates are queued per channel and applied at most once every 6 minutes
+// (well under the limit), always with the latest value.
+const COUNTER_MIN_RENAME_INTERVAL_MS = 6 * 60 * 1000;
+const COUNTER_ERROR_BACKOFF_MS = 15 * 60 * 1000;
+const COUNTER_FAILURE_LOG_INTERVAL_MS = 10 * 60 * 1000;
+const counterRuntimes = new Map();
+
+function getCounterRuntime(guildId, channelId) {
+  const key = `${guildId}:${channelId}`;
+  let runtime = counterRuntimes.get(key);
+  if (!runtime) {
+    runtime = {
+      key,
+      timer: null,
+      inFlight: false,
+      pending: null,
+      nextAllowedAt: 0,
+      lastFailureLogAt: 0
+    };
+    counterRuntimes.set(key, runtime);
+  }
+  return runtime;
+}
+
+function getCounterRetryDelay(error) {
+  const retryAfter = error?.retryAfter ?? error?.rawError?.retry_after ?? error?.data?.retry_after;
+  if (typeof retryAfter === 'number' && Number.isFinite(retryAfter)) {
+    return Math.max(retryAfter * 1000, 1000);
+  }
+  return COUNTER_ERROR_BACKOFF_MS;
+}
+
+function scheduleCounterFlush(runtime, delayMs) {
+  if (runtime.timer) {
+    clearTimeout(runtime.timer);
+  }
+  runtime.timer = setTimeout(() => {
+    runtime.timer = null;
+    void flushCounter(runtime);
+  }, Math.max(delayMs, 1000));
+  if (typeof runtime.timer.unref === 'function') {
+    runtime.timer.unref();
+  }
+}
+
+async function flushCounter(runtime) {
+  if (runtime.inFlight) return;
+  const pending = runtime.pending;
+  if (!pending) return;
+  runtime.pending = null;
+  await updateCounter(pending.client, pending.guild, pending.counter);
+}
+
+function queueCounterRename(client, guild, counter, runtime, channel, newName, count) {
+  const workItem = { client, guild, counter };
+  runtime.pending = workItem;
+
+  if (runtime.inFlight) return true;
+
+  const now = Date.now();
+  if (now < runtime.nextAllowedAt) {
+    scheduleCounterFlush(runtime, runtime.nextAllowedAt - now);
+    return true;
+  }
+
+  runtime.inFlight = true;
+  return performCounterRename(runtime, channel, workItem, newName, count);
+}
+
+async function performCounterRename(runtime, channel, workItem, newName, count) {
+  const { client, guild, counter } = workItem;
+  const previousName = channel.name;
+
+  try {
+    await channel.setName(newName, 'Mise à jour du compteur');
+    runtime.nextAllowedAt = Date.now() + COUNTER_MIN_RENAME_INTERVAL_MS;
+
+    if (runtime.pending === workItem) {
+      runtime.pending = null;
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug(`Updated channel name to: "${newName}"`);
+    }
+
+    // Counter renames happen on every presence/voice change. Only log them
+    // when explicitly requested (LOG_COUNTER_UPDATES=true) to avoid spam.
+    if (process.env.LOG_COUNTER_UPDATES === 'true') {
+      try {
+        await logEvent({
+          client,
+          guildId: guild.id,
+          eventType: EVENT_TYPES.COUNTER_UPDATE,
+          data: {
+            description: `Compteur **${getCounterTypeLabel(counter.type)}** mis à jour dans ${channel.toString()}`,
+            channelId: channel.id,
+            fields: [
+              {
+                name: '📊 Compteur',
+                value: `${getCounterEmoji(counter.type)} ${getCounterTypeLabel(counter.type)}`,
+                inline: true
+              },
+              {
+                name: '🔢 Nouvelle valeur',
+                value: String(count),
+                inline: true
+              },
+              {
+                name: '📍 Salon',
+                value: channel.toString(),
+                inline: true
+              },
+              {
+                name: '🔄 Ancien nom',
+                value: `\`${previousName}\``,
+                inline: false
+              },
+              {
+                name: '🆕 Nouveau nom',
+                value: `\`${newName}\``,
+                inline: false
+              }
+            ]
+          }
+        });
+      } catch (logError) {
+        logger.debug('Failed to log counter update:', logError.message);
+      }
+    }
+
+    return true;
+  } catch (error) {
+    const delay = getCounterRetryDelay(error);
+    runtime.nextAllowedAt = Date.now() + delay;
+    if (!runtime.pending) {
+      runtime.pending = workItem;
+    }
+
+    const now = Date.now();
+    if (now - runtime.lastFailureLogAt >= COUNTER_FAILURE_LOG_INTERVAL_MS) {
+      runtime.lastFailureLogAt = now;
+      logger.warn(
+        `Renommage du compteur ${counter.type} impossible dans #${channel.name} ` +
+        `(nouvelle tentative dans ${Math.round(delay / 60000)} min) : ${error.message}`
+      );
+    }
+
+    return false;
+  } finally {
+    runtime.inFlight = false;
+    if (runtime.pending) {
+      const delay = Math.max(runtime.nextAllowedAt - Date.now(), 1000);
+      scheduleCounterFlush(runtime, delay);
+    }
+  }
+}
+
 export async function updateCounter(client, guild, counter, stats) {
   try {
     if (!counter || !counter.type || !counter.channelId) {
@@ -189,7 +371,7 @@ export async function updateCounter(client, guild, counter, stats) {
     const { type, channelId } = counter;
     const channel = await resolveCounterChannel(guild, channelId);
     if (!channel) {
-        logger.error('Channel not found for counter:', channelId);
+        logger.error('Salon du compteur introuvable');
         return false;
     }
 
@@ -230,68 +412,23 @@ export async function updateCounter(client, guild, counter, stats) {
       logger.debug(`New name would be: "${newName}"`);
     }
     
-    if (channel.name !== newName) {
-      const previousName = channel.name;
-      try {
-        await channel.setName(newName);
-        if (process.env.NODE_ENV !== 'production') {
-          logger.debug(`Updated channel name to: "${newName}"`);
+    if (channel.name === newName) {
+      const runtime = getCounterRuntime(guild.id, channelId);
+      if (runtime.pending && runtime.pending.counter?.id === counter.id) {
+        runtime.pending = null;
+        if (runtime.timer) {
+          clearTimeout(runtime.timer);
+          runtime.timer = null;
         }
-
-        // Counter renames happen on every presence/voice change. Only log them
-        // when explicitly requested (LOG_COUNTER_UPDATES=true) to avoid spam.
-        if (process.env.LOG_COUNTER_UPDATES === 'true') {
-          try {
-            await logEvent({
-              client,
-              guildId: guild.id,
-              eventType: EVENT_TYPES.COUNTER_UPDATE,
-              data: {
-                description: `Compteur **${getCounterTypeLabel(type)}** mis a jour dans ${channel.toString()}`,
-                channelId: channel.id,
-                fields: [
-                  {
-                    name: '📊 Compteur',
-                    value: `${getCounterEmoji(type)} ${getCounterTypeLabel(type)} (\`${type}\`)`,
-                    inline: true
-                  },
-                  {
-                    name: '🔢 Nouvelle valeur',
-                    value: count.toLocaleString('en-US'),
-                    inline: true
-                  },
-                  {
-                    name: '📍 Salon',
-                    value: `${channel.toString()} (\`${channel.id}\`)`,
-                    inline: true
-                  },
-                  {
-                    name: '🔄 Ancien nom',
-                    value: `\`${previousName}\``,
-                    inline: false
-                  },
-                  {
-                    name: '🆕 Nouveau nom',
-                    value: `\`${newName}\``,
-                    inline: false
-                  }
-                ]
-              }
-            });
-          } catch (logError) {
-            logger.debug('Failed to log counter update:', logError.message);
-          }
-        }
-      } catch (error) {
-        logger.error(`Failed to update channel name for ${channel.id}:`, error);
-        return false;
       }
-    } else {
       if (process.env.NODE_ENV !== 'production') {
         logger.debug('Channel name already correct, no update needed');
       }
+      return true;
     }
-    return true;
+
+    const runtime = getCounterRuntime(guild.id, channelId);
+    return queueCounterRename(client, guild, counter, runtime, channel, newName, count);
   } catch (error) {
     logger.error("Error updating counter:", error);
     return false;

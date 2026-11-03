@@ -89,7 +89,7 @@ export async function addXp(client, guild, member, xpToAdd) {
               fields: [
                 {
                   name: '👤 Membre',
-                  value: `<@${member.user.id}> (${member.user.id})`,
+                  value: `<@${member.user.id}>`,
                   inline: true
                 },
                 {
@@ -135,7 +135,7 @@ export async function addXp(client, guild, member, xpToAdd) {
               fields: [
                 {
                   name: '👤 Membre',
-                  value: `<@${member.user.id}> (${member.user.id})`,
+                  value: `<@${member.user.id}>`,
                   inline: true
                 },
                 {
@@ -149,7 +149,7 @@ export async function addXp(client, guild, member, xpToAdd) {
                   inline: true
                 },
                 {
-                  name: '🎁 Recompense',
+                  name: '🎁 Récompense',
                   value: formatMilestoneValue(milestones[milestoneKey]),
                   inline: false
                 }
@@ -202,7 +202,7 @@ async function awardRoleReward(guild, member, roleId, level) {
       return;
     }
 
-    await member.roles.add(role, `Level ${level} reward`);
+    await member.roles.add(role, `Récompense du niveau ${level}`);
     logger.info(`✅ Awarded role ${role.name} to ${member.user.tag} for reaching level ${level}`);
   } catch (error) {
     logger.error(`Failed to award role reward to ${member.user.id}:`, error);

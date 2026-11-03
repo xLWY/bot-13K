@@ -4,6 +4,7 @@ import { logger } from './logger.js';
 import { BotConfig } from '../config/bot.js';
 import { normalizeGuildConfig, validateGuildConfigOrThrow } from './schemas.js';
 import { DEFAULT_GUILD_CONFIG } from './constants.js';
+import { Mutex } from './mutex.js';
 
 const PERSISTENT_KEY_PREFIXES = [
     'counters:',
@@ -2052,16 +2053,28 @@ export async function getJoinToCreateConfig(client, guildId) {
     try {
         const config = await client.db.get(key, {});
         const unwrapped = unwrapReplitData(config);
-        
+        const source = unwrapped && typeof unwrapped === 'object' ? unwrapped : {};
+        const rawTriggers = source.triggerChannels ?? source.triggerChannelId;
+        const triggerChannels = Array.isArray(rawTriggers)
+            ? rawTriggers.filter(Boolean)
+            : rawTriggers
+                ? [rawTriggers]
+                : [];
+        const temporaryChannels = source.temporaryChannels &&
+            typeof source.temporaryChannels === 'object' &&
+            !Array.isArray(source.temporaryChannels)
+            ? source.temporaryChannels
+            : {};
+
         return {
-            enabled: unwrapped.enabled || false,
-            triggerChannels: unwrapped.triggerChannels || [],
-            categoryId: unwrapped.categoryId || null,
-            channelNameTemplate: unwrapped.channelNameTemplate || "{username} · Salon",
-            userLimit: unwrapped.userLimit || 0,
-            bitrate: unwrapped.bitrate || 64000,
-            temporaryChannels: unwrapped.temporaryChannels || {},
-            ...unwrapped
+            ...source,
+            enabled: Boolean(source.enabled),
+            triggerChannels,
+            categoryId: source.categoryId || null,
+            channelNameTemplate: source.channelNameTemplate || "{username} · Salon",
+            userLimit: source.userLimit ?? 0,
+            bitrate: source.bitrate || 64000,
+            temporaryChannels
         };
     } catch (error) {
         logger.error(`Error getting Join to Create config for guild ${guildId}:`, error);
@@ -2107,11 +2120,13 @@ export async function saveJoinToCreateConfig(client, guildId, config) {
 
 export async function updateJoinToCreateConfig(client, guildId, updates) {
     try {
-        const currentConfig = await getJoinToCreateConfig(client, guildId);
-        const updatedConfig = { ...currentConfig, ...updates };
-        
-        await saveJoinToCreateConfig(client, guildId, updatedConfig);
-        return updatedConfig;
+        return await Mutex.runExclusive(`jointocreate:${guildId}`, async () => {
+            const currentConfig = await getJoinToCreateConfig(client, guildId);
+            const updatedConfig = { ...currentConfig, ...updates };
+
+            await saveJoinToCreateConfig(client, guildId, updatedConfig);
+            return updatedConfig;
+        });
     } catch (error) {
         logger.error(`Error updating Join to Create config for guild ${guildId}:`, error);
         throw error;
@@ -2128,27 +2143,29 @@ export async function updateJoinToCreateConfig(client, guildId, updates) {
 
 export async function addJoinToCreateTrigger(client, guildId, channelId, options = {}) {
     try {
-        const config = await getJoinToCreateConfig(client, guildId);
-        
-        if (config.triggerChannels.includes(channelId)) {
-            return false;
-        }
-        
-        config.triggerChannels.push(channelId);
-        config.enabled = config.triggerChannels.length > 0;
-        
-        if (Object.keys(options).length > 0) {
-            if (!config.channelOptions) {
-                config.channelOptions = {};
+        return await Mutex.runExclusive(`jointocreate:${guildId}`, async () => {
+            const config = await getJoinToCreateConfig(client, guildId);
+
+            if (config.triggerChannels.includes(channelId)) {
+                return false;
             }
-            config.channelOptions[channelId] = {
-                nameTemplate: options.nameTemplate || config.channelNameTemplate,
-                userLimit: options.userLimit || config.userLimit,
-                bitrate: options.bitrate || config.bitrate
-            };
-        }
-        
-        return await saveJoinToCreateConfig(client, guildId, config);
+
+            config.triggerChannels.push(channelId);
+            config.enabled = config.triggerChannels.length > 0;
+
+            if (Object.keys(options).length > 0) {
+                if (!config.channelOptions) {
+                    config.channelOptions = {};
+                }
+                config.channelOptions[channelId] = {
+                    nameTemplate: options.nameTemplate || config.channelNameTemplate,
+                    userLimit: options.userLimit || config.userLimit,
+                    bitrate: options.bitrate || config.bitrate
+                };
+            }
+
+            return await saveJoinToCreateConfig(client, guildId, config);
+        });
     } catch (error) {
         logger.error(`Error adding Join to Create trigger for guild ${guildId}:`, error);
         return false;
@@ -2164,21 +2181,23 @@ export async function addJoinToCreateTrigger(client, guildId, channelId, options
 
 export async function removeJoinToCreateTrigger(client, guildId, channelId) {
     try {
-        const config = await getJoinToCreateConfig(client, guildId);
-        
-        const index = config.triggerChannels.indexOf(channelId);
-        if (index === -1) {
-            return false;
-        }
-        
-        config.triggerChannels.splice(index, 1);
-        config.enabled = config.triggerChannels.length > 0;
-        
-        if (config.channelOptions && config.channelOptions[channelId]) {
-            delete config.channelOptions[channelId];
-        }
-        
-        return await saveJoinToCreateConfig(client, guildId, config);
+        return await Mutex.runExclusive(`jointocreate:${guildId}`, async () => {
+            const config = await getJoinToCreateConfig(client, guildId);
+
+            const index = config.triggerChannels.indexOf(channelId);
+            if (index === -1) {
+                return false;
+            }
+
+            config.triggerChannels.splice(index, 1);
+            config.enabled = config.triggerChannels.length > 0;
+
+            if (config.channelOptions && config.channelOptions[channelId]) {
+                delete config.channelOptions[channelId];
+            }
+
+            return await saveJoinToCreateConfig(client, guildId, config);
+        });
     } catch (error) {
         logger.error(`Error removing Join to Create trigger for guild ${guildId}:`, error);
         return false;
@@ -2196,15 +2215,17 @@ export async function removeJoinToCreateTrigger(client, guildId, channelId) {
 
 export async function registerTemporaryChannel(client, guildId, channelId, ownerId, triggerChannelId) {
     try {
-        const config = await getJoinToCreateConfig(client, guildId);
-        
-        config.temporaryChannels[channelId] = {
-            ownerId,
-            triggerChannelId,
-            createdAt: Date.now()
-        };
-        
-        return await saveJoinToCreateConfig(client, guildId, config);
+        return await Mutex.runExclusive(`jointocreate:${guildId}`, async () => {
+            const config = await getJoinToCreateConfig(client, guildId);
+
+            config.temporaryChannels[channelId] = {
+                ownerId,
+                triggerChannelId,
+                createdAt: Date.now()
+            };
+
+            return await saveJoinToCreateConfig(client, guildId, config);
+        });
     } catch (error) {
         logger.error(`Error registering temporary channel for guild ${guildId}:`, error);
         return false;
@@ -2220,14 +2241,16 @@ export async function registerTemporaryChannel(client, guildId, channelId, owner
 
 export async function unregisterTemporaryChannel(client, guildId, channelId) {
     try {
-        const config = await getJoinToCreateConfig(client, guildId);
-        
-        if (config.temporaryChannels[channelId]) {
-            delete config.temporaryChannels[channelId];
-            return await saveJoinToCreateConfig(client, guildId, config);
-        }
-        
-        return false;
+        return await Mutex.runExclusive(`jointocreate:${guildId}`, async () => {
+            const config = await getJoinToCreateConfig(client, guildId);
+
+            if (config.temporaryChannels[channelId]) {
+                delete config.temporaryChannels[channelId];
+                return await saveJoinToCreateConfig(client, guildId, config);
+            }
+
+            return false;
+        });
     } catch (error) {
         logger.error(`Error unregistering temporary channel for guild ${guildId}:`, error);
         return false;
@@ -2236,18 +2259,20 @@ export async function unregisterTemporaryChannel(client, guildId, channelId) {
 
 export async function updateTemporaryChannelInfo(client, guildId, channelId, updates) {
     try {
-        const config = await getJoinToCreateConfig(client, guildId);
+        return await Mutex.runExclusive(`jointocreate:${guildId}`, async () => {
+            const config = await getJoinToCreateConfig(client, guildId);
 
-        if (!config.temporaryChannels[channelId]) {
-            return false;
-        }
+            if (!config.temporaryChannels[channelId]) {
+                return false;
+            }
 
-        config.temporaryChannels[channelId] = {
-            ...config.temporaryChannels[channelId],
-            ...updates
-        };
+            config.temporaryChannels[channelId] = {
+                ...config.temporaryChannels[channelId],
+                ...updates
+            };
 
-        return await saveJoinToCreateConfig(client, guildId, config);
+            return await saveJoinToCreateConfig(client, guildId, config);
+        });
     } catch (error) {
         logger.error(`Error updating temporary channel info for guild ${guildId}:`, error);
         return false;

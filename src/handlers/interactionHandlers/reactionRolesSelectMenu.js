@@ -139,7 +139,7 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
                         fields: [
                             {
                                 name: '👤 Membre',
-                                value: `<@${member.user.id}> (${member.user.id})`,
+                                value: `<@${member.user.id}>`,
                                 inline: false
                             },
                             ...(addedRoles.length > 0 ? [{

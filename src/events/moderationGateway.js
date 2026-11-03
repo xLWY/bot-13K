@@ -88,12 +88,11 @@ export default [
           guildId: ban.guild.id,
           eventType: EVENT_TYPES.GUILD_BAN,
           data: {
-            description: `<@${ban.user.id}> a ete banni du serveur`,
+            description: `<@${ban.user.id}> a été banni du serveur`,
             userId: ban.user.id,
             fields: [
-              { name: '👤 Membre', value: `<@${ban.user.id}> (${ban.user.id})`, inline: true },
-              { name: '📛 Pseudo', value: truncate(`${ban.user.tag}`, 100), inline: true },
-              { name: '🔨 Raison', value: truncate(ban.reason || '*non precisee*', 500), inline: false },
+              { name: '👤 Membre', value: `<@${ban.user.id}>`, inline: true },
+              { name: '🔨 Raison', value: truncate(ban.reason || '*non précisée*', 500), inline: false },
             ],
           },
         });
@@ -115,11 +114,10 @@ export default [
           guildId: ban.guild.id,
           eventType: EVENT_TYPES.GUILD_UNBAN,
           data: {
-            description: `<@${ban.user.id}> a ete debanni du serveur`,
+            description: `<@${ban.user.id}> a été débanni du serveur`,
             userId: ban.user.id,
             fields: [
-              { name: '👤 Membre', value: `<@${ban.user.id}> (${ban.user.id})`, inline: true },
-              { name: '📛 Pseudo', value: truncate(`${ban.user.tag}`, 100), inline: true },
+              { name: '👤 Membre', value: `<@${ban.user.id}>`, inline: true },
             ],
           },
         });
@@ -143,22 +141,12 @@ export default [
           guildId: guild.id,
           eventType: EVENT_TYPES.AUDIT_LOG,
           data: {
-            description: `Action d'administration : **${AuditLogEvent[entry.action] ?? entry.action}**`,
+            description: `Action d'administration : **${AUDIT_ACTION_LABELS[entry.action] ?? 'Action inconnue'}**`,
             userId: entry.executor?.id,
             fields: [
               {
-                name: '🧑‍⚖️ Executant',
+                name: '🧑‍⚖️ Exécutant',
                 value: entry.executor ? `<@${entry.executor.id}>` : '*inconnu*',
-                inline: true,
-              },
-              {
-                name: '🔢 Code action',
-                value: `\`${entry.action}\``,
-                inline: true,
-              },
-              {
-                name: '🎯 Cible',
-                value: entry.targetId ? `\`${entry.targetId}\`` : '*aucune*',
                 inline: true,
               },
               {
@@ -174,7 +162,7 @@ export default [
               },
               {
                 name: '🔨 Raison',
-                value: truncate(entry.reason || '*non precisee*', 300),
+                value: truncate(entry.reason || '*non précisée*', 300),
                 inline: false,
               },
             ],

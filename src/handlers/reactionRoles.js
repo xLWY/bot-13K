@@ -53,7 +53,7 @@ async function handleReactionAdd(client, reaction, user) {
                     fields: [
                         {
                             name: '👤 Membre',
-                            value: `<@${user.id}> (${user.id})`,
+                            value: `<@${user.id}>`,
                             inline: true
                         },
                         {
@@ -127,7 +127,7 @@ async function handleReactionRemove(client, reaction, user) {
                     fields: [
                         {
                             name: '👤 Membre',
-                            value: `<@${user.id}> (${user.id})`,
+                            value: `<@${user.id}>`,
                             inline: true
                         },
                         {

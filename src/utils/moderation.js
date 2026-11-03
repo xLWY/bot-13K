@@ -5,6 +5,65 @@ import { logger } from './logger.js';
 import { getFromDb, setInDb } from './database.js';
 import { getColor } from '../config/bot.js';
 
+const ACTION_LABELS = {
+  'Member Banned': 'Membre banni',
+  'Member Unbanned': 'Membre débanni',
+  'Member Kicked': 'Membre expulsé',
+  'Member Timed Out': 'Membre réduit au silence',
+  'Member Untimeouted': 'Membre rétabli',
+  'User Warned': 'Membre averti',
+  'Warnings Viewed': 'Avertissements consultés',
+  'Messages Purged': 'Messages supprimés',
+  'Channel Locked': 'Salon verrouillé',
+  'Channel Unlocked': 'Salon déverrouillé',
+  'Channel Nuked': 'Salon recréé',
+  'Case Created': 'Dossier créé',
+  'Case Updated': 'Dossier mis à jour',
+  'DM Sent': 'Message privé envoyé',
+  'Log Channel Activated': 'Salon de logs activé'
+};
+
+const METADATA_LABELS = {
+  messageCount: 'Messages supprimés',
+  requestedAmount: 'Messages demandés',
+  category: 'Catégorie',
+  content: 'Contenu',
+  massBan: 'Bannissement groupé',
+  massKick: 'Expulsion groupée',
+  permanent: 'Permanent',
+  durationMinutes: 'Durée (minutes)',
+  timeoutEnds: 'Fin du silence',
+  totalWarns: 'Total des avertissements',
+  warningNumber: 'Numéro de l\'avertissement',
+  totalWarnings: 'Total des avertissements',
+  deleteDays: 'Jours de messages supprimés',
+  durationMs: 'Durée (ms)'
+};
+
+function actionLabel(action) {
+  return ACTION_LABELS[action] || action;
+}
+
+function cleanUserReference(value) {
+  return String(value ?? 'inconnu').replace(/\s*\((\d{15,25})\)/g, '');
+}
+
+function formatMetadataValue(key, value) {
+  if (typeof value === 'boolean') return value ? 'Oui' : 'Non';
+  if (key === 'category' && value === 'None') return '*aucune*';
+  if (key === 'timeoutEnds') {
+    const timestamp = Date.parse(value);
+    if (Number.isFinite(timestamp)) {
+      return `<t:${Math.floor(timestamp / 1000)}:F>`;
+    }
+  }
+  if (key === 'durationMs') {
+    const seconds = Math.max(0, Math.round(Number(value) / 1000));
+    if (Number.isFinite(seconds)) return `${seconds} s`;
+  }
+  return String(value);
+}
+
 
 
 
@@ -48,6 +107,7 @@ export async function logEvent({ client, guild, guildId, event }) {
     
     const actionStyles = {
       'Member Banned': { color: getColor('error'), icon: '🔨' },
+      'Member Unbanned': { color: getColor('success'), icon: '🔓' },
       'Member Kicked': { color: getColor('warning'), icon: '👢' },
       'Member Timed Out': { color: getColor('warning'), icon: '⏳' },
       'Member Untimeouted': { color: getColor('success'), icon: '✅' },
@@ -56,6 +116,7 @@ export async function logEvent({ client, guild, guildId, event }) {
       'Messages Purged': { color: getColor('moderation'), icon: '🗑️' },
       'Channel Locked': { color: getColor('moderation'), icon: '🔒' },
       'Channel Unlocked': { color: getColor('success'), icon: '🔓' },
+      'Channel Nuked': { color: getColor('moderation'), icon: '💥' },
       'Case Created': { color: getColor('info'), icon: '📋' },
       'Case Updated': { color: getColor('moderation'), icon: '📝' },
       'DM Sent': { color: getColor('info'), icon: '✉️' },
@@ -63,34 +124,35 @@ export async function logEvent({ client, guild, guildId, event }) {
     };
 
     const style = actionStyles[event.action] || { color: getColor('primary'), icon: '🔨' };
+    const displayAction = actionLabel(event.action);
 
     if (event.action === 'DM Sent') {
       const contentText = String(event.content || event.metadata?.content || '*pas de contenu*');
       const dmEmbed = new EmbedBuilder()
         .setColor(event.color || style.color)
         .setAuthor({
-          name: `${style.icon} ${event.action}`,
+          name: `${style.icon} ${displayAction}`,
           iconURL: guild.iconURL() || undefined
         })
         .setThumbnail(guild.iconURL() || undefined)
         .addFields(
-          { name: '🎯 Cible', value: event.target, inline: true },
-          { name: '🛡️ Modérateur', value: event.executor, inline: true },
+          { name: '🎯 Cible', value: cleanUserReference(event.target), inline: true },
+          { name: '🛡️ Modérateur', value: cleanUserReference(event.executor), inline: true },
           { name: '💬 Message', value: contentText.length > 1024 ? `${contentText.substring(0, 1021)}...` : contentText }
         )
         .setTimestamp();
 
       const route = await deliverLog(client, guild, logChannel, { embeds: [dmEmbed] });
-      logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id} (${route})`);
+      logger.info(`Moderation action logged: ${displayAction} (${route})`);
       return;
     }
 
     const embed = new EmbedBuilder()
       .setColor(event.color || style.color)
-      .setTitle(`${style.icon} ${event.action}`)
+      .setTitle(`${style.icon} ${displayAction}`)
       .addFields(
-        { name: "Cible", value: event.target, inline: true },
-        { name: "Modérateur", value: event.executor, inline: true }
+        { name: '🎯 Cible', value: cleanUserReference(event.target), inline: true },
+        { name: '🛡️ Modérateur', value: cleanUserReference(event.executor), inline: true }
       )
       .setTimestamp();
 
@@ -100,7 +162,7 @@ export async function logEvent({ client, guild, guildId, event }) {
 
     if (!event.hideFooter) {
       embed.setFooter({ 
-        text: `ID du serveur : ${guild.id} | ID du modérateur : ${event.executor.match(/\((\d+)\)/)?.[1] || event.metadata?.moderatorId || 'Inconnu'}`,
+        text: 'xlwy bot • Journal de modération',
         iconURL: guild.iconURL() || undefined
       });
     }
@@ -123,19 +185,25 @@ export async function logEvent({ client, guild, guildId, event }) {
 
     if (event.metadata) {
       Object.entries(event.metadata).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          embed.addFields({
-            name: key.charAt(0).toUpperCase() + key.slice(1),
-            value: String(value).length > 1024 ? String(value).substring(0, 1021) + '...' : String(value),
-            inline: true
-          });
-        }
+        if (value === undefined || value === null) return;
+        if (key === 'id' || /id$/i.test(key)) return;
+
+        const label = METADATA_LABELS[key] ||
+          key.replace(/([A-Z])/g, ' $1').replace(/^./, (char) => char.toUpperCase());
+        const formatted = formatMetadataValue(key, value);
+        if (!formatted) return;
+
+        embed.addFields({
+          name: label,
+          value: formatted.length > 1024 ? `${formatted.substring(0, 1021)}...` : formatted,
+          inline: true
+        });
       });
     }
 
     if (event.caseId) {
       embed.addFields({
-        name: "ID du dossier",
+        name: '📋 Dossier',
         value: `#${event.caseId}`,
         inline: true
       });
@@ -143,7 +211,7 @@ export async function logEvent({ client, guild, guildId, event }) {
 
     const route = await deliverLog(client, guild, logChannel, { embeds: [embed] });
 
-    logger.info(`Moderation action logged: ${event.action} by ${event.executor} on ${event.target} in guild ${guild.id} (${route})`);
+    logger.info(`Moderation action logged: ${displayAction} (${route})`);
     
   } catch (error) {
     logger.error("Error logging moderation event:", error);

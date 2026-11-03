@@ -145,43 +145,56 @@ export async function buildControlPanel(client, voiceChannel, tempInfo) {
 
 export async function createControlPanel(client, guild, voiceChannel) {
     try {
-        const tempInfo = await getTemporaryChannelInfo(client, guild.id, voiceChannel.id);
-        if (!tempInfo) {
-            logger.warn(`No temp channel info for ${voiceChannel.id}, skipping control panel`);
+        const channel = await guild.channels.fetch(voiceChannel.id).catch(() => null);
+        if (!channel) {
+            logger.debug(`Temporary channel ${voiceChannel.id} no longer exists, skipping control panel`);
             return false;
         }
 
-        const layout = await buildControlPanel(client, voiceChannel, tempInfo);
+        const tempInfo = await getTemporaryChannelInfo(client, guild.id, channel.id);
+        if (!tempInfo) {
+            logger.warn(`No temp channel info for ${channel.id}, skipping control panel`);
+            return false;
+        }
+
+        const layout = await buildControlPanel(client, channel, tempInfo);
 
         try {
-            const message = await voiceChannel.send({
+            const message = await channel.send({
                 content: `<@${tempInfo.ownerId}>`,
                 ...layout
             });
 
-            await updateTemporaryChannelInfo(client, guild.id, voiceChannel.id, {
-                textChannelId: voiceChannel.id,
+            await updateTemporaryChannelInfo(client, guild.id, channel.id, {
+                textChannelId: channel.id,
                 panelMessageId: message.id
             });
 
-            logger.info(`Created control panel for temporary channel ${voiceChannel.id} (in voice text chat)`);
+            logger.info(`Created control panel for temporary channel ${channel.id} (in voice text chat)`);
             return true;
         } catch (voiceChatError) {
             logger.warn(
-                `Voice text chat unavailable for ${voiceChannel.id}, falling back to a separate text channel:`,
+                `Voice text chat unavailable for ${channel.id}, falling back to a separate text channel:`,
                 voiceChatError.message
             );
         }
 
+        // The member may have left while we were trying the voice chat panel.
+        const stillExists = await guild.channels.fetch(channel.id).catch(() => null);
+        if (!stillExists) {
+            logger.debug(`Temporary channel ${channel.id} was deleted, skipping fallback text channel`);
+            return false;
+        }
+
         const textChannelName = sanitizeChannelName(
-            `${CONTROL_TEXT_PREFIX}${voiceChannel.name}`,
+            `${CONTROL_TEXT_PREFIX}${channel.name}`,
             '🎛 Salon vocal'
         );
 
         const textChannel = await guild.channels.create({
             name: textChannelName,
             type: ChannelType.GuildText,
-            parent: voiceChannel.parentId
+            parent: channel.parentId
         });
 
         const message = await textChannel.send({
@@ -189,12 +202,17 @@ export async function createControlPanel(client, guild, voiceChannel) {
             ...layout
         });
 
-        await updateTemporaryChannelInfo(client, guild.id, voiceChannel.id, {
+        const linked = await updateTemporaryChannelInfo(client, guild.id, channel.id, {
             textChannelId: textChannel.id,
             panelMessageId: message.id
         });
 
-        logger.info(`Created control panel for temporary channel ${voiceChannel.id} (text ${textChannel.id})`);
+        if (!linked) {
+            await textChannel.delete('Salon temporaire supprimé entre-temps').catch(() => {});
+            return false;
+        }
+
+        logger.info(`Created control panel for temporary channel ${channel.id} (text ${textChannel.id})`);
         return true;
     } catch (error) {
         logger.error(`Failed to create control panel for temporary channel ${voiceChannel.name}:`, error);

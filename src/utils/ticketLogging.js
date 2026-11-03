@@ -123,8 +123,19 @@ function mapTicketEventType(eventType) {
 
 
 
+function displayTicketNumber(event) {
+  const value = event?.ticketNumber;
+  if (value === undefined || value === null || value === '') return null;
+
+  const text = String(value);
+  // Older tickets used the channel ID as a fallback "number" — never show it.
+  if (/^\d{17,20}$/.test(text)) return null;
+  return text;
+}
+
 async function createTicketLogEmbed(client, guild, event) {
   const embed = new EmbedBuilder();
+  const ticketNumber = displayTicketNumber(event);
   
   const eventColors = {
   open: 0x2ecc71,
@@ -146,9 +157,9 @@ async function createTicketLogEmbed(client, guild, event) {
   
   embed.setTimestamp();
   
-  if (event.ticketId || event.ticketNumber) {
-    embed.setFooter({ 
-      text: `Ticket ID: ${event.ticketNumber || event.ticketId || 'Inconnu'}` 
+  if (ticketNumber) {
+    embed.setFooter({
+      text: `xlwy bot • Ticket #${ticketNumber}`
     });
   }
   
@@ -157,7 +168,7 @@ async function createTicketLogEmbed(client, guild, event) {
   if (event.userId) {
     fields.push({
       name: '👤 Utilisateur',
-      value: `<@${event.userId}> (${event.userId})`,
+      value: `<@${event.userId}>`,
       inline: true
     });
   }
@@ -165,7 +176,7 @@ async function createTicketLogEmbed(client, guild, event) {
   if (event.executorId) {
     fields.push({
       name: '🔨 Exécuté par',
-      value: `<@${event.executorId}> (${event.executorId})`,
+      value: `<@${event.executorId}>`,
       inline: true
     });
   }
@@ -178,41 +189,58 @@ async function createTicketLogEmbed(client, guild, event) {
       high: '🔴',
       urgent: '🚨'
     };
+    const priorityLabels = {
+      none: 'Aucune',
+      low: 'Basse',
+      medium: 'Moyenne',
+      high: 'Haute',
+      urgent: 'Urgente'
+    };
     
     fields.push({
       name: '🎯 Priorité',
-      value: `${priorityEmojis[event.priority] || '⚪'} ${event.priority.charAt(0).toUpperCase() + event.priority.slice(1)}`,
+      value: `${priorityEmojis[event.priority] || '⚪'} ${priorityLabels[event.priority] || event.priority}`,
       inline: true
     });
   }
   
   if (event.metadata) {
     const skipKeys = new Set(['ticketType', 'claimedAt', 'previousClaimer']);
+    const knownLabels = {
+      channelId: 'Salon',
+      categoryName: 'Catégorie',
+      dmSent: 'MP envoyé',
+      closedAt: 'Fermé le',
+      openedAt: 'Ouvert le',
+      movedToClosedCategory: 'Déplacé dans la catégorie fermée',
+      previousPriority: 'Priorité précédente',
+      updatedAt: 'Mis à jour le',
+      deletedAt: 'Supprimé le',
+      isPinned: 'Épinglé',
+      newChannelName: 'Nouveau nom',
+    };
+
     Object.entries(event.metadata).forEach(([key, value]) => {
       if (skipKeys.has(key)) return;
-      if (value !== undefined && value !== null) {
-        const knownLabels = {
-          channelId: 'Salon',
-          categoryName: 'Catégorie',
-          ticketType: 'Type',
-          dmSent: 'MP envoyé',
-          closedAt: 'Fermé le',
-          openedAt: 'Ouvert le',
-          movedToClosedCategory: 'Déplacé',
-          claimedAt: 'Réclamé le',
-          previousClaimer: 'Ancien réclamant',
-          previousPriority: 'Priorité précédente',
-          updatedAt: 'Mis à jour le',
-          deletedAt: 'Supprimé le',
-          isPinned: 'Épinglé',
-          newChannelName: 'Nouveau nom',
-        };
-        fields.push({
-          name: `📊 ${knownLabels[key] || key.charAt(0).toUpperCase() + key.slice(1)}`,
-          value: String(value),
-          inline: true
-        });
+      if (value === undefined || value === null) return;
+
+      let formatted = value;
+      if (key === 'channelId') {
+        formatted = `<#${value}>`;
+      } else if (['closedAt', 'openedAt', 'updatedAt', 'deletedAt'].includes(key)) {
+        const timestamp = Date.parse(value);
+        formatted = Number.isFinite(timestamp)
+          ? `<t:${Math.floor(timestamp / 1000)}:F>`
+          : String(value);
+      } else if (typeof value === 'boolean') {
+        formatted = value ? 'Oui' : 'Non';
       }
+
+      fields.push({
+        name: `📊 ${knownLabels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, (char) => char.toUpperCase())}`,
+        value: String(formatted),
+        inline: true
+      });
     });
   }
   
@@ -231,36 +259,37 @@ async function createTicketLogEmbed(client, guild, event) {
 
 
 function getEventDisplayInfo(event) {
-  const ticketRef = event.ticketNumber ? `#${event.ticketNumber}` : event.ticketId ? `<#${event.ticketId}>` : 'Inconnu';
+  const ticketNumber = displayTicketNumber(event);
+  const ticketRef = ticketNumber ? `#${ticketNumber}` : event.ticketId ? `<#${event.ticketId}>` : 'Inconnu';
   
   const eventMessages = {
     open: {
-      title: '🎫 Ticket Ouvert',
+      title: '🎫 Ticket ouvert',
       description: `Un nouveau ticket a été créé : ${ticketRef}`
     },
     close: {
-      title: '🔒 Ticket Fermé',
+      title: '🔒 Ticket fermé',
       description: `Le ticket ${ticketRef} a été fermé`
     },
     delete: {
-      title: '🗑️ Ticket Supprimé',
+      title: '🗑️ Ticket supprimé',
       description: `Le ticket ${ticketRef} a été supprimé définitivement`
     },
     claim: {
-      title: '🙋 Ticket Réclamé',
+      title: '🙋 Ticket réclamé',
       description: `Le ticket ${ticketRef} a été réclamé`
     },
     unclaim: {
-      title: '🔓 Ticket Non Réclamé',
+      title: '🔓 Ticket libéré',
       description: `Le ticket ${ticketRef} n'est plus réclamé`
     },
     priority: {
-      title: '🎯 Priorité Mise à Jour',
+      title: '🎯 Priorité mise à jour',
       description: `Priorité modifiée pour le ticket ${ticketRef}`
     },
     transcript: {
-      title: '📜 Transcript Créé',
-      description: `Transcript généré pour le ticket ${ticketRef}`
+      title: '📜 Transcription créée',
+      description: `Transcription générée pour le ticket ${ticketRef}`
     }
   };
   

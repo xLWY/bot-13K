@@ -109,7 +109,7 @@ async function buildDashboardEmbed(guild, counters, stats) {
     return new EmbedBuilder()
         .setTitle('📊 Tableau de bord des compteurs')
         .setDescription(
-            `Gère les salons compteurs de **${guild.name}**.\nLes noms se mettent à jour automatiquement aux arrivées, départs, changements de vocal et toutes les 15 minutes.`,
+            `Gère les salons compteurs de **${guild.name}**.\nLes noms se mettent à jour automatiquement aux arrivées, départs, changements de vocal et toutes les 6 minutes.`,
         )
         .setColor(getColor('info'))
         .addFields(fields)

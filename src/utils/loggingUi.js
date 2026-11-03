@@ -22,6 +22,23 @@ const DASHBOARD_CATEGORY_EMOJIS = {
   counter: '📊',
 };
 
+const DASHBOARD_CATEGORY_LABELS = {
+  moderation: 'Modération',
+  ticket: 'Tickets',
+  message: 'Messages',
+  role: 'Rôles',
+  member: 'Membres',
+  leveling: 'Niveaux',
+  reactionrole: 'Rôles réaction',
+  giveaway: 'Concours',
+  counter: 'Compteurs',
+};
+
+function categoryLabel(category) {
+  return DASHBOARD_CATEGORY_LABELS[category] ||
+    category.charAt(0).toUpperCase() + category.slice(1);
+}
+
 function createDashboardCategoryButtons(enabledEvents = {}, loggingEnabled = false) {
   const categories = ['moderation', 'ticket', 'message', 'role', 'member', 'leveling', 'reactionrole', 'giveaway', 'counter'];
   const buttons = categories.map((category) => {
@@ -32,7 +49,7 @@ function createDashboardCategoryButtons(enabledEvents = {}, loggingEnabled = fal
       : categoryEvents.every((t) => enabledEvents[t] !== false);
     const isEnabled = loggingEnabled && !wildcardDisabled && allEnabled;
     const emoji = DASHBOARD_CATEGORY_EMOJIS[category] || '📌';
-    const label = `${emoji} ${category.charAt(0).toUpperCase() + category.slice(1)}`;
+    const label = `${emoji} ${categoryLabel(category)}`;
     return new ButtonBuilder()
       .setCustomId(`log_dash_toggle:${category}.*`)
       .setLabel(label)
@@ -51,7 +68,7 @@ export function createLoggingDashboardComponents(enabledEvents, loggingEnabled =
   const actionRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('log_dash_toggle:audit_enabled')
-      .setLabel(loggingEnabled ? '🧾 Audit : ON' : '🧾 Audit : OFF')
+      .setLabel(loggingEnabled ? '🧾 Audit : activé' : '🧾 Audit : désactivé')
       .setStyle(loggingEnabled ? ButtonStyle.Success : ButtonStyle.Danger),
     new ButtonBuilder()
       .setCustomId('log_dash_toggle:all')
@@ -75,7 +92,7 @@ export function createLoggingButtons() {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`logging_toggle:${EVENT_TYPES.MODERATION_BAN}`)
-        .setLabel('🔨 Moderation')
+        .setLabel('🔨 Modération')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`logging_toggle:${EVENT_TYPES.TICKET_CREATE}`)
@@ -87,7 +104,7 @@ export function createLoggingButtons() {
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`logging_toggle:${EVENT_TYPES.ROLE_CREATE}`)
-        .setLabel('🏷️ Roles')
+        .setLabel('🏷️ Rôles')
         .setStyle(ButtonStyle.Secondary)
     ),
     
@@ -95,19 +112,19 @@ export function createLoggingButtons() {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`logging_toggle:${EVENT_TYPES.MEMBER_JOIN}`)
-        .setLabel('👋 Join/Leave')
+        .setLabel('👋 Arrivées/Départs')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`logging_toggle:${EVENT_TYPES.LEVELING_LEVELUP}`)
-        .setLabel('📈 Leveling')
+        .setLabel('📈 Niveaux')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`logging_toggle:${EVENT_TYPES.REACTION_ROLE_ADD}`)
-        .setLabel('🎭 Reactions')
+        .setLabel('🎭 Rôles réaction')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`logging_toggle:${EVENT_TYPES.GIVEAWAY_CREATE}`)
-        .setLabel('🎁 Giveaway')
+        .setLabel('🎁 Concours')
         .setStyle(ButtonStyle.Secondary)
     ),
 
@@ -115,7 +132,7 @@ export function createLoggingButtons() {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('logging_toggle:counter.*')
-        .setLabel('📊 Counter')
+        .setLabel('📊 Compteurs')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId('logging_toggle:all')
@@ -172,7 +189,7 @@ export function createStatusIndicatorButtons(enabledEvents = {}, loggingEnabled 
     buttons.push(
       new ButtonBuilder()
         .setCustomId(`logging_toggle:${category}.*`)
-        .setLabel(`${emoji} ${category.charAt(0).toUpperCase() + category.slice(1)}`)
+        .setLabel(`${emoji} ${categoryLabel(category)}`)
         .setStyle(isEnabled ? ButtonStyle.Success : ButtonStyle.Danger)
     );
   }
@@ -197,7 +214,7 @@ export function createLoggingStatusComponents(enabledEvents, loggingEnabled = fa
   const actionRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('logging_toggle:audit_enabled')
-      .setLabel(loggingEnabled ? '🧾 Audit : ON' : '🧾 Audit : OFF')
+      .setLabel(loggingEnabled ? '🧾 Audit : activé' : '🧾 Audit : désactivé')
       .setStyle(loggingEnabled ? ButtonStyle.Success : ButtonStyle.Danger),
     new ButtonBuilder()
       .setCustomId('logging_toggle:all')

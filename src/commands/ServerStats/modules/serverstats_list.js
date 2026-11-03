@@ -68,7 +68,7 @@ export async function handleList(interaction, client) {
             });
 
             embed.setFooter({ 
-                text: "Système de compteurs • Actualisation automatique toutes les 15 minutes" 
+                text: "Système de compteurs • Actualisation automatique toutes les 6 minutes"
             });
 
             await InteractionHelper.safeEditReply(interaction, { embeds: [embed] }).catch(logger.error);
@@ -77,7 +77,7 @@ export async function handleList(interaction, client) {
 
         const embed = createEmbed({
             title: `📋 Compteurs du serveur (${validCounters.length})`,
-            description: "Voici tous les compteurs actifs de ce serveur.\n\nLes compteurs sont actualisés automatiquement toutes les 15 minutes.",
+            description: "Voici tous les compteurs actifs de ce serveur.\n\nLes compteurs sont actualisés automatiquement toutes les 6 minutes.",
             color: getColor('info')
         });
 
@@ -125,7 +125,7 @@ export async function handleList(interaction, client) {
         });
 
         embed.setFooter({ 
-            text: "Système de compteurs • Actualisation automatique toutes les 15 minutes" 
+            text: "Système de compteurs • Actualisation automatique toutes les 6 minutes"
         });
         embed.setTimestamp();
 
