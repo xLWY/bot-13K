@@ -37,7 +37,12 @@ const METADATA_LABELS = {
   warningNumber: 'Numéro de l\'avertissement',
   totalWarnings: 'Total des avertissements',
   deleteDays: 'Jours de messages supprimés',
-  durationMs: 'Durée (ms)'
+  durationMs: 'Durée (ms)',
+  autoSpam: 'Anti-spam automatique',
+  spamMessages: 'Messages détectés',
+  spamDuplicates: 'Doublons détectés',
+  spamMentions: 'Mentions détectées',
+  deletedMessages: 'Messages supprimés'
 };
 
 function actionLabel(action) {

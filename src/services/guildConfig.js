@@ -2,6 +2,7 @@ import { getGuildConfig as getGuildConfigDb, setGuildConfig as setGuildConfigDb 
 import { BotConfig } from '../config/bot.js';
 import { normalizeGuildConfig, validateGuildConfigOrThrow } from '../utils/schemas.js';
 import { wrapServiceBoundary } from '../utils/serviceErrorBoundary.js';
+import { DEFAULT_ANTISPAM_CONFIG } from '../utils/constants.js';
 
 const GUILD_CONFIG_DEFAULTS = {
     prefix: BotConfig.defaultPrefix,
@@ -17,6 +18,12 @@ const GUILD_CONFIG_DEFAULTS = {
         enabled: false,
         channelId: null,
         enabledEvents: {}
+    },
+    antiSpam: {
+        ...DEFAULT_ANTISPAM_CONFIG,
+        ignoredChannels: [],
+        ignoredRoles: [],
+        ignoredUsers: []
     }
 };
 

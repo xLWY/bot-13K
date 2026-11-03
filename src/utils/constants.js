@@ -33,6 +33,21 @@ export const DEFAULT_ECONOMY_DATA = {
 
 
 
+export const DEFAULT_ANTISPAM_CONFIG = {
+    enabled: false,
+    messagesPerWindow: 7,
+    windowSeconds: 5,
+    duplicateThreshold: 5,
+    duplicateWindowSeconds: 10,
+    mentionLimit: 8,
+    timeoutSeconds: 600,
+    deleteMessages: true,
+    notify: true,
+    ignoredChannels: [],
+    ignoredRoles: [],
+    ignoredUsers: []
+};
+
 export const DEFAULT_GUILD_CONFIG = {
     prefix: '!',
     logIgnore: { users: [], channels: [] },
@@ -47,6 +62,12 @@ export const DEFAULT_GUILD_CONFIG = {
     logging: {
         enabled: false,
         enabledEvents: {}
+    },
+    antiSpam: {
+        ...DEFAULT_ANTISPAM_CONFIG,
+        ignoredChannels: [],
+        ignoredRoles: [],
+        ignoredUsers: []
     },
     leveling: {
         enabled: false,
