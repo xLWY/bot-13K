@@ -9,6 +9,7 @@ import { getLevelingConfig } from '../../services/leveling.js';
 import { getServerCounters } from '../../services/serverstatsService.js';
 import { getConfiguration as getJtcConfig } from '../../services/joinToCreateService.js';
 import { getAllReactionRoleMessages } from '../../services/reactionRoleService.js';
+import { getAntiSpamConfig, getMissingAntiSpamPermissions } from '../../services/antiSpamService.js';
 import greetDashboard from '../Welcome/modules/greet_dashboard.js';
 import ticketDashboard from '../Ticket/modules/ticket_dashboard.js';
 import levelingDashboard from './modules/leveling_dashboard.js';
@@ -16,6 +17,7 @@ import giveawayDashboard from './modules/giveaway_dashboard.js';
 import shopDashboard from './modules/shop_dashboard.js';
 import serverstatsDashboard from './modules/serverstats_dashboard.js';
 import jtcDashboard from './modules/jtc_dashboard.js';
+import antispamDashboard from './modules/antispam_dashboard.js';
 import { openReactionRolesPanel } from '../Reaction_roles/reactroles.js';
 import { openStaff } from '../Moderation/staff.js';
 
@@ -27,17 +29,19 @@ export function openPanel(interaction, client, guildId) {
         const welcomeConfig = await getWelcomeConfig(client, guildId);
         const guildConfig = await getGuildConfig(client, guildId).catch(() => ({}));
 
-        const [levelingConfig, jtcConfig, counters, reactionRoles] = await Promise.allSettled([
+        const [levelingConfig, jtcConfig, counters, reactionRoles, antiSpamConfig] = await Promise.allSettled([
             getLevelingConfig(client, guildId).catch(() => null),
             getJtcConfig(client, guildId).catch(() => null),
             getServerCounters(client, guildId).catch(() => []),
             getAllReactionRoleMessages(client, guildId).catch(() => []),
+            getAntiSpamConfig(client, guildId).catch(() => null),
         ]);
 
         const leveling = levelingConfig.status === 'fulfilled' ? levelingConfig.value : null;
         const jtc = jtcConfig.status === 'fulfilled' ? jtcConfig.value : null;
         const counterList = counters.status === 'fulfilled' ? counters.value : [];
         const rrList = reactionRoles.status === 'fulfilled' ? reactionRoles.value : [];
+        const antiSpam = antiSpamConfig.status === 'fulfilled' ? antiSpamConfig.value : null;
 
         const welcomeStatus = welcomeConfig?.channelId
             ? (guild.channels.cache.get(welcomeConfig.channelId) ? `<#${welcomeConfig.channelId}>` : '`⚠️ Introuvable`')
@@ -54,6 +58,7 @@ export function openPanel(interaction, client, guildId) {
             : '❌ Désactivé';
         const counterStatus = counterList.length ? `✅ ${counterList.length} compteur(s)` : '❌ Aucun';
         const rrStatus = rrList.length ? `✅ ${rrList.length} message(s)` : '❌ Aucun';
+        const antiSpamStatus = antiSpam?.enabled ? '✅ Activé' : '❌ Désactivé';
 
         const alerts = [];
         if (welcomeConfig?.channelId && !guild.channels.cache.get(welcomeConfig.channelId)) {
@@ -64,6 +69,12 @@ export function openPanel(interaction, client, guildId) {
         }
         if (guildConfig?.ticketPanelChannelId && !guild.channels.cache.get(guildConfig.ticketPanelChannelId)) {
             alerts.push('⚠️ Le salon du panneau de tickets n\'existe plus.');
+        }
+        if (antiSpam?.enabled) {
+            const missingAntiSpamPermissions = getMissingAntiSpamPermissions(guild.members.me);
+            if (missingAntiSpamPermissions.length > 0) {
+                alerts.push(`⚠️ L'anti-spam est activé, mais le bot n'a pas : ${missingAntiSpamPermissions.join(', ')}.`);
+            }
         }
 
         const embed = new EmbedBuilder()
@@ -78,6 +89,7 @@ export function openPanel(interaction, client, guildId) {
                 { name: '\u{1F44B} Bienvenue / Au revoir', value: welcomeStatus, inline: true },
                 { name: '\u{1F3AB} Tickets', value: ticketStatus, inline: true },
                 { name: '\u{1F4C8} Leveling / XP', value: levelingStatus, inline: true },
+                { name: '\u{1F6E1}\uFE0F Anti-spam', value: antiSpamStatus, inline: true },
                 { name: '\u{1F3A4} Salon vocal', value: jtcStatus, inline: true },
                 { name: '\u{1F4CA} Compteurs', value: counterStatus, inline: true },
                 { name: '\u{1F3AD} Rôles réaction', value: rrStatus, inline: true },
@@ -91,6 +103,7 @@ export function openPanel(interaction, client, guildId) {
             { id: 'panel_welcome', label: 'Bienvenue', emoji: '\u{1F44B}' },
             { id: 'panel_ticket', label: 'Tickets', emoji: '\u{1F3AB}' },
             { id: 'panel_leveling', label: 'Leveling', emoji: '\u{1F4C8}' },
+            { id: 'panel_antispam', label: 'Anti-spam', emoji: '\u{1F6E1}\uFE0F' },
             { id: 'panel_jtc', label: 'Salon vocal', emoji: '\u{1F3A4}' },
             { id: 'panel_serverstats', label: 'Compteurs', emoji: '\u{1F4CA}' },
             { id: 'panel_giveaway', label: 'Giveaways', emoji: '\u{1F381}' },
@@ -125,7 +138,7 @@ export function openPanel(interaction, client, guildId) {
             componentType: ComponentType.Button,
             filter: i =>
                 i.user.id === interaction.user.id &&
-                ['panel_welcome', 'panel_ticket', 'panel_leveling', 'panel_jtc', 'panel_serverstats', 'panel_giveaway', 'panel_shop', 'panel_reactionroles', 'panel_staff'].includes(i.customId),
+                ['panel_welcome', 'panel_ticket', 'panel_leveling', 'panel_antispam', 'panel_jtc', 'panel_serverstats', 'panel_giveaway', 'panel_shop', 'panel_reactionroles', 'panel_staff'].includes(i.customId),
                 time: 300_000,
         });
 
@@ -141,6 +154,8 @@ export function openPanel(interaction, client, guildId) {
                         return await ticketDashboard.execute(btnInteraction, guildConfig, client, onBack);
                     case 'panel_leveling':
                         return await levelingDashboard.execute(btnInteraction, guildConfig, client, onBack);
+                    case 'panel_antispam':
+                        return await antispamDashboard.execute(btnInteraction, {}, client, onBack);
                     case 'panel_jtc':
                         return await jtcDashboard.execute(btnInteraction, {}, client, onBack);
                     case 'panel_serverstats':

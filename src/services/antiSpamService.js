@@ -1,5 +1,5 @@
 import { PermissionFlagsBits } from 'discord.js';
-import { getGuildConfig } from './guildConfig.js';
+import { getGuildConfig, updateGuildConfig } from './guildConfig.js';
 import { logModerationAction } from '../utils/moderation.js';
 import { DEFAULT_ANTISPAM_CONFIG } from '../utils/constants.js';
 import { logger } from '../utils/logger.js';
@@ -98,6 +98,39 @@ export async function getAntiSpamConfig(client, guildId, { force = false } = {})
 
 export function invalidateAntiSpamConfig(guildId) {
   configCache.delete(guildId);
+}
+
+export async function saveAntiSpamConfig(client, guildId, current, updates = {}) {
+  const base = current || {};
+  const antiSpam = normalizeAntiSpamConfig({
+    ...base,
+    ...updates,
+    ignoredChannels: updates.ignoredChannels ?? base.ignoredChannels,
+    ignoredRoles: updates.ignoredRoles ?? base.ignoredRoles,
+    ignoredUsers: updates.ignoredUsers ?? base.ignoredUsers
+  });
+
+  const saved = await updateGuildConfig(client, guildId, { antiSpam });
+  if (saved === false) {
+    throw new Error('Échec de l’enregistrement de la configuration anti-spam');
+  }
+
+  invalidateAntiSpamConfig(guildId);
+
+  return antiSpam;
+}
+
+export function getMissingAntiSpamPermissions(botMember) {
+  const missing = [];
+
+  if (!botMember?.permissions?.has(PermissionFlagsBits.ManageMessages)) {
+    missing.push('Gérer les messages');
+  }
+  if (!botMember?.permissions?.has(PermissionFlagsBits.ModerateMembers)) {
+    missing.push('Exclure temporairement des membres');
+  }
+
+  return missing;
 }
 
 function normalizeContent(content) {
@@ -227,7 +260,7 @@ async function deleteTrackedMessages(guild, history, ignoredChannels = []) {
   return deletedCount;
 }
 
-function formatDuration(seconds) {
+export function formatDuration(seconds) {
   if (seconds >= 3600) {
     const hours = Math.round(seconds / 3600);
     return `${hours} h`;

@@ -6,56 +6,14 @@ import {
 } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
-import { updateGuildConfig } from '../../services/guildConfig.js';
 import {
+  formatDuration,
   getAntiSpamConfig,
-  invalidateAntiSpamConfig,
-  normalizeAntiSpamConfig
+  getMissingAntiSpamPermissions,
+  saveAntiSpamConfig
 } from '../../services/antiSpamService.js';
 import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-
-function formatDuration(seconds) {
-  if (seconds >= 3600) {
-    return `${Math.round(seconds / 3600)} h`;
-  }
-  if (seconds >= 60) {
-    return `${Math.round(seconds / 60)} min`;
-  }
-  return `${seconds} s`;
-}
-
-async function saveAntiSpamConfig(client, guildId, current, updates) {
-  const antiSpam = normalizeAntiSpamConfig({
-    ...current,
-    ...updates,
-    ignoredChannels: updates.ignoredChannels ?? current.ignoredChannels,
-    ignoredRoles: updates.ignoredRoles ?? current.ignoredRoles,
-    ignoredUsers: updates.ignoredUsers ?? current.ignoredUsers
-  });
-
-  const saved = await updateGuildConfig(client, guildId, { antiSpam });
-  if (saved === false) {
-    throw new Error('Échec de l’enregistrement de la configuration anti-spam');
-  }
-
-  invalidateAntiSpamConfig(guildId);
-
-  return antiSpam;
-}
-
-function getMissingPermissions(botMember) {
-  const missing = [];
-
-  if (!botMember?.permissions?.has(PermissionFlagsBits.ManageMessages)) {
-    missing.push('Gérer les messages');
-  }
-  if (!botMember?.permissions?.has(PermissionFlagsBits.ModerateMembers)) {
-    missing.push('Exclure temporairement des membres');
-  }
-
-  return missing;
-}
 
 function buildStatusEmbed(config) {
   const embed = new EmbedBuilder()
@@ -254,7 +212,7 @@ export default {
 
       if (subcommand === 'status') {
         const embed = buildStatusEmbed(current);
-        const missingPermissions = getMissingPermissions(interaction.guild.members.me);
+        const missingPermissions = getMissingAntiSpamPermissions(interaction.guild.members.me);
 
         if (missingPermissions.length > 0) {
           embed.addFields({
@@ -262,6 +220,11 @@ export default {
             value: missingPermissions.join('\n')
           });
         }
+
+        embed.addFields({
+          name: '🎛️ Configuration',
+          value: 'Utilise `/panel` → **Anti-spam** pour modifier tous les réglages.'
+        });
 
         await InteractionHelper.safeEditReply(interaction, {
           embeds: [embed]
