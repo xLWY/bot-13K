@@ -2,7 +2,7 @@ import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
 import { getReactionRoleMessage, deleteReactionRoleMessage } from '../services/reactionRoleService.js';
-import { getCachedMessage } from '../utils/messageCache.js';
+import { getCachedMessage, isMessageDeletionSilent } from '../utils/messageCache.js';
 
 const MAX_LOGGED_MESSAGE_CONTENT_LENGTH = 1024;
 
@@ -49,6 +49,10 @@ export default {
       } catch (reactionRoleCleanupError) {
         logger.warn(`Failed to clean up reaction role data for deleted message ${message.id}:`, reactionRoleCleanupError);
       }
+
+      // Les commandes prefixe sont supprimees automatiquement apres execution.
+      // On ne les journalise pas comme des suppressions de messages.
+      if (isMessageDeletionSilent(message.id)) return;
 
       const cached = getCachedMessage(message.id);
       const authorIsBot = message.author?.bot ?? cached?.authorBot ?? false;

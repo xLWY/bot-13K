@@ -5,6 +5,7 @@ import { BotConfig } from '../config/bot.js';
 import { handleInteractionError } from './errorHandler.js';
 import { enforceAbuseProtection, formatCooldownDuration } from './abuseProtection.js';
 import { isBotOwner } from './ownerIds.js';
+import { markMessageDeletionSilent, clearMessageDeletionSilent } from './messageCache.js';
 
 const OPTION_TYPE = {
     SUBCOMMAND: 1,
@@ -318,9 +319,13 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
 
 async function tryDeletePrefixMessage(message) {
     if (!message.deletable) return;
+    // Suppression volontaire de la commande : elle ne doit pas apparaitre
+    // dans les logs comme une suppression de message de membre.
+    markMessageDeletionSilent(message.id);
     try {
         await message.delete();
     } catch (error) {
+        clearMessageDeletionSilent(message.id);
         logger.debug(`Could not delete prefix command message (${error.code || error.message}):`);
     }
 }

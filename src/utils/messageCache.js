@@ -9,6 +9,8 @@ const DEFAULT_MAX_ENTRIES = 5000;
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
 const cache = new Map();
+const silentDeleteIds = new Map();
+const SILENT_DELETE_TTL_MS = 60 * 1000;
 let ttlMs = DEFAULT_TTL_MS;
 let maxEntries = DEFAULT_MAX_ENTRIES;
 
@@ -79,11 +81,39 @@ export function getCachedMessage(messageId) {
   return entry;
 }
 
+// Marque une suppression comme volontaire (ex: commande prefixe nettoyee
+// automatiquement) pour ne pas la journaliser comme une suppression de membre.
+export function markMessageDeletionSilent(messageId) {
+  if (!messageId) return;
+  silentDeleteIds.set(messageId, Date.now() + SILENT_DELETE_TTL_MS);
+}
+
+export function isMessageDeletionSilent(messageId) {
+  if (!messageId) return false;
+  const expiresAt = silentDeleteIds.get(messageId);
+  if (!expiresAt) return false;
+  if (Date.now() > expiresAt) {
+    silentDeleteIds.delete(messageId);
+    return false;
+  }
+  return true;
+}
+
+export function clearMessageDeletionSilent(messageId) {
+  if (!messageId) return;
+  silentDeleteIds.delete(messageId);
+}
+
 function sweep() {
   const now = Date.now();
   for (const [key, entry] of cache) {
     if (now - entry.cachedAt > ttlMs) {
       cache.delete(key);
+    }
+  }
+  for (const [key, expiresAt] of silentDeleteIds) {
+    if (now > expiresAt) {
+      silentDeleteIds.delete(key);
     }
   }
 }
