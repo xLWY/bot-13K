@@ -109,6 +109,16 @@ function buildStatusEmbed(config) {
     });
   }
 
+  if (config.ignoredRoles.length > 0) {
+    embed.addFields({
+      name: 'Rôles ignorés',
+      value: config.ignoredRoles
+        .slice(0, 10)
+        .map((roleId) => `<@&${roleId}>`)
+        .join(', ')
+    });
+  }
+
   return embed;
 }
 
@@ -230,6 +240,22 @@ export default {
           option
             .setName('remove')
             .setDescription('Retirer ce salon de la liste des exemptions')
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('ignorerole')
+        .setDescription('Ignorer ou surveiller à nouveau un rôle')
+        .addRoleOption((option) =>
+          option
+            .setName('role')
+            .setDescription('Rôle à ignorer ou à surveiller')
+            .setRequired(true)
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName('remove')
+            .setDescription('Retirer ce rôle de la liste des exemptions')
         )
     ),
 
@@ -414,6 +440,50 @@ export default {
               remove
                 ? `Le salon <#${channel.id}> est de nouveau surveillé.`
                 : `Le salon <#${channel.id}> est maintenant ignoré par l’anti-spam.`,
+              '🛡️ Anti-spam'
+            )
+          ]
+        });
+        return;
+      }
+
+      if (subcommand === 'ignorerole') {
+        const role = interaction.options.getRole('role');
+        const remove = interaction.options.getBoolean('remove') ?? false;
+
+        if (!role || (role.guild?.id && role.guild.id !== guildId)) {
+          await InteractionHelper.sendErrorNotice(
+            interaction,
+            'Ce rôle n’appartient pas à ce serveur.'
+          );
+          return;
+        }
+
+        if (role.id === guildId) {
+          await InteractionHelper.sendErrorNotice(
+            interaction,
+            'Le rôle **@everyone** ne peut pas être ignoré. Choisis un rôle spécifique.'
+          );
+          return;
+        }
+
+        const ignoredRoles = new Set(current.ignoredRoles);
+        if (remove) {
+          ignoredRoles.delete(role.id);
+        } else {
+          ignoredRoles.add(role.id);
+        }
+
+        await saveAntiSpamConfig(client, guildId, current, {
+          ignoredRoles: [...ignoredRoles]
+        });
+
+        await InteractionHelper.safeEditReply(interaction, {
+          embeds: [
+            successEmbed(
+              remove
+                ? `Le rôle <@&${role.id}> est de nouveau surveillé.`
+                : `Le rôle <@&${role.id}> est maintenant ignoré par l’anti-spam.`,
               '🛡️ Anti-spam'
             )
           ]

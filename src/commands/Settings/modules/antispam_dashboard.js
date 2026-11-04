@@ -9,6 +9,7 @@ import {
     EmbedBuilder,
     MessageFlags,
     ModalBuilder,
+    RoleSelectMenuBuilder,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
     TextInputBuilder,
@@ -38,6 +39,19 @@ function formatIgnoredChannels(cfg, guild) {
             : '`Salon introuvable`',
     );
     const remaining = cfg.ignoredChannels.length - shown.length;
+
+    return shown.join('\n') + (remaining > 0 ? `\n… et **${remaining}** autre(s)` : '');
+}
+
+function formatIgnoredRoles(cfg, guild) {
+    if (!cfg.ignoredRoles.length) return '`Aucun`';
+
+    const shown = cfg.ignoredRoles.slice(0, 10).map(roleId =>
+        guild.roles?.cache?.has(roleId)
+            ? `<@&${roleId}>`
+            : '`Rôle introuvable`',
+    );
+    const remaining = cfg.ignoredRoles.length - shown.length;
 
     return shown.join('\n') + (remaining > 0 ? `\n… et **${remaining}** autre(s)` : '');
 }
@@ -121,6 +135,11 @@ function buildDashboardEmbed(cfg, guild, missingPermissions = []) {
         {
             name: '🚫 Salons ignorés',
             value: formatIgnoredChannels(cfg, guild),
+            inline: false,
+        },
+        {
+            name: '👥 Rôles ignorés',
+            value: formatIgnoredRoles(cfg, guild),
             inline: false,
         },
     ];
@@ -235,7 +254,15 @@ function buildButtonRows(cfg) {
             .setStyle(ButtonStyle.Secondary),
     );
 
-    return [mainRow, optionsRow, linkRow];
+    const roleRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('asp_ignoreroles')
+            .setLabel('Rôles ignorés')
+            .setEmoji('👥')
+            .setStyle(ButtonStyle.Secondary),
+    );
+
+    return [mainRow, optionsRow, linkRow, roleRow];
 }
 
 async function sendNotice(interaction, text, { title = '🛡️ Anti-spam', success = false } = {}) {
@@ -789,6 +816,176 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
     }
 }
 
+function buildIgnoredRoleOptions(cfg, guild) {
+    return cfg.ignoredRoles.slice(0, 25).map((roleId, index) => {
+        const role = guild.roles?.cache?.get(roleId);
+
+        return new StringSelectMenuOptionBuilder()
+            .setLabel(
+                (role ? `@${role.name}` : `Rôle introuvable ${index + 1}`).slice(0, 100),
+            )
+            .setDescription(
+                (role ? 'Retirer ce rôle de la liste' : 'Ce rôle n’existe plus').slice(0, 100),
+            )
+            .setValue(roleId);
+    });
+}
+
+async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guildId) {
+    await btnInteraction.deferUpdate().catch(() => {});
+
+    const cfg = await getAntiSpamConfig(client, guildId, { force: true });
+    const ignoredOptions = buildIgnoredRoleOptions(cfg, rootInteraction.guild);
+    const components = [
+        new ActionRowBuilder().addComponents(
+            new RoleSelectMenuBuilder()
+                .setCustomId('asp_ignorerole_add')
+                .setPlaceholder('Ajouter un rôle à ignorer')
+                .setMinValues(1)
+                .setMaxValues(1),
+        ),
+    ];
+
+    if (ignoredOptions.length > 0) {
+        components.push(
+            new ActionRowBuilder().addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId('asp_ignorerole_remove')
+                    .setPlaceholder('Retirer un rôle ignoré')
+                    .addOptions(ignoredOptions)
+                    .setMinValues(1)
+                    .setMaxValues(1),
+            ),
+        );
+    }
+
+    const prompt = await btnInteraction
+        .followUp({
+            embeds: [
+                new EmbedBuilder()
+                    .setTitle('👥 Rôles ignorés')
+                    .setDescription(
+                        `L’anti-spam ne s’applique pas aux membres ayant l’un de ces rôles.\n\n${formatIgnoredRoles(cfg, rootInteraction.guild)}` +
+                        (cfg.ignoredRoles.length > 25
+                            ? '\n\nSeuls les 25 premiers rôles peuvent être retirés depuis ce menu.'
+                            : ''),
+                    )
+                    .setColor(getColor('info'))
+                    .setFooter({ text: 'Sélectionne un rôle à ajouter ou à retirer.' }),
+            ],
+            components,
+            flags: MessageFlags.Ephemeral,
+            fetchReply: true,
+        })
+        .catch(() => null);
+
+    if (!prompt) return;
+
+    const selected = await prompt
+        .awaitMessageComponent({
+            filter: interaction =>
+                interaction.user.id === btnInteraction.user.id &&
+                ['asp_ignorerole_add', 'asp_ignorerole_remove'].includes(interaction.customId),
+            time: FLOW_TIME,
+        })
+        .catch(() => null);
+
+    if (!selected) {
+        await prompt.edit({
+            embeds: [
+                warningEmbed(
+                    'Le menu a expiré. Relance **Rôles ignorés** depuis le tableau de bord.',
+                    '⏱️ Délai dépassé',
+                ),
+            ],
+            components: [],
+        }).catch(() => {});
+        return;
+    }
+
+    await selected.deferUpdate().catch(() => {});
+
+    try {
+        const latest = await getAntiSpamConfig(client, guildId, { force: true });
+        let nextRoles;
+        let message;
+
+        if (selected.customId === 'asp_ignorerole_add') {
+            const role = selected.roles.first();
+            if (!role) {
+                await selected.editReply({
+                    embeds: [warningEmbed('Aucun rôle sélectionné.', '⚠️ Aucun changement')],
+                    components: [],
+                });
+                return;
+            }
+
+            if (role.id === guildId) {
+                await selected.editReply({
+                    embeds: [
+                        warningEmbed(
+                            'Le rôle **@everyone** ne peut pas être ignoré. Choisis un rôle spécifique.',
+                            '⚠️ Rôle invalide',
+                        ),
+                    ],
+                    components: [],
+                });
+                return;
+            }
+
+            if (latest.ignoredRoles.includes(role.id)) {
+                await selected.editReply({
+                    embeds: [
+                        warningEmbed(
+                            `Le rôle <@&${role.id}> est déjà ignoré par l’anti-spam.`,
+                            '⚠️ Aucun changement',
+                        ),
+                    ],
+                    components: [],
+                });
+                return;
+            }
+
+            nextRoles = [...latest.ignoredRoles, role.id];
+            message = `Le rôle <@&${role.id}> sera désormais ignoré par l’anti-spam.`;
+        } else {
+            const roleId = selected.values[0];
+            if (!roleId) {
+                await selected.editReply({
+                    embeds: [warningEmbed('Aucun rôle sélectionné.', '⚠️ Aucun changement')],
+                    components: [],
+                });
+                return;
+            }
+
+            nextRoles = latest.ignoredRoles.filter(id => id !== roleId);
+            message = `Le rôle <@&${roleId}> n’est plus ignoré par l’anti-spam.`;
+        }
+
+        await saveAntiSpamConfig(client, guildId, latest, {
+            ignoredRoles: nextRoles,
+        });
+
+        await selected.editReply({
+            embeds: [successEmbed(message, '👥 Rôles ignorés')],
+            components: [],
+        });
+
+        await refreshDashboard(rootInteraction, client, guildId);
+    } catch (error) {
+        logger.error('Anti-spam ignored roles update failed:', error);
+        await selected.editReply({
+            embeds: [
+                warningEmbed(
+                    'Impossible d’enregistrer ce changement. Réessaie dans un instant.',
+                    '⚠️ Erreur',
+                ),
+            ],
+            components: [],
+        }).catch(() => {});
+    }
+}
+
 export default {
     async execute(interaction, config, client, onBack) {
         const deferred = await InteractionHelper.safeDeferOrUpdate(interaction, {});
@@ -819,6 +1016,7 @@ export default {
                         'asp_delete',
                         'asp_notify',
                         'asp_ignore',
+                        'asp_ignoreroles',
                         'asp_refresh',
                         'asp_back',
                         'asp_invites',
@@ -861,6 +1059,9 @@ export default {
                             break;
                         case 'asp_ignore':
                             await handleIgnoredChannels(btnInteraction, interaction, client, guildId);
+                            break;
+                        case 'asp_ignoreroles':
+                            await handleIgnoredRoles(btnInteraction, interaction, client, guildId);
                             break;
                         case 'asp_invites':
                             await handleToggle(btnInteraction, client, guildId, 'blockInvites');
