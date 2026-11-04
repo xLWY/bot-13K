@@ -1,5 +1,6 @@
 import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
+import { handleAntiSpam } from '../services/antiSpamService.js';
 import { logger } from '../utils/logger.js';
 import { cacheMessage, getCachedMessage } from '../utils/messageCache.js';
 
@@ -22,6 +23,16 @@ export default {
 
       if (oldContentRaw === newMessage.content) {
         cacheMessage(newMessage);
+        return;
+      }
+
+      // Met à jour le cache avant le filtre anti-spam : si le message est
+      // supprimé pour un lien ajouté par édition, le log de suppression doit
+      // afficher le nouveau contenu.
+      cacheMessage(newMessage);
+
+      const stoppedByAntiSpam = await handleAntiSpam(newMessage, newMessage.client, { isEdit: true });
+      if (stoppedByAntiSpam) {
         return;
       }
 
@@ -76,9 +87,6 @@ export default {
           fields
         }
       });
-
-      // Garde le contenu edite pour un futur log de suppression.
-      cacheMessage(newMessage);
 
     } catch (error) {
       logger.error('Error in messageUpdate event:', error);

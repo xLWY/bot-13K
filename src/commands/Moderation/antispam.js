@@ -14,6 +14,21 @@ import {
 } from '../../services/antiSpamService.js';
 import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
+import { normalizeAllowedDomains } from '../../utils/linkFilter.js';
+
+function formatAllowedDomains(domains) {
+  if (!domains || domains.length === 0) return '`Aucun`';
+
+  const shown = [];
+  for (const domain of domains.slice(0, 10)) {
+    const label = `\`${domain}\``;
+    if (shown.join(', ').length + label.length + 2 > 900) break;
+    shown.push(label);
+  }
+
+  const remaining = domains.length - shown.length;
+  return shown.join(', ') + (remaining > 0 ? ` … +${remaining}` : '');
+}
 
 function buildStatusEmbed(config) {
   const embed = new EmbedBuilder()
@@ -54,6 +69,31 @@ function buildStatusEmbed(config) {
         name: 'Notification',
         value: config.notify ? 'Oui' : 'Non',
         inline: true
+      },
+      {
+        name: 'Invitations Discord',
+        value: config.blockInvites ? 'Bloquées' : 'Autorisées',
+        inline: true
+      },
+      {
+        name: 'Invites du serveur',
+        value: config.allowOwnInvites ? 'Autorisées' : 'Bloquées',
+        inline: true
+      },
+      {
+        name: 'Liens externes',
+        value: config.blockLinks ? 'Bloqués' : 'Autorisés',
+        inline: true
+      },
+      {
+        name: 'Raccourcisseurs',
+        value: config.blockShorteners ? 'Bloqués' : 'Autorisés',
+        inline: true
+      },
+      {
+        name: 'Domaines autorisés',
+        value: formatAllowedDomains(config.allowedDomains),
+        inline: false
       }
     )
     .setFooter({ text: 'xlwy bot • Anti-spam' })
@@ -96,7 +136,7 @@ export default {
     .addSubcommand((subcommand) =>
       subcommand
         .setName('settings')
-        .setDescription('Modifier les seuils de détection')
+        .setDescription('Modifier les seuils et la protection contre les liens')
         .addIntegerOption((option) =>
           option
             .setName('messages')
@@ -148,6 +188,32 @@ export default {
           option
             .setName('notify')
             .setDescription('Prévenir dans le salon lorsqu’un spam est détecté')
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName('blockinvites')
+            .setDescription('Bloquer les invitations vers d’autres serveurs Discord')
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName('allowowninvites')
+            .setDescription('Autoriser les invitations de ce serveur')
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName('blocklinks')
+            .setDescription('Bloquer tous les liens externes')
+        )
+        .addBooleanOption((option) =>
+          option
+            .setName('blockshorteners')
+            .setDescription('Bloquer les liens raccourcis (bit.ly, tinyurl, etc.)')
+        )
+        .addStringOption((option) =>
+          option
+            .setName('alloweddomains')
+            .setDescription('Domaines autorisés, séparés par des virgules (ex: youtube.com, tenor.com)')
+            .setMaxLength(1000)
         )
     )
     .addSubcommand((subcommand) =>
@@ -212,7 +278,7 @@ export default {
 
       if (subcommand === 'status') {
         const embed = buildStatusEmbed(current);
-        const missingPermissions = getMissingAntiSpamPermissions(interaction.guild.members.me);
+        const missingPermissions = getMissingAntiSpamPermissions(interaction.guild.members.me, current);
 
         if (missingPermissions.length > 0) {
           embed.addFields({
@@ -262,6 +328,11 @@ export default {
         const timeout = interaction.options.getInteger('timeout');
         const deleteMessages = interaction.options.getBoolean('deletemessages');
         const notify = interaction.options.getBoolean('notify');
+        const blockInvites = interaction.options.getBoolean('blockinvites');
+        const allowOwnInvites = interaction.options.getBoolean('allowowninvites');
+        const blockLinks = interaction.options.getBoolean('blocklinks');
+        const blockShorteners = interaction.options.getBoolean('blockshorteners');
+        const allowedDomainsInput = interaction.options.getString('alloweddomains');
 
         if (messages !== null) updates.messagesPerWindow = messages;
         if (window !== null) updates.windowSeconds = window;
@@ -271,6 +342,13 @@ export default {
         if (timeout !== null) updates.timeoutSeconds = timeout * 60;
         if (deleteMessages !== null) updates.deleteMessages = deleteMessages;
         if (notify !== null) updates.notify = notify;
+        if (blockInvites !== null) updates.blockInvites = blockInvites;
+        if (allowOwnInvites !== null) updates.allowOwnInvites = allowOwnInvites;
+        if (blockLinks !== null) updates.blockLinks = blockLinks;
+        if (blockShorteners !== null) updates.blockShorteners = blockShorteners;
+        if (allowedDomainsInput !== null) {
+          updates.allowedDomains = normalizeAllowedDomains(allowedDomainsInput);
+        }
 
         if (Object.keys(updates).length === 0) {
           await InteractionHelper.safeEditReply(interaction, {
@@ -294,7 +372,12 @@ export default {
                 `**Mentions :** ${updated.mentionLimit} max\n` +
                 `**Silence :** ${formatDuration(updated.timeoutSeconds)}\n` +
                 `**Suppression :** ${updated.deleteMessages ? 'Oui' : 'Non'}\n` +
-                `**Notification :** ${updated.notify ? 'Oui' : 'Non'}`,
+                `**Notification :** ${updated.notify ? 'Oui' : 'Non'}\n` +
+                `**Invitations Discord :** ${updated.blockInvites ? 'Bloquées' : 'Autorisées'}\n` +
+                `**Invites du serveur :** ${updated.allowOwnInvites ? 'Autorisées' : 'Bloquées'}\n` +
+                `**Liens externes :** ${updated.blockLinks ? 'Bloqués' : 'Autorisés'}\n` +
+                `**Raccourcisseurs :** ${updated.blockShorteners ? 'Bloqués' : 'Autorisés'}\n` +
+                `**Domaines autorisés :** ${formatAllowedDomains(updated.allowedDomains)}`,
               '🛡️ Anti-spam configuré'
             )
           ]

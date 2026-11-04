@@ -42,6 +42,9 @@ const METADATA_LABELS = {
   spamMessages: 'Messages détectés',
   spamDuplicates: 'Doublons détectés',
   spamMentions: 'Mentions détectées',
+  spamLinks: 'Liens détectés',
+  spamLinkType: 'Type de lien',
+  spamLinkHost: 'Domaine détecté',
   deletedMessages: 'Messages supprimés'
 };
 

@@ -17,6 +17,7 @@ import {
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { successEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
+import { normalizeAllowedDomains } from '../../../utils/linkFilter.js';
 import {
     formatDuration,
     getAntiSpamConfig,
@@ -39,6 +40,20 @@ function formatIgnoredChannels(cfg, guild) {
     const remaining = cfg.ignoredChannels.length - shown.length;
 
     return shown.join('\n') + (remaining > 0 ? `\n… et **${remaining}** autre(s)` : '');
+}
+
+function formatAllowedDomains(cfg) {
+    if (!cfg.allowedDomains.length) return '`Aucun`';
+
+    const shown = [];
+    for (const domain of cfg.allowedDomains.slice(0, 10)) {
+        const label = `\`${domain}\``;
+        if (shown.join(', ').length + label.length + 2 > 900) break;
+        shown.push(label);
+    }
+
+    const remaining = cfg.allowedDomains.length - shown.length;
+    return shown.join(', ') + (remaining > 0 ? ` … +${remaining}` : '');
 }
 
 function buildDashboardEmbed(cfg, guild, missingPermissions = []) {
@@ -79,6 +94,31 @@ function buildDashboardEmbed(cfg, guild, missingPermissions = []) {
             inline: true,
         },
         {
+            name: '🔗 Invitations Discord',
+            value: cfg.blockInvites ? '✅ Bloquées' : '❌ Autorisées',
+            inline: true,
+        },
+        {
+            name: '🏠 Invites du serveur',
+            value: cfg.allowOwnInvites ? '✅ Autorisées' : '❌ Bloquées',
+            inline: true,
+        },
+        {
+            name: '🌐 Liens externes',
+            value: cfg.blockLinks ? '✅ Bloqués' : '❌ Autorisés',
+            inline: true,
+        },
+        {
+            name: '✂️ Raccourcisseurs',
+            value: cfg.blockShorteners ? '✅ Bloqués' : '❌ Autorisés',
+            inline: true,
+        },
+        {
+            name: '✅ Domaines autorisés',
+            value: formatAllowedDomains(cfg),
+            inline: false,
+        },
+        {
             name: '🚫 Salons ignorés',
             value: formatIgnoredChannels(cfg, guild),
             inline: false,
@@ -96,7 +136,8 @@ function buildDashboardEmbed(cfg, guild, missingPermissions = []) {
     return new EmbedBuilder()
         .setTitle('🛡️ Tableau de bord Anti-spam')
         .setDescription(
-            `Protège **${guild.name}** contre le flood, les doublons et les mentions abusives.\n` +
+            `Protège **${guild.name}** contre le flood, les doublons, les mentions abusives, ` +
+            'les invitations Discord et les liens publicitaires.\n' +
             'Les réglages s’appliquent immédiatement aux membres non staff.',
         )
         .setColor(
@@ -166,7 +207,35 @@ function buildButtonRows(cfg) {
             .setStyle(ButtonStyle.Danger),
     );
 
-    return [mainRow, optionsRow];
+    const linkRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('asp_invites')
+            .setLabel('Invitations')
+            .setEmoji('🔗')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('asp_owninvites')
+            .setLabel('Invites serveur')
+            .setEmoji('🏠')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('asp_links')
+            .setLabel('Liens')
+            .setEmoji('🌐')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('asp_shorteners')
+            .setLabel('Raccourcis')
+            .setEmoji('✂️')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('asp_domains')
+            .setLabel('Domaines')
+            .setEmoji('✅')
+            .setStyle(ButtonStyle.Secondary),
+    );
+
+    return [mainRow, optionsRow, linkRow];
 }
 
 async function sendNotice(interaction, text, { title = '🛡️ Anti-spam', success = false } = {}) {
@@ -194,6 +263,7 @@ async function refreshDashboard(rootInteraction, client, guildId) {
         const cfg = await getAntiSpamConfig(client, guildId, { force: true });
         const missingPermissions = getMissingAntiSpamPermissions(
             rootInteraction.guild?.members?.me,
+            cfg,
         );
 
         await InteractionHelper.safeEditReply(rootInteraction, {
@@ -263,6 +333,30 @@ async function handleToggle(btnInteraction, client, guildId, setting) {
             on: 'Le bot **préviendra** le salon lorsqu’un spam est détecté.',
             off: 'Le bot ne préviendra plus le salon lors d’une détection.',
             title: '🔔 Notification',
+        },
+        blockInvites: {
+            value: !cfg.blockInvites,
+            on: 'Les invitations vers d’autres serveurs Discord sont maintenant **bloquées**.',
+            off: 'Les invitations vers d’autres serveurs Discord sont maintenant **autorisées**.',
+            title: '🔗 Invitations Discord',
+        },
+        allowOwnInvites: {
+            value: !cfg.allowOwnInvites,
+            on: 'Les invitations de **ce serveur** sont maintenant **autorisées**.',
+            off: 'Les invitations de **ce serveur** sont maintenant **bloquées**.',
+            title: '🏠 Invites du serveur',
+        },
+        blockLinks: {
+            value: !cfg.blockLinks,
+            on: 'Tous les liens externes sont maintenant **bloqués**, sauf les domaines autorisés.',
+            off: 'Les liens externes sont maintenant **autorisés**.',
+            title: '🌐 Liens externes',
+        },
+        blockShorteners: {
+            value: !cfg.blockShorteners,
+            on: 'Les liens raccourcis sont maintenant **bloqués**.',
+            off: 'Les liens raccourcis sont maintenant **autorisés**.',
+            title: '✂️ Raccourcisseurs',
         },
     };
 
@@ -480,6 +574,59 @@ async function handleTimeout(btnInteraction, rootInteraction, client, guildId) {
     if (saved) await refreshDashboard(rootInteraction, client, guildId);
 }
 
+async function handleAllowedDomains(btnInteraction, rootInteraction, client, guildId) {
+    const cfg = await getAntiSpamConfig(client, guildId, { force: true });
+
+    const input = new TextInputBuilder()
+        .setCustomId('domains_input')
+        .setLabel('Domaines autorisés (un par ligne)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('youtube.com, tenor.com, imgur.com')
+        .setMaxLength(1000)
+        .setRequired(false);
+
+    if (cfg.allowedDomains.length > 0) {
+        input.setValue(cfg.allowedDomains.join('\n').slice(0, 1000));
+    }
+
+    const modal = new ModalBuilder()
+        .setCustomId('asp_domains_modal')
+        .setTitle('Domaines autorisés')
+        .addComponents(new ActionRowBuilder().addComponents(input));
+
+    const submitted = await showModal(btnInteraction, modal, 'asp_domains_modal');
+    if (!submitted) return;
+
+    const raw = submitted.fields.getTextInputValue('domains_input');
+    const domains = normalizeAllowedDomains(raw);
+    const tokens = raw.split(/[\s,;]+/).filter(Boolean);
+
+    if (tokens.length > 0 && domains.length === 0) {
+        await sendNotice(
+            submitted,
+            'Aucun domaine valide. Utilise un format comme `youtube.com` ou `tenor.com`.',
+            { title: '⚠️ Domaines invalides' },
+        );
+        return;
+    }
+
+    const list = domains.length === 0
+        ? 'Aucun domaine n’est autorisé.'
+        : `Domaines autorisés :\n${domains.slice(0, 10).map(domain => `• \`${domain}\``).join('\n')}` +
+          (domains.length > 10 ? `\n… +${domains.length - 10}` : '');
+
+    const saved = await saveAndConfirm(
+        submitted,
+        client,
+        guildId,
+        { allowedDomains: domains },
+        list,
+        '✅ Domaines autorisés',
+    );
+
+    if (saved) await refreshDashboard(rootInteraction, client, guildId);
+}
+
 function buildIgnoredOptions(cfg, guild) {
     return cfg.ignoredChannels.slice(0, 25).map((channelId, index) => {
         const channel = guild.channels.cache.get(channelId);
@@ -650,7 +797,7 @@ export default {
         try {
             const guildId = interaction.guildId || interaction.guild.id;
             const cfg = await getAntiSpamConfig(client, guildId, { force: true });
-            const missingPermissions = getMissingAntiSpamPermissions(interaction.guild?.members?.me);
+            const missingPermissions = getMissingAntiSpamPermissions(interaction.guild?.members?.me, cfg);
 
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [buildDashboardEmbed(cfg, interaction.guild, missingPermissions)],
@@ -674,6 +821,11 @@ export default {
                         'asp_ignore',
                         'asp_refresh',
                         'asp_back',
+                        'asp_invites',
+                        'asp_owninvites',
+                        'asp_links',
+                        'asp_shorteners',
+                        'asp_domains',
                     ].includes(buttonInteraction.customId),
                 time: DASHBOARD_TIME,
             });
@@ -709,6 +861,25 @@ export default {
                             break;
                         case 'asp_ignore':
                             await handleIgnoredChannels(btnInteraction, interaction, client, guildId);
+                            break;
+                        case 'asp_invites':
+                            await handleToggle(btnInteraction, client, guildId, 'blockInvites');
+                            await refreshDashboard(interaction, client, guildId);
+                            break;
+                        case 'asp_owninvites':
+                            await handleToggle(btnInteraction, client, guildId, 'allowOwnInvites');
+                            await refreshDashboard(interaction, client, guildId);
+                            break;
+                        case 'asp_links':
+                            await handleToggle(btnInteraction, client, guildId, 'blockLinks');
+                            await refreshDashboard(interaction, client, guildId);
+                            break;
+                        case 'asp_shorteners':
+                            await handleToggle(btnInteraction, client, guildId, 'blockShorteners');
+                            await refreshDashboard(interaction, client, guildId);
+                            break;
+                        case 'asp_domains':
+                            await handleAllowedDomains(btnInteraction, interaction, client, guildId);
                             break;
                         case 'asp_refresh':
                             await btnInteraction.deferUpdate().catch(() => {});

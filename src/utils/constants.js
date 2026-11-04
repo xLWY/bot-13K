@@ -43,6 +43,11 @@ export const DEFAULT_ANTISPAM_CONFIG = {
     timeoutSeconds: 600,
     deleteMessages: true,
     notify: true,
+    blockInvites: true,
+    allowOwnInvites: true,
+    blockLinks: false,
+    allowedDomains: [],
+    blockShorteners: false,
     ignoredChannels: [],
     ignoredRoles: [],
     ignoredUsers: []
@@ -65,6 +70,7 @@ export const DEFAULT_GUILD_CONFIG = {
     },
     antiSpam: {
         ...DEFAULT_ANTISPAM_CONFIG,
+        allowedDomains: [],
         ignoredChannels: [],
         ignoredRoles: [],
         ignoredUsers: []

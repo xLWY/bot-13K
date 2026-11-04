@@ -71,7 +71,7 @@ export function openPanel(interaction, client, guildId) {
             alerts.push('⚠️ Le salon du panneau de tickets n\'existe plus.');
         }
         if (antiSpam?.enabled) {
-            const missingAntiSpamPermissions = getMissingAntiSpamPermissions(guild.members.me);
+            const missingAntiSpamPermissions = getMissingAntiSpamPermissions(guild.members.me, antiSpam);
             if (missingAntiSpamPermissions.length > 0) {
                 alerts.push(`⚠️ L'anti-spam est activé, mais le bot n'a pas : ${missingAntiSpamPermissions.join(', ')}.`);
             }

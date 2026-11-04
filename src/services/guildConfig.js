@@ -21,6 +21,7 @@ const GUILD_CONFIG_DEFAULTS = {
     },
     antiSpam: {
         ...DEFAULT_ANTISPAM_CONFIG,
+        allowedDomains: [],
         ignoredChannels: [],
         ignoredRoles: [],
         ignoredUsers: []
