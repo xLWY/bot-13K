@@ -188,9 +188,15 @@ export default {
         .setDescription('Ouvrir le panneau de contrôle global du serveur')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
+    deferEphemeral: true,
+
     async execute(interaction) {
         try {
             const { guild, client } = interaction;
+
+            if (interaction.isPrefixCommand?.()) {
+                return await InteractionHelper.sendErrorNotice(interaction, 'Utilise `/panel` : la version préfixe est désactivée pour éviter un panneau public.');
+            }
 
             if (!isBotOwner(interaction.user.id) && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
                 return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/panel`.');

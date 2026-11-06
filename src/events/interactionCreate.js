@@ -522,18 +522,6 @@ export default {
       try {
         InteractionHelper.patchInteractionResponses(interaction);
 
-        if (
-          typeof interaction.customId === 'string' &&
-          interaction.customId.startsWith('partnership_')
-        ) {
-          logger.debug('Skipping interaction handler for inline partnership dashboard interaction', {
-            event: 'interaction.partnership.inline_skipped',
-            traceId: interactionTraceContext.traceId,
-            customId: interaction.customId
-          });
-          return;
-        }
-
         if (interaction.isChatInputCommand()) {
           const command = client.commands.get(interaction.commandName);
           const deferOptions = command?.deferEphemeral
