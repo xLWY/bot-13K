@@ -331,18 +331,42 @@ async function tryDeletePrefixMessage(message) {
     }
 }
 
+function scheduleNoticeDeletion(sent) {
+    if (!sent) return;
+    setTimeout(async () => {
+        try { await sent.delete(); } catch (_) {
+            // already deleted
+        }
+    }, 5000).unref?.();
+}
+
 async function replyWithNotice(message, text) {
+    // En MP, le salon est déjà privé : pas besoin de créer un second MP.
+    if (!message.guild) {
+        await message.reply(text).catch((error) => {
+            logger.warn(`replyWithNotice failed in DM: ${error.code || error.message}`);
+        });
+        return;
+    }
+
+    // Les commandes préfixées ne peuvent pas être éphémères côté Discord.
+    // On envoie donc l'erreur en MP pour qu'elle reste invisible aux autres.
+    try {
+        await message.author.send({
+            content: text,
+            allowedMentions: { parse: [] }
+        });
+        return;
+    } catch (error) {
+        logger.warn(`Could not DM prefix notice to ${message.author.tag} (${message.author.id}): ${error.code || error.message}`);
+    }
+
+    // Filet de sécurité si les MP sont fermés : notification courte, auto-supprimée.
     const sent = await message.reply(`<@${message.author.id}> ${text}`).catch((error) => {
-        logger.warn(`replyWithNotice failed in ${message.guild ? 'guild' : 'DM'}: ${error.code || error.message}`);
+        logger.warn(`replyWithNotice fallback failed in guild: ${error.code || error.message}`);
         return null;
     });
-    if (sent) {
-        setTimeout(async () => {
-            try { await sent.delete(); } catch (_) {
-                // already deleted
-            }
-        }, 5000).unref?.();
-    }
+    scheduleNoticeDeletion(sent);
 }
 
 const DM_SAFE_COMMANDS = new Set(['ping', 'diag', 'logtest', 'help', 'avatar']);

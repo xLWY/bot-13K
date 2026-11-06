@@ -1,7 +1,6 @@
 import { Events } from 'discord.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { handleAntiSpam } from '../services/antiSpamService.js';
-import { handleOwnerMention } from '../services/ownerMentionGuard.js';
 import { logger } from '../utils/logger.js';
 import { cacheMessage, getCachedMessage } from '../utils/messageCache.js';
 
@@ -31,11 +30,6 @@ export default {
       // supprimé pour un lien ajouté par édition, le log de suppression doit
       // afficher le nouveau contenu.
       cacheMessage(newMessage);
-
-      const stoppedByOwnerMention = await handleOwnerMention(newMessage, newMessage.client);
-      if (stoppedByOwnerMention) {
-        return;
-      }
 
       const stoppedByAntiSpam = await handleAntiSpam(newMessage, newMessage.client, { isEdit: true });
       if (stoppedByAntiSpam) {
