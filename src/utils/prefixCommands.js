@@ -87,7 +87,8 @@ function buildOptionsFromTokens(message, optionDefs, tokens) {
 
         if (rawToken === undefined || rawToken === '') {
             if (def.required) {
-                return { error: `Argument requis manquant : \`${def.name}\`` };
+                const label = def.description ? `**${def.description}**` : `\`${def.name}\``;
+                return { error: `Il manque : ${label}.` };
             }
             continue;
         }
@@ -465,7 +466,7 @@ export async function handlePrefixCommand(message, client) {
 
         const parsed = buildOptionsFromTokens(message, optionDefs, tokens);
         if (parsed.error) {
-            await replyWithNotice(message, `${parsed.error} — utilisation : ${usageLine(configuredPrefix, commandName, subcommand, optionDefs)}`);
+            await replyWithNotice(message, parsed.error);
             return true;
         }
 
