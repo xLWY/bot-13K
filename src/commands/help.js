@@ -8,20 +8,54 @@ import {
     StringSelectMenuOptionBuilder,
     ComponentType,
     MessageFlags,
+    PermissionFlagsBits,
 } from 'discord.js';
 import { getColor } from '../config/bot.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { logger } from '../utils/logger.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 const PER_PAGE = 8;
 const SESSION_MS = 600_000;
+const OWNER_ONLY_COMMANDS = new Set(['diag', 'logtest']);
 
-function collectCategories(client) {
+function getCommandDefaultPermissions(command) {
+    const json = typeof command.data?.toJSON === 'function' ? command.data.toJSON() : command.data;
+    const raw = json?.default_member_permissions;
+
+    if (raw === undefined || raw === null || raw === '') return null;
+
+    try {
+        return BigInt(raw);
+    } catch {
+        return null;
+    }
+}
+
+function canUseCommand(interaction, command) {
+    if (OWNER_ONLY_COMMANDS.has(command.data.name)) {
+        return isBotOwner(interaction.user?.id);
+    }
+
+    const required = getCommandDefaultPermissions(command);
+    if (required === null) return true;
+    if (isBotOwner(interaction.user?.id)) return true;
+
+    const permissions = interaction.memberPermissions;
+    if (!permissions) return false;
+    if (permissions.has(PermissionFlagsBits.Administrator)) return true;
+    if (required === 0n) return false;
+
+    return permissions.has(required);
+}
+
+function collectCategories(interaction, client) {
     const groups = new Map();
 
     for (const command of client.commands.values()) {
         if (!command?.data?.name) continue;
         if (command.hiddenFromSlash) continue;
+        if (!canUseCommand(interaction, command)) continue;
 
         const category = command.category || 'Divers';
         if (!groups.has(category)) groups.set(category, []);
@@ -53,7 +87,7 @@ function getSubcommandNames(command) {
 
 function cleanDescription(command) {
     const raw = command.data?.description || 'Aucune description.';
-    return raw.replace(/^\*\s*/, '').trim();
+    return raw.trim();
 }
 
 function buildOverview(categories, total) {
@@ -66,6 +100,7 @@ function buildOverview(categories, total) {
         .setTitle('\u{1F4D6} Commandes du bot')
         .setDescription(
             `${total} commandes reparties en ${categories.length} categories.\n` +
+            'Les commandes avec `*` sont accessibles aux membres.\n' +
             'Choisis une categorie ci-dessous, ou navigue avec les fleches.\n\n' +
             lines.join('\n'),
         )
@@ -150,7 +185,7 @@ async function resolveChannel(interaction) {
 }
 
 async function renderHelp(interaction, client, state) {
-    const categories = collectCategories(client);
+    const categories = collectCategories(interaction, client);
     const total = categories.reduce((sum, [, commands]) => sum + commands.length, 0);
 
     const payload = state.categoryIndex === null
@@ -187,7 +222,7 @@ async function startCollector(interaction, client) {
         try {
             if (i.isStringSelectMenu()) {
                 const name = i.values[0];
-                const index = collectCategories(client).findIndex(([categoryName]) => categoryName === name);
+                const index = collectCategories(i, client).findIndex(([categoryName]) => categoryName === name);
                 state.categoryIndex = index >= 0 ? index : null;
                 state.page = 0;
             } else if (i.customId === 'help_next') {
@@ -229,7 +264,7 @@ export default {
         try {
             await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
 
-            const categories = collectCategories(client);
+            const categories = collectCategories(interaction, client);
             const total = categories.reduce((sum, [, commands]) => sum + commands.length, 0);
 
             await InteractionHelper.safeEditReply(interaction, {

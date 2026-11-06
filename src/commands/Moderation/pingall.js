@@ -20,7 +20,7 @@ function hasCooldown(userId) {
 export default {
     data: new SlashCommandBuilder()
         .setName('pingall')
-        .setDescription('* Pinger tout le monde avec @everyone')
+        .setDescription('Pinger tout le monde avec @everyone')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
     category: 'moderation',
 

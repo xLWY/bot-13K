@@ -38,7 +38,7 @@ const ACTIVITY_LABELS = {
 export default {
   data: new SlashCommandBuilder()
     .setName("userinfo")
-    .setDescription("Obtenir des informations détaillées sur un utilisateur")
+    .setDescription("* Obtenir des informations détaillées sur un utilisateur")
     .addUserOption((option) =>
       option
         .setName("target")

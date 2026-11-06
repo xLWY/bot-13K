@@ -10,6 +10,7 @@ export default {
     data: new SlashCommandBuilder()
         .setName("claim")
         .setDescription("Réclame un ticket ouvert et l'assigne à vous-même.")
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
         .setDMPermission(false),
 
     async execute(interaction, guildConfig, client) {

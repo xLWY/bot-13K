@@ -7,7 +7,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("serverinfo")
-    .setDescription("Obtenir des informations détaillées sur le serveur"),
+    .setDescription("* Obtenir des informations détaillées sur le serveur"),
 
   async execute(interaction) {
     try {

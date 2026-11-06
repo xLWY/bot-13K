@@ -11,7 +11,7 @@ export default {
     data: new SlashCommandBuilder()
         .setName("gdelete")
         .setDescription(
-            "* Supprime un message de concours et le retire de la base de données.",
+            "Supprime un message de concours et le retire de la base de données.",
         )
         .addStringOption((option) =>
             option

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { getColor } from '../config/bot.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { isBotOwner, getBotOwnerIds } from '../utils/ownerIds.js';
@@ -8,7 +8,8 @@ import { logger } from '../utils/logger.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('logtest')
-        .setDescription("* Teste l'envoi des logs en message privé (propriétaire)")
+        .setDescription("Teste l'envoi des logs en message privé (propriétaire)")
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .setDMPermission(true),
 
     category: 'debug',

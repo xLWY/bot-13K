@@ -185,7 +185,7 @@ export function openPanel(interaction, client, guildId) {
 export default {
     data: new SlashCommandBuilder()
         .setName('panel')
-        .setDescription('* Ouvrir le panneau de contrôle global du serveur')
+        .setDescription('Ouvrir le panneau de contrôle global du serveur')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
     async execute(interaction) {

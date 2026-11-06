@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, MessageFlags, version as djsVersion } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits, version as djsVersion } from 'discord.js';
 import { getColor } from '../config/bot.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { logger } from '../utils/logger.js';
@@ -23,7 +23,8 @@ function formatUptime(ms) {
 export default {
     data: new SlashCommandBuilder()
         .setName('diag')
-        .setDescription('* Diagnostic du bot (owner)')
+        .setDescription('Diagnostic du bot (owner)')
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .setDMPermission(true),
 
     category: 'debug',

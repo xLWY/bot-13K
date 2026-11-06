@@ -762,7 +762,7 @@ async function handleSend(button, dashboardMessage, interaction, state) {
 export default {
     data: new SlashCommandBuilder()
         .setName('partenariat')
-        .setDescription('* Créer et publier une annonce de partenariat')
+        .setDescription('Créer et publier une annonce de partenariat')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .setDMPermission(false),
 

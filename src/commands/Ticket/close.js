@@ -9,7 +9,7 @@ import { closeTicket } from '../../services/ticket.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("close")
-        .setDescription("Ferme le ticket actuel.")
+        .setDescription("* Ferme le ticket actuel.")
         .setDMPermission(false),
 
     async execute(interaction, guildConfig, client) {

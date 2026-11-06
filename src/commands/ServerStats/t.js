@@ -43,7 +43,7 @@ async function resolveMembers(guild, userIds) {
 export default {
     data: new SlashCommandBuilder()
         .setName("t")
-        .setDescription("Classement des membres les plus actifs (messages + vocal)")
+        .setDescription("* Classement des membres les plus actifs (messages + vocal)")
         .addIntegerOption((option) =>
             option
                 .setName("limit")

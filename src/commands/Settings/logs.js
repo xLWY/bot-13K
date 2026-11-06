@@ -8,7 +8,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('logs')
-        .setDescription('* Les logs sont envoyes en MP au proprietaire du bot. Definit un canal de secours')
+        .setDescription('Les logs sont envoyes en MP au proprietaire du bot. Definit un canal de secours')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addChannelOption(option =>
             option.setName('channel')

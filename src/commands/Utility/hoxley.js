@@ -13,7 +13,7 @@ export default {
     hiddenFromSlash: true,
     data: new SlashCommandBuilder()
         .setName('hoxley')
-        .setDescription('* Envoyer une image'),
+        .setDescription('Envoyer une image'),
 
     async execute(interaction) {
         try {

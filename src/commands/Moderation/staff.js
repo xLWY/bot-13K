@@ -542,7 +542,7 @@ async function openWarnList(btn) {
 export default {
     data: new SlashCommandBuilder()
         .setName('staff')
-        .setDescription('* Panneau de moderation (warn, timeout, mute, purge, lock, kick, ban)')
+        .setDescription('Panneau de moderation (warn, timeout, mute, purge, lock, kick, ban)')
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 
     hiddenFromSlash: true,

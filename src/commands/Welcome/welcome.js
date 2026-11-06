@@ -10,7 +10,7 @@ import greetDashboard from './modules/greet_dashboard.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('welcome')
-        .setDescription('* Configurer le système de bienvenue')
+        .setDescription('Configurer le système de bienvenue')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(subcommand =>
             subcommand
