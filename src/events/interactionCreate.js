@@ -522,8 +522,25 @@ export default {
       try {
         InteractionHelper.patchInteractionResponses(interaction);
 
+        if (
+          typeof interaction.customId === 'string' &&
+          interaction.customId.startsWith('partnership_')
+        ) {
+          logger.debug('Skipping interaction handler for inline partnership dashboard interaction', {
+            event: 'interaction.partnership.inline_skipped',
+            traceId: interactionTraceContext.traceId,
+            customId: interaction.customId
+          });
+          return;
+        }
+
         if (interaction.isChatInputCommand()) {
-          await interaction.deferReply().catch(() => {});
+          const command = client.commands.get(interaction.commandName);
+          const deferOptions = command?.deferEphemeral
+            ? { flags: MessageFlags.Ephemeral }
+            : {};
+
+          await interaction.deferReply(deferOptions).catch(() => {});
           try {
             logger.info(`Command executed: /${interaction.commandName} by ${interaction.user.tag}`, {
               event: 'interaction.command.received',
@@ -537,8 +554,6 @@ export default {
               type: 'command_input_validation',
               commandName: interaction.commandName
             }, interactionTraceContext));
-
-            const command = client.commands.get(interaction.commandName);
 
             if (!command) {
               throw createError(
