@@ -293,7 +293,9 @@ const registeredNames = new Set();
             logger.error(`${rejected.length} command(s) rejected locally and excluded from registration`);
         }
 
-        const globalResult = await registerGlobalCommands(client, validCommands);
+        const globalResult = guildId
+            ? { registered: 0, failed: [] }
+            : await registerGlobalCommands(client, validCommands);
 
         if (globalResult.failed.length > 0) {
             logger.error('Commands Discord refused despite passing local validation:');
@@ -303,7 +305,9 @@ const registeredNames = new Set();
         }
 
         if (guildId) {
-            
+            logger.info(
+                `GUILD_ID configured: using guild commands only to avoid duplicates with global commands.`
+            );
             logger.info(`Preparing to register ${totalCommandsWithSubs} commands for guild ${guildId}`);
             
             logger.info('Validating commands before registration...');
@@ -394,6 +398,15 @@ const registeredNames = new Set();
                     logger.warn(`Warning: Expected ${commandsToRegister.length} commands, but Discord reports ${registeredCommands.size} registered`);
                 } else {
                     logger.info(`Verification passed: ${registeredCommands.size} commands successfully registered`);
+                }
+
+                // En mode serveur uniquement, on supprime les anciennes commandes
+                // globales pour éviter que chaque commande apparaisse en double.
+                try {
+                    await withTimeout(client.application.commands.set([]), 'Global command cleanup');
+                    logger.info('Global commands cleared (guild-only mode)');
+                } catch (cleanupError) {
+                    logger.warn('Could not clear global commands:', cleanupError.message);
                 }
                 
             } catch (error) {
