@@ -247,7 +247,7 @@ async function notifyBrokenWelcomeChannel(client, guild, typeLabel, missingChann
     brokenWelcomeAlerts.set(guildId, now);
 
     const label = typeLabel === 'bienvenue' ? 'canal de bienvenue' : 'salon de ping';
-    const description = `Le **${label}** de bienvenue configuré n'existe plus ou n'est plus accessible.\n\n**Ancien ID :** \`${missingChannelId || 'inconnu'}\`\n\nReconfigure-le avec **\`/welcome setup\`** ou **\`/welcome dashboard\`**.`;
+    const description = `Le **${label}** de bienvenue configuré n'existe plus ou n'est plus accessible.\n\n**Ancien ID :** \`${missingChannelId || 'inconnu'}\`\n\nReconfigure-le via **\`/panel\`** → **Bienvenue**.`;
 
     try {
         await logEvent({

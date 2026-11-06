@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, EmbedBuilder, MessageFlags, version as djsVersion } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits, version as djsVersion } from 'discord.js';
 import { getColor } from '../config/bot.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { logger } from '../utils/logger.js';
@@ -10,7 +10,8 @@ function round(ms) {
 export default {
     data: new SlashCommandBuilder()
         .setName('ping')
-        .setDescription('* Affiche la latence du bot')
+        .setDescription('Affiche la latence du bot')
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .setDMPermission(true),
 
     category: 'general',

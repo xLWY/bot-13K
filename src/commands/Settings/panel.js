@@ -25,7 +25,7 @@ export function openPanel(interaction, client, guildId) {
     const guild = interaction.guild || client.guilds.cache.get(guildId);
 
     return (async () => {
-        await InteractionHelper.safeDeferOrUpdate(interaction, {});
+        await InteractionHelper.safeDeferOrUpdate(interaction, { flags: MessageFlags.Ephemeral });
         const welcomeConfig = await getWelcomeConfig(client, guildId);
         const guildConfig = await getGuildConfig(client, guildId).catch(() => ({}));
 
@@ -62,7 +62,7 @@ export function openPanel(interaction, client, guildId) {
 
         const alerts = [];
         if (welcomeConfig?.channelId && !guild.channels.cache.get(welcomeConfig.channelId)) {
-            alerts.push('⚠️ Le canal de bienvenue n\'existe plus — reconfigure via `/welcome dashboard`.');
+            alerts.push('⚠️ Le canal de bienvenue n\'existe plus — reconfigure via `/panel` → **Bienvenue**.');
         }
         if (welcomeConfig?.pingChannelId && !guild.channels.cache.get(welcomeConfig.pingChannelId)) {
             alerts.push('⚠️ Le salon de ping de bienvenue n\'existe plus.');
@@ -200,7 +200,7 @@ export default {
                 logger.info('Opening /panel dashboard via prefix command');
             }
 
-            await InteractionHelper.safeDefer(interaction);
+            await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
             await openPanel(interaction, client, guild.id);
         } catch (error) {
             logger.error('Error in /panel:', error);
