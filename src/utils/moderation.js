@@ -20,7 +20,8 @@ const ACTION_LABELS = {
   'Case Created': 'Dossier créé',
   'Case Updated': 'Dossier mis à jour',
   'DM Sent': 'Message privé envoyé',
-  'Log Channel Activated': 'Salon de logs activé'
+  'Log Channel Activated': 'Salon de logs activé',
+  'Owner Mention Guard': 'Mention du propriétaire'
 };
 
 const METADATA_LABELS = {
@@ -45,7 +46,12 @@ const METADATA_LABELS = {
   spamLinks: 'Liens détectés',
   spamLinkType: 'Type de lien',
   spamLinkHost: 'Domaine détecté',
-  deletedMessages: 'Messages supprimés'
+  deletedMessages: 'Messages supprimés',
+  ownerMentionGuard: 'Déclencheur',
+  ownerMentioned: 'Propriétaire mentionné',
+  timeoutFailed: 'Timeout échoué',
+  deletionFailed: 'Suppression échouée',
+  existingTimeoutPreserved: 'Timeout existant conservé'
 };
 
 function actionLabel(action) {
@@ -128,7 +134,8 @@ export async function logEvent({ client, guild, guildId, event }) {
       'Case Created': { color: getColor('info'), icon: '📋' },
       'Case Updated': { color: getColor('moderation'), icon: '📝' },
       'DM Sent': { color: getColor('info'), icon: '✉️' },
-      'Log Channel Activated': { color: getColor('success'), icon: '📝' }
+      'Log Channel Activated': { color: getColor('success'), icon: '📝' },
+      'Owner Mention Guard': { color: getColor('warning'), icon: '🛡️' }
     };
 
     const style = actionStyles[event.action] || { color: getColor('primary'), icon: '🔨' };

@@ -13,6 +13,7 @@ import { recordMessage } from '../services/statsService.js';
 import { isBotOwner } from '../utils/ownerIds.js';
 import { cacheMessage } from '../utils/messageCache.js';
 import { handleAntiSpam } from '../services/antiSpamService.js';
+import { handleOwnerMention } from '../services/ownerMentionGuard.js';
 
 const MESSAGE_XP_RATE_LIMIT_ATTEMPTS = 12;
 const MESSAGE_XP_RATE_LIMIT_WINDOW_MS = 10000;
@@ -33,6 +34,11 @@ export default {
       // Garde une copie du message pour les logs de suppression/edition.
       if (message.guild) {
         cacheMessage(message);
+
+        // Règle prioritaire : mentionner le propriétaire du bot = message
+        // supprimé + timeout de 2 minutes + journal de modération.
+        const stoppedByOwnerMention = await handleOwnerMention(message, client);
+        if (stoppedByOwnerMention) return;
 
         // Le filtre anti-spam est exécuté avant les commandes et l'XP : un
         // message supprimé ne doit pas continuer à générer de l'activité.
