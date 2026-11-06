@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { logModerationAction } from '../../utils/moderation.js';
+import { logModerationAction, moderationMentionPayload } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderationService.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
@@ -47,6 +47,7 @@ export default {
                 });
 
                 await InteractionHelper.safeEditReply(interaction, {
+                    ...moderationMentionPayload(targetUser.id, 'a été débanni du serveur.'),
                     embeds: [
                         successEmbed(
                             "✅ Utilisateur débanni",

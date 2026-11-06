@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { successEmbed } from '../../utils/embeds.js';
-import { logModerationAction } from '../../utils/moderation.js';
+import { logModerationAction, moderationMentionPayload } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { XlwyBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -104,6 +104,7 @@ export default {
 
       
       await InteractionHelper.universalReply(interaction, {
+        ...moderationMentionPayload(targetUser.id, 'a été expulsé du serveur.'),
         embeds: [
           successEmbed(
             `👢 **Expulsé** ${targetUser.tag}`,

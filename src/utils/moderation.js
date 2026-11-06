@@ -58,6 +58,20 @@ function actionLabel(action) {
   return ACTION_LABELS[action] || action;
 }
 
+/**
+ * Prépare un message de succès qui mentionne réellement la cible.
+ * Une mention placée uniquement dans un embed ne déclenche pas de ping.
+ */
+export function moderationMentionPayload(userId, text = '') {
+  if (!userId) return {};
+
+  const mention = `<@${userId}>`;
+  return {
+    content: text ? `${mention} ${text}` : mention,
+    allowedMentions: { users: [userId] }
+  };
+}
+
 function cleanUserReference(value) {
   return String(value ?? 'inconnu').replace(/\s*\((\d{15,25})\)/g, '');
 }

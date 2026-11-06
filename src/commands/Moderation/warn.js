@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { logModerationAction } from '../../utils/moderation.js';
+import { logModerationAction, moderationMentionPayload } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { WarningService } from '../../services/warningService.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
@@ -85,6 +85,7 @@ export default {
                 });
 
                 await InteractionHelper.safeEditReply(interaction, {
+                    ...moderationMentionPayload(target.id, 'a reçu un avertissement.'),
                     embeds: [
                         successEmbed(
                             `⚠️ **Averti** ${target.tag}`,
