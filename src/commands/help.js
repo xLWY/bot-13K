@@ -17,7 +17,7 @@ import { isBotOwner } from '../utils/ownerIds.js';
 
 const PER_PAGE = 8;
 const SESSION_MS = 600_000;
-const OWNER_ONLY_COMMANDS = new Set(['diag', 'logtest']);
+const OWNER_ONLY_COMMANDS = new Set(['diag', 'logtest', 'ownerrole']);
 
 function getCommandDefaultPermissions(command) {
     const json = typeof command.data?.toJSON === 'function' ? command.data.toJSON() : command.data;
