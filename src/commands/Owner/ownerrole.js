@@ -107,6 +107,11 @@ function buildEmbed(roles, page) {
 
 async function sendError(interaction, text) {
     if (interaction.isPrefixCommand?.() === true) {
+        if (!interaction.guild) {
+            await InteractionHelper.safeReply(interaction, { content: text, components: [] }).catch(() => {});
+            return;
+        }
+
         const sent = await interaction.user.send({ content: text }).catch(() => null);
         if (!sent) {
             await InteractionHelper.safeReply(interaction, { content: text }).catch(() => {});
@@ -221,23 +226,21 @@ export default {
         .setName('ownerrole')
         .setDescription('Choisir un rôle que le bot peut te donner')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-        .setDMPermission(false),
+        .setDMPermission(true),
 
     category: 'Owner',
     deferEphemeral: true,
 
-    async execute(interaction) {
+    async execute(interaction, config, client) {
         const isPrefix = interaction.isPrefixCommand?.() === true;
 
         if (!isBotOwner(interaction.user.id)) {
             return sendError(interaction, 'Cette commande est réservée au owner du bot.');
         }
 
-        if (!interaction.guild) {
-            return sendError(interaction, 'Cette commande doit être utilisée dans un serveur.');
-        }
-
-        if (isPrefix) {
+        // En préfixe dans un serveur, on renvoie vers la version slash.
+        // En MP, on continue pour afficher le menu directement.
+        if (isPrefix && interaction.guild) {
             const sent = await interaction.user
                 .send({ content: 'Utilise `/ownerrole` pour choisir ton rôle.' })
                 .catch(() => null);
@@ -249,20 +252,63 @@ export default {
             return;
         }
 
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, {
-            flags: MessageFlags.Ephemeral,
-        });
+        const inGuild = Boolean(interaction.guild);
+
+        const deferSuccess = await InteractionHelper.safeDefer(
+            interaction,
+            inGuild ? { flags: MessageFlags.Ephemeral } : {}
+        );
         if (!deferSuccess) return;
 
         try {
-            const guild = interaction.guild;
+            const discordClient = client ?? interaction.client;
+            const configuredGuildId = discordClient?.config?.bot?.guildId ?? process.env.GUILD_ID;
+
+            if (interaction.guild && configuredGuildId && interaction.guild.id !== configuredGuildId) {
+                return sendError(
+                    interaction,
+                    'Cette commande est réservée au serveur principal.'
+                );
+            }
+
+            const guildId = interaction.guild?.id ?? configuredGuildId;
+
+            if (!guildId) {
+                return sendError(
+                    interaction,
+                    'Aucun serveur cible configuré. Ajoute `GUILD_ID` sur Render.'
+                );
+            }
+
+            const cachedGuild = discordClient?.guilds?.cache?.get(guildId);
+            const guild = interaction.guild
+                ?? cachedGuild
+                ?? (discordClient ? await discordClient.guilds.fetch(guildId).catch(() => null) : null);
+
+            if (!guild) {
+                return sendError(
+                    interaction,
+                    'Je ne trouve pas le serveur cible. Vérifie `GUILD_ID` et que le bot est bien dans le serveur.'
+                );
+            }
+
             const botMember = guild.members.me ?? await guild.members.fetchMe();
 
             if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
                 return sendError(interaction, 'Je n\'ai pas la permission **Gérer les rôles**.');
             }
 
-            const ownerMember = interaction.member ?? await guild.members.fetch(interaction.user.id);
+            const ownerMember = interaction.guild
+                ? (interaction.member ?? await guild.members.fetch(interaction.user.id).catch(() => null))
+                : await guild.members.fetch(interaction.user.id).catch(() => null);
+
+            if (!ownerMember) {
+                return sendError(
+                    interaction,
+                    'Je n\'arrive pas à te trouver dans le serveur cible. Vérifie que tu es bien membre du serveur.'
+                );
+            }
+
             const roles = getAssignableRoles(guild, botMember, ownerMember);
 
             if (roles.length === 0) {

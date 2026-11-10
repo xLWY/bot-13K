@@ -524,7 +524,7 @@ export default {
 
         if (interaction.isChatInputCommand()) {
           const command = client.commands.get(interaction.commandName);
-          const deferOptions = command?.deferEphemeral
+          const deferOptions = command?.deferEphemeral && interaction.guildId
             ? { flags: MessageFlags.Ephemeral }
             : {};
 

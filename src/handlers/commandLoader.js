@@ -8,7 +8,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Commandes autorisees en message prive (slash + prefixe).
-const DM_ENABLED_COMMANDS = new Set(['ping', 'diag', 'logtest', 'help', 'avatar']);
+// Celles de GLOBAL_COMMANDS sont enregistrees aussi globalement pour que le
+// slash fonctionne aussi en MP ; les autres restent en mode serveur.
+const DM_ENABLED_COMMANDS = new Set(['ping', 'diag', 'logtest', 'help', 'avatar', 'ownerrole']);
+
+// Commandes enregistrees aussi globalement (en plus du serveur) pour pouvoir
+// etre utilisees en MP. Elles restent protegees par le code (owner-only).
+const GLOBAL_COMMANDS = new Set(['ownerrole']);
 
 
 
@@ -237,7 +243,6 @@ async function registerGlobalCommands(client, commands) {
 export async function registerCommands(client, guildId) {
     try {
         const commands = [];
-        let totalSubcommands = 0;
 const registeredNames = new Set();
         
         for (const command of client.commands.values()) {
@@ -259,9 +264,6 @@ const registeredNames = new Set();
 
                     commands.push(commandJson);
                     
-                    const subcommands = getSubcommandInfo(commandJson);
-                    totalSubcommands += subcommands.length;
-                    
                     if (process.env.NODE_ENV !== 'production') {
                         logger.debug(`Registering command: ${commandName}`);
                     }
@@ -273,8 +275,6 @@ const registeredNames = new Set();
             }
         }
         
-        const totalCommandsWithSubs = commands.length + totalSubcommands;
-
         const seenNames = new Set();
         const validCommands = [];
         const rejected = [];
@@ -293,6 +293,9 @@ const registeredNames = new Set();
             logger.error(`${rejected.length} command(s) rejected locally and excluded from registration`);
         }
 
+        const guildCommandsToRegister = commands;
+        const globalCommandsToRegister = validCommands.filter(cmd => GLOBAL_COMMANDS.has(cmd.name));
+
         const globalResult = guildId
             ? { registered: 0, failed: [] }
             : await registerGlobalCommands(client, validCommands);
@@ -306,9 +309,9 @@ const registeredNames = new Set();
 
         if (guildId) {
             logger.info(
-                `GUILD_ID configured: using guild commands only to avoid duplicates with global commands.`
+                `GUILD_ID configured: using guild commands plus ${globalCommandsToRegister.length} global command(s) for DMs.`
             );
-            logger.info(`Preparing to register ${totalCommandsWithSubs} commands for guild ${guildId}`);
+            logger.info(`Preparing to register ${guildCommandsToRegister.length} commands for guild ${guildId}`);
             
             logger.info('Validating commands before registration...');
             
@@ -380,11 +383,11 @@ const registeredNames = new Set();
             logger.info(`Found ${existingCommands.size} existing guild commands`);
             
             const MAX_COMMANDS = 100;
-            let commandsToRegister = commands;
+            let commandsToRegister = guildCommandsToRegister;
 
-            if (commands.length > MAX_COMMANDS) {
-                logger.warn(`Command count (${commands.length}) exceeds Discord limit (${MAX_COMMANDS}), truncating...`);
-                commandsToRegister = commands.slice(0, MAX_COMMANDS);
+            if (guildCommandsToRegister.length > MAX_COMMANDS) {
+                logger.warn(`Command count (${guildCommandsToRegister.length}) exceeds Discord limit (${MAX_COMMANDS}), truncating...`);
+                commandsToRegister = guildCommandsToRegister.slice(0, MAX_COMMANDS);
                 logger.info(`Truncated to ${commandsToRegister.length} commands for registration`);
             }
 
@@ -400,13 +403,22 @@ const registeredNames = new Set();
                     logger.info(`Verification passed: ${registeredCommands.size} commands successfully registered`);
                 }
 
-                // En mode serveur uniquement, on supprime les anciennes commandes
-                // globales pour éviter que chaque commande apparaisse en double.
+                // On enregistre aussi au niveau global les commandes autorisees en MP.
+                // En serveur, la commande de serveur prend le dessus sur la commande globale.
                 try {
-                    await withTimeout(client.application.commands.set([]), 'Global command cleanup');
-                    logger.info('Global commands cleared (guild-only mode)');
+                    if (globalCommandsToRegister.length > 0) {
+                        const globalSync = await registerGlobalCommands(client, globalCommandsToRegister);
+                        if (globalSync.failed.length > 0) {
+                            logger.warn('Global command sync completed with errors.');
+                        } else {
+                            logger.info(`Global commands synced: ${globalSync.registered} command(s).`);
+                        }
+                    } else {
+                        await withTimeout(client.application.commands.set([]), 'Global command cleanup');
+                        logger.info('Global commands cleared (guild-only mode)');
+                    }
                 } catch (cleanupError) {
-                    logger.warn('Could not clear global commands:', cleanupError.message);
+                    logger.warn('Could not sync global commands:', cleanupError.message);
                 }
                 
             } catch (error) {
