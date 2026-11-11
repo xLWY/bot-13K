@@ -10,7 +10,6 @@ import {
     EmbedBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import shopService from '../../../services/shopService.js';
 import { getCurrentPrice, getItemById } from '../../../config/shop/index.js';
@@ -281,7 +280,7 @@ async function handlePurchase(selectInteraction, rootInteraction, client, guildI
             await btnInteraction.deferUpdate();
             if (btnInteraction.customId === 'shop_cfg_cancel') {
                 await btnInteraction.followUp({
-                    embeds: [warningEmbed('Achat annulé.', '❌ Annulé')],
+                    content: '❌ Achat annulé.',
                     flags: MessageFlags.Ephemeral,
                 });
                 return;
@@ -290,12 +289,12 @@ async function handlePurchase(selectInteraction, rootInteraction, client, guildI
             const result = await shopService.purchaseItem(userId, itemId, 1, { guildId, client });
             if (result.success) {
                 await btnInteraction.followUp({
-                    embeds: [successEmbed(result.message, '🛒 Achat réussi')],
+                    content: `🛒 Achat réussi — ${result.message}`,
                     flags: MessageFlags.Ephemeral,
                 });
             } else {
                 await btnInteraction.followUp({
-                    embeds: [warningEmbed(result.message, '❌ Achat refusé')],
+                    content: `❌ Achat refusé — ${result.message}`,
                     flags: MessageFlags.Ephemeral,
                 });
             }

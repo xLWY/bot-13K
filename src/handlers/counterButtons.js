@@ -1,4 +1,4 @@
-import { createEmbed, successEmbed } from '../utils/embeds.js';
+import { createEmbed } from '../utils/embeds.js';
 import { performDeletionByCounterId } from '../commands/ServerStats/modules/serverstats_delete.js';
 import { logger } from '../utils/logger.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
@@ -57,7 +57,7 @@ export const counterDeleteActionHandler = {
       }
 
       await interaction.editReply({
-        embeds: [successEmbed(result.message)],
+        content: result.message,
         components: []
       }).catch(logger.error);
     } catch (error) {

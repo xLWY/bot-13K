@@ -1,6 +1,5 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, ChannelSelectMenuBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, RoleSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, MessageFlags, ComponentType, EmbedBuilder, LabelBuilder, CheckboxBuilder, TextDisplayBuilder } from 'discord.js';
-import { createEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, createError, XlwyBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -287,7 +286,7 @@ async function handleSetup(interaction) {
         }
         
         await interaction.followUp({
-            embeds: [warningEmbed('Avertissement de validation des rôles', errorMsg)],
+            content: `⚠️ Avertissement de validation des rôles\n${errorMsg}`,
             ephemeral: true
         });
     }
@@ -774,7 +773,7 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
 
             if (accepted.length === 0) {
                 await roleInteraction.followUp({
-                    embeds: [warningEmbed('Aucun rôle valide', rejected.join('\n'))],
+                    content: `⚠️ Aucun rôle valide\n${rejected.join('\n')}`,
                     flags: MessageFlags.Ephemeral,
                 });
                 return;
@@ -828,12 +827,7 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
     const roleMentions = roles.map(r => r.toString()).join(', ');
 
     await textSubmitted.editReply({
-        embeds: [
-            successEmbed(
-                '✅ Panneau créé',
-                `**Salon :** ${targetChannel}\n**Rôles :** ${roles.length}\n**Liste :** ${roleMentions}\n\n[Voir le panneau](${message.url})`,
-            ),
-        ],
+        content: `✅ Panneau créé\n**Salon :** ${targetChannel}\n**Rôles :** ${roles.length}\n**Liste :** ${roleMentions}\n\n[Voir le panneau](${message.url})`,
         components: [],
     }).catch(() => {});
 
@@ -1221,7 +1215,7 @@ async function handleEditText(buttonInteraction, rootInteraction, panelData, gui
     }
 
     await submitted.reply({
-        embeds: [successEmbed('✅ Panneau mis à jour', 'Le titre et la description ont été mis à jour.')],
+        content: '✅ Panneau mis à jour — Le titre et la description ont été mis à jour.',
         flags: MessageFlags.Ephemeral,
     });
 
@@ -1242,12 +1236,7 @@ async function fallbackEditTextPrompt(buttonInteraction, rootInteraction, panelD
         .setStyle(ButtonStyle.Primary);
 
     await buttonInteraction.followUp({
-        embeds: [
-            warningEmbed(
-                'Édition du texte indisponible',
-                'Clique sur le bouton ci-dessous pour rouvrir l\'éditeur.',
-            ),
-        ],
+        content: '⚠️ Édition du texte indisponible — Clique sur le bouton ci-dessous pour rouvrir l\'éditeur.',
         components: [new ActionRowBuilder().addComponents(retryButton)],
         flags: MessageFlags.Ephemeral,
     }).catch(() => {});
@@ -1337,7 +1326,7 @@ async function handleAddRole(selectInteraction, rootInteraction, panelData, guil
         await rebuildLivePanelMessage(guild, panelData);
 
         await roleInteraction.followUp({
-            embeds: [successEmbed('✅ Rôle ajouté', `${role} a été ajouté au panneau.`)],
+            content: `✅ Rôle ajouté — ${role} a été ajouté au panneau.`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -1417,12 +1406,7 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
             await deleteReactionRoleMessage(client, guildId, panelData.messageId);
 
             await removeInteraction.followUp({
-                embeds: [
-                    successEmbed(
-                        '✅ Rôle retiré',
-                        'C\'était le dernier rôle du panneau. Le panneau a été supprimé.',
-                    ),
-                ],
+                content: '✅ Rôle retiré — C\'était le dernier rôle du panneau. Le panneau a été supprimé.',
                 flags: MessageFlags.Ephemeral,
             });
 
@@ -1460,12 +1444,7 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
             await rebuildLivePanelMessage(guild, panelData);
 
             await removeInteraction.followUp({
-                embeds: [
-                    successEmbed(
-                        '✅ Rôle retiré',
-                        `${role ? role.toString() : `<@&${roleId}>`} a été retiré du panneau.`,
-                    ),
-                ],
+                content: `✅ Rôle retiré — ${role ? role.toString() : `<@&${roleId}>`} a été retiré du panneau.`,
                 flags: MessageFlags.Ephemeral,
             });
 
@@ -1561,7 +1540,7 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
     }
 
     await submitted.followUp({
-        embeds: [successEmbed('✅ Panneau supprimé', `**${title}** a été supprimé.`)],
+        content: `✅ Panneau supprimé — **${title}** a été supprimé.`,
         flags: MessageFlags.Ephemeral,
     });
 

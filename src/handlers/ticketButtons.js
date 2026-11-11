@@ -5,7 +5,7 @@ import {
   ActionRowBuilder,
   MessageFlags,
 } from 'discord.js';
-import { createEmbed, successEmbed } from '../utils/embeds.js';
+import { createEmbed } from '../utils/embeds.js';
 import { createTicket, closeTicket, claimTicket, getTicketTypeForGuild } from '../services/ticket.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
@@ -199,7 +199,7 @@ export const closeTicketHandler = {
 
       if (result.success) {
         return await interaction.editReply({
-          embeds: [successEmbed('Ce ticket a été fermé.', '🔒 Ticket Fermé')],
+          content: '🔒 Ticket Fermé — Ce ticket a été fermé.',
         }).catch(() => {});
       }
 
@@ -240,7 +240,7 @@ export const closeTicketModalHandler = {
 
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ce ticket a été fermé.', '🔒 Ticket Fermé')],
+          content: '🔒 Ticket Fermé — Ce ticket a été fermé.',
           flags: MessageFlags.Ephemeral,
         });
       } else {
@@ -279,7 +279,7 @@ export const claimTicketHandler = {
 
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Vous avez réclamé ce ticket.', '🙋 Ticket Réclamé')],
+          content: '🙋 Ticket Réclamé — Vous avez réclamé ce ticket.',
           flags: MessageFlags.Ephemeral,
         });
       } else {
@@ -419,7 +419,7 @@ export const unclaimTicketHandler = {
 
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Vous ne réclamez plus ce ticket.', '🔓 Réclamation Retirée')],
+          content: '🔓 Réclamation Retirée — Vous ne réclamez plus ce ticket.',
           flags: MessageFlags.Ephemeral,
         });
       } else {
@@ -464,7 +464,7 @@ export const reopenTicketHandler = {
         }
 
         await interaction.editReply({
-          embeds: [successEmbed(reopenMessage, '🔓 Ticket Rouvert')],
+          content: `🔓 Ticket Rouvert — ${reopenMessage}`,
           flags: MessageFlags.Ephemeral,
         });
       } else {
@@ -504,7 +504,7 @@ export const deleteTicketHandler = {
 
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ce ticket sera définitivement supprimé dans 3 secondes.', '🗑️ Ticket Supprimé')],
+          content: '🗑️ Ticket Supprimé — Ce ticket sera définitivement supprimé dans 3 secondes.',
           flags: MessageFlags.Ephemeral,
         });
       } else {

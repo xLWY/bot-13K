@@ -479,11 +479,8 @@ async function sendEmbed(interaction, data) {
   clearEmbedData(interaction.user.id);
 
   await refreshBuilderMessage(interaction, createEmptyEmbedData(), {
-    embeds: [
-      new EmbedBuilder()
-        .setDescription(`✅ Embed envoyé avec succès dans ${targetChannel}.`)
-        .setColor(getColor('success'))
-    ],
+    content: `✅ Embed envoyé avec succès dans ${targetChannel}.`,
+    embeds: [],
     components: []
   });
 

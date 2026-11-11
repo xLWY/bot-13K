@@ -1,5 +1,4 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logEvent, moderationMentionPayload } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderationService.js';
@@ -42,11 +41,6 @@ export default {
 
                 await InteractionHelper.safeEditReply(interaction, {
                     ...moderationMentionPayload(targetUser.id, 'a été retiré de son timeout.'),
-                    embeds: [
-                        successEmbed(
-                            `🔓 **Timeout retiré** pour ${targetUser.tag}`,
-                        ),
-                    ],
                 });
         } catch (error) {
             logger.error('Untimeout command error:', error);

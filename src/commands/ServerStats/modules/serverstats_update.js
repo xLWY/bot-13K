@@ -1,5 +1,4 @@
 import { PermissionFlagsBits } from 'discord.js';
-import { successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter, getCounterEmoji, getCounterTypeLabel, resolveCounterChannel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
@@ -80,7 +79,7 @@ export async function handleUpdate(interaction, client) {
         const finalChannel = guild.channels.cache.get(updatedCounter.channelId);
 
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [successEmbed(`✅ **Compteur mis à jour avec succès !**\n\n**Type changé :** ${getCounterEmoji(oldType)} ${getCounterTypeLabel(oldType)} → ${getCounterEmoji(newType)} ${getCounterTypeLabel(newType)}\n\n**Réglages actuels :**\n**Type :** ${getCounterEmoji(updatedCounter.type)} ${getCounterTypeLabel(updatedCounter.type)}\n**Salon :** ${finalChannel}\n**Nom du salon :** ${finalChannel.name}\n\nLe compteur sera automatiquement actualisé (au maximum toutes les 6 minutes).`)]
+            content: `✅ **Compteur mis à jour avec succès !**\n\n**Type changé :** ${getCounterEmoji(oldType)} ${getCounterTypeLabel(oldType)} → ${getCounterEmoji(newType)} ${getCounterTypeLabel(newType)}\n\n**Réglages actuels :**\n**Type :** ${getCounterEmoji(updatedCounter.type)} ${getCounterTypeLabel(updatedCounter.type)}\n**Salon :** ${finalChannel}\n**Nom du salon :** ${finalChannel.name}\n\nLe compteur sera automatiquement actualisé (au maximum toutes les 6 minutes).`
         }).catch(logger.error);
 
     } catch (error) {

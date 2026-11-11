@@ -11,7 +11,6 @@ import {
     ButtonStyle
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { 
@@ -212,7 +211,7 @@ time: 600_000,
             });
 
             await interaction.followUp({
-                embeds: [successEmbed('✅ Modèle mis à jour', `Le modèle de nom a été changé pour \`${newTemplate}\``)],
+                content: `✅ Modèle mis à jour — Le modèle de nom a été changé pour \`${newTemplate}\``,
                 flags: MessageFlags.Ephemeral,
             });
 
@@ -281,7 +280,7 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
             });
 
             await interaction.followUp({
-                embeds: [successEmbed('✅ Limite mise à jour', `La limite a été changée : ${newLimit === 0 ? 'illimitée' : newLimit + ' membres'}`)],
+                content: `✅ Limite mise à jour — La limite a été changée : ${newLimit === 0 ? 'illimitée' : newLimit + ' membres'}`,
                 flags: MessageFlags.Ephemeral,
             });
 
@@ -355,7 +354,7 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
             });
 
             await interaction.followUp({
-                embeds: [successEmbed('✅ Débit mis à jour', `Débit binaire changé à ${newBitrate} kbps`)],
+                content: `✅ Débit mis à jour — Débit binaire changé à ${newBitrate} kbps`,
                 flags: MessageFlags.Ephemeral,
             });
 
@@ -423,7 +422,7 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
                 
                 if (success) {
                     await buttonInteraction.followUp({
-                        embeds: [successEmbed('✅ Canal retiré', `${triggerChannel} a été retiré du système Join to Create.`)],
+                        content: `✅ Canal retiré — ${triggerChannel} a été retiré du système Join to Create.`,
                         flags: MessageFlags.Ephemeral,
                     });
                 } else {
@@ -444,7 +443,7 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
             }
         } else {
             await buttonInteraction.followUp({
-                embeds: [successEmbed('✅ Annulé', 'Le retrait du canal a été annulé.')],
+                content: '✅ Annulé — Le retrait du canal a été annulé.',
                 flags: MessageFlags.Ephemeral,
             });
         }

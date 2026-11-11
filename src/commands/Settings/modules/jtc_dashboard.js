@@ -15,7 +15,6 @@ import {
     TextInputStyle,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { updateJoinToCreateConfig } from '../../../utils/database.js';
@@ -468,12 +467,7 @@ async function openCategoryPicker(btnInteraction, rootInteraction, client, guild
             }
 
             await selectInteraction.followUp({
-                embeds: [
-                    successEmbed(
-                        '✅ Salon déclencheur créé',
-                        `<#${triggerChannel.id}> a été créé. Chaque membre qui le rejoint obtient son propre salon vocal.`,
-                    ),
-                ],
+                content: `✅ Salon déclencheur créé — <#${triggerChannel.id}> a été créé. Chaque membre qui le rejoint obtient son propre salon vocal.`,
                 flags: MessageFlags.Ephemeral,
             });
 
@@ -797,7 +791,7 @@ async function handleTemplate(btnInteraction, rootInteraction, client, guildId, 
     }
 
     await answer.interaction.reply({
-        embeds: [successEmbed('✅ Nom mis à jour', `Les nouveaux salons s'appelleront \`${answer.value}\`.`)],
+        content: `✅ Nom mis à jour — Les nouveaux salons s'appelleront \`${answer.value}\`.`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -839,12 +833,7 @@ async function handleLimit(btnInteraction, rootInteraction, client, guildId, sco
     }
 
     await answer.interaction.reply({
-        embeds: [
-            successEmbed(
-                '✅ Limite mise à jour',
-                value > 0 ? `${value} membre(s) maximum par salon.` : 'Aucune limite de membres.',
-            ),
-        ],
+        content: `✅ Limite mise à jour — ${value > 0 ? `${value} membre(s) maximum par salon.` : 'Aucune limite de membres.'}`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -886,7 +875,7 @@ async function handleBitrate(btnInteraction, rootInteraction, client, guildId, s
     }
 
     await answer.interaction.reply({
-        embeds: [successEmbed('✅ Débit mis à jour', `Les nouveaux salons utiliseront ${kbps} kbps.`)],
+        content: `✅ Débit mis à jour — Les nouveaux salons utiliseront ${kbps} kbps.`,
         flags: MessageFlags.Ephemeral,
     });
 

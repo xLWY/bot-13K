@@ -17,7 +17,6 @@ import {
     EmbedBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
@@ -431,7 +430,7 @@ async function handlePanelChannel(selectInteraction, rootInteraction, guildConfi
                 : `Le salon a été enregistré, mais je n'ai pas pu envoyer le panneau dans ${channel}. Vérifie mes permissions dans ce salon.`;
 
         await channelInteraction.followUp({
-            embeds: [successEmbed('✅ Panneau de tickets configuré', detail)],
+            content: `✅ Panneau de tickets configuré — ${detail}`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -484,16 +483,11 @@ async function handlePanelMessage(selectInteraction, rootInteraction, guildConfi
     const panelUpdated = await updateLivePanel(client, rootInteraction.guild, guildConfig);
 
     await submitted.reply({
-        embeds: [
-            successEmbed(
-                '✅ Message du panneau mis à jour',
-                `Le message du panneau a été mis à jour.${
-                    panelUpdated
-                        ? '\nLe panneau de tickets en direct a également été actualisé.'
-                        : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Utilise « Définir le salon du panneau » pour le renvoyer.'
-                }`,
-            ),
-        ],
+        content: `✅ Message du panneau mis à jour — Le message du panneau a été mis à jour.${
+            panelUpdated
+                ? '\nLe panneau de tickets en direct a également été actualisé.'
+                : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Utilise « Définir le salon du panneau » pour le renvoyer.'
+        }`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -539,16 +533,11 @@ async function handleButtonLabel(selectInteraction, rootInteraction, guildConfig
     const panelUpdated = await updateLivePanel(client, rootInteraction.guild, guildConfig);
 
     await submitted.reply({
-        embeds: [
-            successEmbed(
-                '✅ Libellé du bouton mis à jour',
-                `Libellé du bouton modifié en \`${newLabel}\`.${
-                    panelUpdated
-                        ? '\nLe bouton du panneau en direct a également été actualisé.'
-                        : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Utilise « Définir le salon du panneau » pour le renvoyer.'
-                }`,
-            ),
-        ],
+        content: `✅ Libellé du bouton mis à jour — Libellé du bouton modifié en \`${newLabel}\`.${
+            panelUpdated
+                ? '\nLe bouton du panneau en direct a également été actualisé.'
+                : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Utilise « Définir le salon du panneau » pour le renvoyer.'
+        }`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -596,7 +585,7 @@ async function handleStaffRole(selectInteraction, rootInteraction, guildConfig, 
         await client.db.set(getGuildConfigKey(guildId), guildConfig);
 
         await roleInteraction.followUp({
-            embeds: [successEmbed('✅ Rôle staff défini', `Le rôle staff est désormais ${role}.`)],
+            content: `✅ Rôle staff défini — Le rôle staff est désormais ${role}.`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -652,12 +641,7 @@ async function handleOpenCategory(selectInteraction, rootInteraction, guildConfi
         await client.db.set(getGuildConfigKey(guildId), guildConfig);
 
         await catInteraction.followUp({
-            embeds: [
-                successEmbed(
-                    '✅ Catégorie ouverte mise à jour',
-                    `Les nouveaux tickets seront créés dans **${category.name}**.`,
-                ),
-            ],
+            content: `✅ Catégorie ouverte mise à jour — Les nouveaux tickets seront créés dans **${category.name}**.`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -719,12 +703,7 @@ async function handleClosedCategory(
         await client.db.set(getGuildConfigKey(guildId), guildConfig);
 
         await catInteraction.followUp({
-            embeds: [
-                successEmbed(
-                    '✅ Catégorie fermée mise à jour',
-                    `Les tickets fermés seront déplacés vers **${category.name}**.`,
-                ),
-            ],
+            content: `✅ Catégorie fermée mise à jour — Les tickets fermés seront déplacés vers **${category.name}**.`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -782,12 +761,7 @@ async function handleMaxTickets(selectInteraction, rootInteraction, guildConfig,
     await client.db.set(getGuildConfigKey(guildId), guildConfig);
 
     await submitted.reply({
-        embeds: [
-            successEmbed(
-                '✅ Nombre max de tickets mis à jour',
-                `Les utilisateurs peuvent avoir au plus **${newMax}** ticket${newMax !== 1 ? 's' : ''} ouvert${newMax !== 1 ? 's' : ''} à la fois.`,
-            ),
-        ],
+        content: `✅ Nombre max de tickets mis à jour — Les utilisateurs peuvent avoir au plus **${newMax}** ticket${newMax !== 1 ? 's' : ''} ouvert${newMax !== 1 ? 's' : ''} à la fois.`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -881,16 +855,11 @@ async function handleAddType(selectInteraction, rootInteraction, guildConfig, gu
     const panelUpdated = await updateLivePanel(client, rootInteraction.guild, guildConfig);
 
     await submitted.reply({
-        embeds: [
-            successEmbed(
-                '✅ Bouton ajouté',
-                `Le bouton **${emoji} ${label}** a été ajouté au panneau.${
-                    panelUpdated
-                        ? '\nLe panneau de tickets en direct a été actualisé.'
-                        : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Utilise « Définir le salon du panneau » pour le renvoyer.'
-                }`,
-            ),
-        ],
+        content: `✅ Bouton ajouté — Le bouton **${emoji} ${label}** a été ajouté au panneau.${
+            panelUpdated
+                ? '\nLe panneau de tickets en direct a été actualisé.'
+                : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé. Utilise « Définir le salon du panneau » pour le renvoyer.'
+        }`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -950,16 +919,11 @@ async function handleRemoveType(selectInteraction, rootInteraction, guildConfig,
         const panelUpdated = await updateLivePanel(client, rootInteraction.guild, guildConfig);
 
         await typeInteraction.followUp({
-            embeds: [
-                successEmbed(
-                    '✅ Bouton supprimé',
-                    `Le bouton a été retiré du panneau.${
-                        panelUpdated
-                            ? '\nLe panneau de tickets en direct a été actualisé.'
-                            : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé.'
-                    }`,
-                ),
-            ],
+            content: `✅ Bouton supprimé — Le bouton a été retiré du panneau.${
+                panelUpdated
+                    ? '\nLe panneau de tickets en direct a été actualisé.'
+                    : '\n> **Remarque :** le panneau en direct n\'a pas pu être localisé.'
+            }`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -983,12 +947,7 @@ async function handleDmOnClose(btnInteraction, rootInteraction, guildConfig, gui
     await client.db.set(getGuildConfigKey(guildId), guildConfig);
 
     await btnInteraction.followUp({
-        embeds: [
-            successEmbed(
-                '✅ MP à la fermeture mis à jour',
-                `Les utilisateurs **${newState ? 'recevront désormais' : 'ne recevront plus'}** un message privé à la fermeture de leur ticket.`,
-            ),
-        ],
+        content: `✅ MP à la fermeture mis à jour — Les utilisateurs **${newState ? 'recevront désormais' : 'ne recevront plus'}** un message privé à la fermeture de leur ticket.`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -1032,7 +991,7 @@ async function handleLogsChannel(selectInteraction, rootInteraction, guildConfig
         await client.db.set(getGuildConfigKey(guildId), guildConfig);
 
         await channelInteraction.followUp({
-            embeds: [successEmbed('✅ Salon des logs mis à jour', `Les logs de tickets seront envoyés dans ${channel}`)],
+            content: `✅ Salon des logs mis à jour — Les logs de tickets seront envoyés dans ${channel}`,
             flags: MessageFlags.Ephemeral
         });
 
@@ -1083,7 +1042,7 @@ async function handleTranscriptChannel(selectInteraction, rootInteraction, guild
         await client.db.set(getGuildConfigKey(guildId), guildConfig);
 
         await channelInteraction.followUp({
-            embeds: [successEmbed('✅ Salon des transcripts mis à jour', `Les transcripts seront envoyés dans ${channel}`)],
+            content: `✅ Salon des transcripts mis à jour — Les transcripts seront envoyés dans ${channel}`,
             flags: MessageFlags.Ephemeral
         });
 
@@ -1279,12 +1238,7 @@ async function handleDeleteSystem(btnInteraction, rootInteraction, guildConfig, 
     await client.db.set(getGuildConfigKey(guildId), guildConfig);
 
     await submitted.followUp({
-        embeds: [
-            successEmbed(
-                '✅ Système de tickets supprimé',
-                'Toute la configuration du système de tickets a été effacée. Lancez `/ticket setup` pour le reconfigurer.',
-            ),
-        ],
+        content: '✅ Système de tickets supprimé — Toute la configuration du système de tickets a été effacée. Lancez `/ticket setup` pour le reconfigurer.',
         flags: MessageFlags.Ephemeral,
     });
 

@@ -1,7 +1,7 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType } from 'discord.js';
 import { setLoggingChannel, getLoggingStatus, EVENT_TYPES } from '../../services/loggingService.js';
 import { getGuildConfig, updateGuildConfig } from '../../services/guildConfig.js';
-import { successEmbed, infoEmbed } from '../../utils/embeds.js';
+import { infoEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
@@ -56,10 +56,7 @@ export default {
                         logIgnore: { users: [], channels: [] }
                     });
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [successEmbed(
-                            `Exclusions vid\u{00E9}es : \`${users.length}\` utilisateur(s) et \`${channels.length}\` canal(aux) ne sont plus ignores. Tous les logs repartent.`,
-                            '\u{1F5C2}\u{FE0F} Exclusions Vides'
-                        )],
+                        content: `Exclusions vid\u{00E9}es : \`${users.length}\` utilisateur(s) et \`${channels.length}\` canal(aux) ne sont plus ignores. Tous les logs repartent.`,
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -88,16 +85,13 @@ export default {
                 logger.info(`[Logs] Set logging channel to ${channel.name} (${channel.id}) in ${interaction.guild.name} (${interaction.guild.id}) by ${interaction.user.tag}`);
 
                 await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed(
-                        `${channel} est désormais le **canal de secours** des logs. Les logs sont envoyes en **message prive au proprietaire du bot** ; ils ne tomberont dans ce salon que si le DM est impossible.\n\n${Object.keys(EVENT_TYPES).length} types d'evenements sont actifs (moderation, messages, roles, membres, tickets, giveaways, reaction roles, leveling...).`,
-                        '\u{1F4DD} Logs Configures'
-                    )],
+                    content: `${channel} est désormais le **canal de secours** des logs. Les logs sont envoyes en **message prive au proprietaire du bot** ; ils ne tomberont dans ce salon que si le DM est impossible.\n\n${Object.keys(EVENT_TYPES).length} types d'evenements sont actifs (moderation, messages, roles, membres, tickets, giveaways, reaction roles, leveling...).`,
                     flags: MessageFlags.Ephemeral
                 });
 
                 try {
                     await channel.send({
-                        embeds: [successEmbed('Ce canal est desormais le **canal de secours** du bot. Les logs partent en message prive au proprietaire ; ce salon ne recoit les logs quen cas dechec du DM.', '\u{1F4DD} Canal de Secours Actif')]
+                        content: '📝 Canal de Secours Actif — Ce canal est désormais le **canal de secours** du bot. Les logs partent en message privé au propriétaire ; ce salon ne reçoit les logs qu’en cas d’échec du DM.'
                     });
                 } catch {
                     logger.warn(`[Logs] Could not send confirmation in logs channel ${channel.id} (missing Send/Embed permissions?)`);

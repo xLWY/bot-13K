@@ -44,12 +44,7 @@ const feedbackHandler = {
 
         if (ticketData.feedback?.rating) {
             await interaction.update({
-                embeds: [
-                    new EmbedBuilder()
-                        .setTitle('✅ Déjà répondu')
-                        .setDescription(`Vous avez déjà noté ce ticket **${STAR_LABELS[String(ticketData.feedback.rating)]}**.\nMerci pour votre avis !`)
-                        .setColor(getColor('success')),
-                ],
+                content: `✅ Déjà répondu — Vous avez déjà noté ce ticket **${STAR_LABELS[String(ticketData.feedback.rating)]}**.\nMerci pour votre avis !`,
                 components: [],
             });
             return;
@@ -96,14 +91,7 @@ const feedbackHandler = {
         }
 
         await interaction.update({
-            embeds: [
-                new EmbedBuilder()
-                    .setTitle('✅ Merci pour votre avis !')
-                    .setDescription(`Vous avez noté votre expérience **${ratingLabel}**.\n\nVotre avis a bien été enregistré et nous aide à nous améliorer !`)
-                    .setColor(getColor('success'))
-                    .setFooter({ text: 'Merci d\'avoir utilisé notre support.' })
-                    .setTimestamp(),
-            ],
+            content: `✅ Merci pour votre avis ! — Vous avez noté votre expérience **${ratingLabel}**.\n\nVotre avis a bien été enregistré et nous aide à nous améliorer !`,
             components: [],
         });
 
@@ -121,12 +109,7 @@ const declineHandler = {
 
     async execute(interaction) {
         await interaction.update({
-            embeds: [
-                new EmbedBuilder()
-                    .setTitle('👋 Pas de souci !')
-                    .setDescription('Vous pouvez nous recontacter à tout moment si vous avez besoin d\'aide.')
-                    .setColor(getColor('default')),
-            ],
+            content: '👋 Pas de souci ! — Vous pouvez nous recontacter à tout moment si vous avez besoin d\'aide.',
             components: [],
         });
     },

@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, successEmbed } from '../../utils/embeds.js';
+import { createEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
@@ -73,12 +73,7 @@ export default {
       });
 
       await InteractionHelper.safeEditReply(interaction, {
-        embeds: [
-          successEmbed(
-            `🔒 **Salon verrouillé**`,
-            `${channel} est maintenant verrouillé. Plus personne ne peut y parler.`,
-          ),
-        ],
+        content: `🔒 **Salon verrouillé** — ${channel} est maintenant verrouillé. Plus personne ne peut y parler.`,
       });
     } catch (error) {
       logger.error('Lock command error:', error);

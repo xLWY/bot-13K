@@ -15,7 +15,6 @@ import {
     EmbedBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import {
@@ -292,16 +291,13 @@ async function openCreateModal(selectInteraction, rootInteraction, client, guild
         await saveGiveaway(client, guildId, initialData);
 
         await submitted.reply({
-            embeds: [successEmbed(`Le concours **${prize}** a été lancé dans <#${channelId}> !`, '🎁 Concours créé')],
+            content: `🎁 Concours créé — Le concours **${prize}** a été lancé dans <#${channelId}> !`,
             flags: MessageFlags.Ephemeral,
         });
     } catch (error) {
         logger.debug('Giveaway creation validation error:', error.message);
         await submitted.reply({
-            embeds: [warningEmbed(
-                error instanceof XlwyBotError ? (error.userMessage || 'Données de concours invalides.') : 'Erreur lors de la création du concours.',
-                '⚠️ Impossible de créer',
-            )],
+            content: `⚠️ Impossible de créer — ${error instanceof XlwyBotError ? (error.userMessage || 'Données de concours invalides.') : 'Erreur lors de la création du concours.'}`,
             flags: MessageFlags.Ephemeral,
         });
         return;
@@ -381,7 +377,7 @@ async function handleEnd(btnInteraction, rootInteraction, client, guildId) {
             }
 
             await selInteraction.followUp({
-                embeds: [successEmbed(`Le concours **${giveaway.prize}** est terminé.`, '🏁 Concours terminé')],
+                content: `🏁 Concours terminé — Le concours **${giveaway.prize}** est terminé.`,
                 flags: MessageFlags.Ephemeral,
             });
         } catch (error) {
@@ -440,7 +436,7 @@ async function handleDelete(btnInteraction, rootInteraction, client, guildId) {
             }
 
             await selInteraction.followUp({
-                embeds: [successEmbed(`Le concours **${giveaway?.prize || ''}** a été supprimé.`, '🗑️ Concours supprimé')],
+                content: `🗑️ Concours supprimé — Le concours **${giveaway?.prize || ''}** a été supprimé.`,
                 flags: MessageFlags.Ephemeral,
             });
         } catch (error) {

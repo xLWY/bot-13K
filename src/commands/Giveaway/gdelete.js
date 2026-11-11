@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
 import { getGuildGiveaways, deleteGiveaway } from '../../utils/giveaways.js';
@@ -185,12 +184,7 @@ export default {
             }
 
             return InteractionHelper.safeReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        "Concours supprimé",
-                        `Concours supprimé pour **${giveaway.prize}** ${statusMsg}. ${winnerStatusMsg}`,
-                    ),
-                ],
+                content: `Concours supprimé — Concours supprimé pour **${giveaway.prize}** ${statusMsg}. ${winnerStatusMsg}`,
                 flags: MessageFlags.Ephemeral,
             });
 

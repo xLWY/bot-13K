@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, successEmbed } from '../../utils/embeds.js';
+import { createEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
@@ -88,12 +88,7 @@ export default {
             });
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        `🔓 **Salon déverrouillé**`,
-                        `${channel} est maintenant déverrouillé. Tu peux parler à nouveau.`,
-                    ),
-                ],
+                content: `🔓 **Salon déverrouillé** — ${channel} est maintenant déverrouillé. Tu peux parler à nouveau.`,
             });
         } catch (error) {
             logger.error('Unlock command error:', error);

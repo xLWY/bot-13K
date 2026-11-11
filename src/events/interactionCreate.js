@@ -12,7 +12,7 @@ import {
 } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
-import { successEmbed, createEmbed } from '../utils/embeds.js';
+import { createEmbed } from '../utils/embeds.js';
 import { saveTicketData, getTicketData, deleteTicketData, incrementTicketCounter } from '../utils/database.js';
 import { handleEmbedBuilderButtons, handleEmbedBuilderModals, handleEmbedBuilderChannelSelect } from '../handlers/interactionHandlers/embedBuilderButtons.js';
 import { handleInteractionError, createError, ErrorTypes } from '../utils/errorHandler.js';
@@ -363,7 +363,7 @@ async function deleteTicketFallback(interaction) {
     }
 
     await interaction.editReply({
-      embeds: [successEmbed('Le ticket va être supprimé.', '✅ Ticket supprimé')],
+      content: '✅ Ticket supprimé — Le ticket va être supprimé.',
     });
 
     setTimeout(async () => {
@@ -443,7 +443,7 @@ async function reopenTicketFallback(interaction) {
     } catch (_) {}
 
     await interaction.editReply({
-      embeds: [successEmbed('Le ticket a été rouvert.', '☎️ Ticket rouvert')],
+      content: '☎️ Ticket rouvert — Le ticket a été rouvert.',
     });
   } catch (error) {
     const detail = error?.message || String(error);
@@ -462,7 +462,7 @@ async function fallbackTicketClose(interaction, client) {
 
     if (result.success) {
       return await interaction.editReply({
-        embeds: [successEmbed('Le ticket a été fermé.', '✅ Ticket fermé')],
+        content: '✅ Ticket fermé — Le ticket a été fermé.',
       });
     }
 

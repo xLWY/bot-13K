@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
 import { saveGiveaway } from '../../utils/giveaways.js';
@@ -176,12 +175,7 @@ export default {
 
             
             await InteractionHelper.safeReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        `Concours lancé ! 🎉`,
-                        `Un nouveau concours pour **${prizeName}** a été lancé dans ${targetChannel} et se termine dans **${durationString}**.`,
-                    ),
-                ],
+                content: `Concours lancé ! 🎉 — Un nouveau concours pour **${prizeName}** a été lancé dans ${targetChannel} et se termine dans **${durationString}**.`,
                 flags: MessageFlags.Ephemeral,
             });
 

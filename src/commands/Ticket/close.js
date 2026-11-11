@@ -1,6 +1,5 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
-import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -44,12 +43,7 @@ export default {
             }
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        "Ticket fermé !",
-                        "Ce ticket a été fermé avec succès.",
-                    ),
-                ],
+                content: "Ticket fermé ! Ce ticket a été fermé avec succès.",
             });
 
             logger.info('Ticket closed successfully', {

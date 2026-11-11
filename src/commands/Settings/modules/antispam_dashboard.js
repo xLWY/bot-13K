@@ -16,7 +16,6 @@ import {
     TextInputStyle,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { normalizeAllowedDomains } from '../../../utils/linkFilter.js';
 import {
@@ -265,18 +264,18 @@ function buildButtonRows(cfg) {
     return [mainRow, optionsRow, linkRow, roleRow];
 }
 
-async function sendNotice(interaction, text, { title = '🛡️ Anti-spam', success = false } = {}) {
-    const embed = success ? successEmbed(text, title) : warningEmbed(text, title);
+async function sendNotice(interaction, text, { title = '🛡️ Anti-spam' } = {}) {
+    const content = `${title} — ${text}`;
 
     try {
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({
-                embeds: [embed],
+                content,
                 flags: MessageFlags.Ephemeral,
             });
         } else {
             await interaction.reply({
-                embeds: [embed],
+                content,
                 flags: MessageFlags.Ephemeral,
             });
         }
@@ -735,12 +734,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
 
     if (!selected) {
         await prompt.edit({
-            embeds: [
-                warningEmbed(
-                    'Le menu a expiré. Relance **Salons ignorés** depuis le tableau de bord.',
-                    '⏱️ Délai dépassé',
-                ),
-            ],
+            content: '⏱️ Délai dépassé — Le menu a expiré. Relance **Salons ignorés** depuis le tableau de bord.',
             components: [],
         }).catch(() => {});
         return;
@@ -757,7 +751,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
             const channel = selected.channels.first();
             if (!channel) {
                 await selected.editReply({
-                    embeds: [warningEmbed('Aucun salon sélectionné.', '⚠️ Aucun changement')],
+                    content: '⚠️ Aucun changement — Aucun salon sélectionné.',
                     components: [],
                 });
                 return;
@@ -765,12 +759,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
 
             if (latest.ignoredChannels.includes(channel.id)) {
                 await selected.editReply({
-                    embeds: [
-                        warningEmbed(
-                            `<#${channel.id}> est déjà ignoré par l’anti-spam.`,
-                            '⚠️ Aucun changement',
-                        ),
-                    ],
+                    content: `⚠️ Aucun changement — <#${channel.id}> est déjà ignoré par l’anti-spam.`,
                     components: [],
                 });
                 return;
@@ -782,7 +771,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
             const channelId = selected.values[0];
             if (!channelId) {
                 await selected.editReply({
-                    embeds: [warningEmbed('Aucun salon sélectionné.', '⚠️ Aucun changement')],
+                    content: '⚠️ Aucun changement — Aucun salon sélectionné.',
                     components: [],
                 });
                 return;
@@ -797,7 +786,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
         });
 
         await selected.editReply({
-            embeds: [successEmbed(message, '🚫 Salons ignorés')],
+            content: `🚫 Salons ignorés — ${message}`,
             components: [],
         });
 
@@ -805,12 +794,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
     } catch (error) {
         logger.error('Anti-spam ignored channels update failed:', error);
         await selected.editReply({
-            embeds: [
-                warningEmbed(
-                    'Impossible d’enregistrer ce changement. Réessaie dans un instant.',
-                    '⚠️ Erreur',
-                ),
-            ],
+            content: '⚠️ Erreur — Impossible d’enregistrer ce changement. Réessaie dans un instant.',
             components: [],
         }).catch(() => {});
     }
@@ -892,12 +876,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
 
     if (!selected) {
         await prompt.edit({
-            embeds: [
-                warningEmbed(
-                    'Le menu a expiré. Relance **Rôles ignorés** depuis le tableau de bord.',
-                    '⏱️ Délai dépassé',
-                ),
-            ],
+            content: '⏱️ Délai dépassé — Le menu a expiré. Relance **Rôles ignorés** depuis le tableau de bord.',
             components: [],
         }).catch(() => {});
         return;
@@ -914,7 +893,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
             const role = selected.roles.first();
             if (!role) {
                 await selected.editReply({
-                    embeds: [warningEmbed('Aucun rôle sélectionné.', '⚠️ Aucun changement')],
+                    content: '⚠️ Aucun changement — Aucun rôle sélectionné.',
                     components: [],
                 });
                 return;
@@ -922,12 +901,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
 
             if (role.id === guildId) {
                 await selected.editReply({
-                    embeds: [
-                        warningEmbed(
-                            'Le rôle **@everyone** ne peut pas être ignoré. Choisis un rôle spécifique.',
-                            '⚠️ Rôle invalide',
-                        ),
-                    ],
+                    content: '⚠️ Rôle invalide — Le rôle **@everyone** ne peut pas être ignoré. Choisis un rôle spécifique.',
                     components: [],
                 });
                 return;
@@ -935,12 +909,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
 
             if (latest.ignoredRoles.includes(role.id)) {
                 await selected.editReply({
-                    embeds: [
-                        warningEmbed(
-                            `Le rôle <@&${role.id}> est déjà ignoré par l’anti-spam.`,
-                            '⚠️ Aucun changement',
-                        ),
-                    ],
+                    content: `⚠️ Aucun changement — Le rôle <@&${role.id}> est déjà ignoré par l’anti-spam.`,
                     components: [],
                 });
                 return;
@@ -952,7 +921,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
             const roleId = selected.values[0];
             if (!roleId) {
                 await selected.editReply({
-                    embeds: [warningEmbed('Aucun rôle sélectionné.', '⚠️ Aucun changement')],
+                    content: '⚠️ Aucun changement — Aucun rôle sélectionné.',
                     components: [],
                 });
                 return;
@@ -967,7 +936,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
         });
 
         await selected.editReply({
-            embeds: [successEmbed(message, '👥 Rôles ignorés')],
+            content: `👥 Rôles ignorés — ${message}`,
             components: [],
         });
 
@@ -975,12 +944,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
     } catch (error) {
         logger.error('Anti-spam ignored roles update failed:', error);
         await selected.editReply({
-            embeds: [
-                warningEmbed(
-                    'Impossible d’enregistrer ce changement. Réessaie dans un instant.',
-                    '⚠️ Erreur',
-                ),
-            ],
+            content: '⚠️ Erreur — Impossible d’enregistrer ce changement. Réessaie dans un instant.',
             components: [],
         }).catch(() => {});
     }

@@ -1,6 +1,5 @@
 import { PermissionFlagsBits, ChannelType } from 'discord.js';
 import crypto from 'node:crypto';
-import { successEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, saveServerCounters, updateCounter, getCounterBaseName, getCounterEmoji, getCounterTypeLabel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
@@ -96,7 +95,7 @@ export async function handleCreate(interaction, client) {
         }
 
         await InteractionHelper.safeEditReply(interaction, {
-            embeds: [successEmbed(`✅ **Compteur créé avec succès !**\n\n**Type :** ${getCounterTypeLabel(type)}\n**Type de salon :** ${targetChannel.type === ChannelType.GuildVoice ? 'vocal' : 'texte'}\n**Catégorie :** ${category}\n**Salon :** ${targetChannel}\n**Nom du salon :** ${targetChannel.name}\n\nLe compteur sera actualisé automatiquement (au maximum toutes les 6 minutes).\n\nUtilise \`/serverstats list\` pour voir tous les compteurs.`)]
+            content: `✅ **Compteur créé avec succès !**\n\n**Type :** ${getCounterTypeLabel(type)}\n**Type de salon :** ${targetChannel.type === ChannelType.GuildVoice ? 'vocal' : 'texte'}\n**Catégorie :** ${category}\n**Salon :** ${targetChannel}\n**Nom du salon :** ${targetChannel.name}\n\nLe compteur sera actualisé automatiquement (au maximum toutes les 6 minutes).\n\nUtilise \`/serverstats list\` pour voir tous les compteurs.`
         }).catch(logger.error);
 
     } catch (error) {

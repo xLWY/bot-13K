@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction, moderationMentionPayload } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { WarningService } from '../../services/warningService.js';
@@ -85,13 +84,7 @@ export default {
                 });
 
                 await InteractionHelper.safeEditReply(interaction, {
-                    ...moderationMentionPayload(target.id, 'a reçu un avertissement.'),
-                    embeds: [
-                        successEmbed(
-                            `⚠️ **Averti** ${target.tag}`,
-                            `**Raison :** ${reason}\n**Total d'avertissements :** ${totalWarns}`,
-                        ),
-                    ],
+                    ...moderationMentionPayload(target.id, `a reçu un avertissement.\n**Raison :** ${reason}\n**Total d'avertissements :** ${totalWarns}`),
                 });
         } catch (error) {
             logger.error('Warn command error:', error);

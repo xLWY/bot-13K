@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { getGuildConfig, setConfigValue } from '../../services/guildConfig.js';
-import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
@@ -43,7 +42,7 @@ export default {
                 const currentPrefix = guildConfig.prefix;
 
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [successEmbed(`Le préfixe actuel de ce serveur est \`${currentPrefix}\``, 'ℹ️ Préfixe actuel')],
+                    content: `Le préfixe actuel de ce serveur est \`${currentPrefix}\``,
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -67,7 +66,7 @@ export default {
             logger.info(`[Prefix] Set prefix to "${trimmedPrefix}" in ${guild.name} (${guild.id}) by ${interaction.user.tag}`);
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [successEmbed(`Le préfixe du serveur a été mis à jour en \`${trimmedPrefix}\``)],
+                content: `Le préfixe du serveur a été mis à jour en \`${trimmedPrefix}\``,
                 flags: MessageFlags.Ephemeral
             });
         } catch (error) {

@@ -1,5 +1,4 @@
 import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
-import { successEmbed, errorEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { addJoinToCreateTrigger, getJoinToCreateConfig } from '../../../utils/database.js';
@@ -35,29 +34,28 @@ export default {
                 categoryId: category?.id
             });
 
-            const embed = successEmbed(
+            const content =
+                `✅ Configuration Join to Create terminée\n\n` +
                 `Canal déclencheur créé : ${triggerChannel}\n\n` +
                 `**Paramètres :**\n` +
                 `• Modèle de nom du canal : \`${nameTemplate}\`\n` +
                 `• Limite de membres : ${userLimit === 0 ? 'Illimitée' : userLimit + ' membres'}\n` +
                 `• Débit binaire : ${bitrate} kbps\n` +
                 `${category ? `• Catégorie : ${category.name}` : '• Catégorie : Racine'}\n\n` +
-                `Lorsqu'un membre rejoint ce canal, un salon vocal temporaire est créé pour lui.`,
-                '✅ Configuration Join to Create terminée'
-            );
+                `Lorsqu'un membre rejoint ce canal, un salon vocal temporaire est créé pour lui.`;
 
             try {
                 if (interaction.deferred) {
-                    await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
+                    await InteractionHelper.safeEditReply(interaction, { content });
                 } else {
-                    await InteractionHelper.safeReply(interaction, { embeds: [embed], flags: MessageFlags.Ephemeral });
+                    await InteractionHelper.safeReply(interaction, { content, flags: MessageFlags.Ephemeral });
                 }
             } catch (responseError) {
                 logger.error('Error responding to interaction:', responseError);
                 
                 try {
                     if (!interaction.replied) {
-                        await InteractionHelper.safeReply(interaction, { embeds: [embed], flags: MessageFlags.Ephemeral });
+                        await InteractionHelper.safeReply(interaction, { content, flags: MessageFlags.Ephemeral });
                     }
                 } catch (e) {
                     logger.error('All response attempts failed:', e);

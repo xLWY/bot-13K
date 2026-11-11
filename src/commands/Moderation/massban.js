@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { checkRateLimit } from '../../utils/rateLimiter.js';
@@ -57,12 +56,7 @@ export default {
             const isAllowed = await checkRateLimit(rateLimitKey, 3, 60000);
             if (!isAllowed) {
                 return await InteractionHelper.safeEditReply(interaction, {
-                    embeds: [
-                        warningEmbed(
-                            "Tu effectues des bannissements massifs trop vite. Attends une minute avant de réessayer.",
-                            "⏳ Limite de fréquence"
-                        ),
-                    ],
+                    content: "Tu effectues des bannissements massifs trop vite. Attends une minute avant de réessayer.",
                     flags: MessageFlags.Ephemeral,
                 });
             }
@@ -175,15 +169,8 @@ export default {
                 });
             }
 
-            const embed = results.successful.length > 0 ? successEmbed : warningEmbed;
-            
             return await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    embed(
-                        `🔨 Bannissement massif terminé`,
-                        description
-                    )
-                ]
+                content: `🔨 Bannissement massif terminé\n\n${description}`,
             });
 
         } catch (error) {

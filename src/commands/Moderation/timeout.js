@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { successEmbed } from '../../utils/embeds.js';
 import { logModerationAction, moderationMentionPayload } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../utils/errorHandler.js';
@@ -121,13 +120,7 @@ export default {
             });
 
             await InteractionHelper.safeEditReply(interaction, {
-                ...moderationMentionPayload(targetUser.id, `a été mis en timeout pendant ${durationDisplay}.`),
-                embeds: [
-                    successEmbed(
-                        `⏳ **Timeout** ${targetUser.tag} pour une durée de ${durationDisplay}.`,
-                        `**Raison :** ${reason}\n**ID de cas :** #${caseId}`,
-                    ),
-                ],
+                ...moderationMentionPayload(targetUser.id, `a été mis en timeout pendant ${durationDisplay}.\n**Raison :** ${reason}\n**ID de cas :** #${caseId}`),
             });
         } catch (error) {
             logger.error('Timeout command error:', error);

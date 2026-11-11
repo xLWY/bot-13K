@@ -12,7 +12,7 @@ import {
     MAX_LEVEL
 } from '../../services/leveling.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
-import { successEmbed, infoEmbed } from '../../utils/embeds.js';
+import { infoEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 
@@ -177,7 +177,7 @@ export default {
                         ]
                     });
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [successEmbed(`Les notifications de montée de niveau seront désormais envoyées dans ${channel}.`, '📈 Canal de Leveling')],
+                        content: `Les notifications de montée de niveau seront désormais envoyées dans ${channel}.`,
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -196,10 +196,7 @@ export default {
                     });
 
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [successEmbed(
-                            subcommand === 'enable' ? 'Le système de leveling est désormais **activé**.' : 'Le système de leveling est désormais **désactivé**.',
-                            '📈 Leveling'
-                        )],
+                        content: subcommand === 'enable' ? 'Le système de leveling est désormais **activé**.' : 'Le système de leveling est désormais **désactivé**.',
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -218,10 +215,7 @@ export default {
                     });
 
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [successEmbed(
-                            enabled ? 'Les notifications de montée de niveau sont **activées**.' : 'Les notifications de montée de niveau sont **désactivées**.',
-                            '📈 Annonces'
-                        )],
+                        content: enabled ? 'Les notifications de montée de niveau sont **activées**.' : 'Les notifications de montée de niveau sont **désactivées**.',
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -249,7 +243,7 @@ export default {
                     });
 
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [successEmbed(`Chaque message valide accorde désormais entre **${min}** et **${max}** XP.`, '📈 Plage d\'XP')],
+                        content: `Chaque message valide accorde désormais entre **${min}** et **${max}** XP.`,
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -268,7 +262,7 @@ export default {
                     });
 
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [successEmbed(`Un utilisateur peut désormais gagner de l'XP toutes les **${seconds}** seconde(s).`, '📈 Délai')],
+                        content: `Un utilisateur peut désormais gagner de l'XP toutes les **${seconds}** seconde(s).`,
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -305,10 +299,7 @@ export default {
                     });
 
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [successEmbed(
-                            `${subcommand === 'add' ? 'Ajout' : 'Retir'} **${amount} XP** ${subcommand === 'add' ? 'à' : 'à'} ${target}.\nMaintenant : niveau **${data.level}**, **${data.totalXp} XP au total** (${data.xp}/${xpNeeded} XP pour le prochain niveau).`,
-                            '📈 XP Mis à Jour'
-                        )],
+                        content: `${subcommand === 'add' ? 'Ajout' : 'Retir'} **${amount} XP** ${subcommand === 'add' ? 'à' : 'à'} ${target}.\nMaintenant : niveau **${data.level}**, **${data.totalXp} XP au total** (${data.xp}/${xpNeeded} XP pour le prochain niveau).`,
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -335,7 +326,7 @@ export default {
                     });
 
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [successEmbed(`${target} est désormais au niveau **${data.level}** (**${data.totalXp} XP au total**).`, '📈 Niveau Défini')],
+                        content: `${target} est désormais au niveau **${data.level}** (**${data.totalXp} XP au total**).`,
                         flags: MessageFlags.Ephemeral
                     });
                 }
@@ -366,10 +357,7 @@ export default {
                     });
 
                     return InteractionHelper.safeEditReply(interaction, {
-                        embeds: [successEmbed(
-                            `${subcommand === 'addlevel' ? 'Ajout' : 'Retir'} **${levels} niveau(x)** ${subcommand === 'addlevel' ? 'à' : 'à'} ${target}.\nMaintenant : niveau **${data.level}** (**${data.totalXp} XP au total**).`,
-                            '📈 Niveaux Mis à Jour'
-                        )],
+                        content: `${subcommand === 'addlevel' ? 'Ajout' : 'Retir'} **${levels} niveau(x)** ${subcommand === 'addlevel' ? 'à' : 'à'} ${target}.\nMaintenant : niveau **${data.level}** (**${data.totalXp} XP au total**).`,
                         flags: MessageFlags.Ephemeral
                     });
                 }

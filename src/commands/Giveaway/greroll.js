@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
 import { getGuildGiveaways, saveGiveaway } from '../../utils/giveaways.js';
@@ -131,12 +130,7 @@ export default {
                 logger.warn(`Could not find channel for giveaway ${messageId}, but saved new winners to database`);
                 
                 return InteractionHelper.safeReply(interaction, {
-                    embeds: [
-                        successEmbed(
-                            "Relance terminée",
-                            "Les nouveaux gagnants ont été sélectionnés et enregistrés dans la base de données. Impossible de trouver le salon pour l'annoncer.",
-                        ),
-                    ],
+                    content: "Relance terminée : les nouveaux gagnants ont été sélectionnés et enregistrés dans la base de données. Impossible de trouver le salon pour l'annoncer.",
                     flags: MessageFlags.Ephemeral,
                 });
             }
@@ -211,12 +205,7 @@ export default {
                 }
 
                 return InteractionHelper.safeReply(interaction, {
-                    embeds: [
-                        successEmbed(
-                            "Relance terminée",
-                            `Les nouveaux gagnants ont été annoncés dans ${channel}. (Message d'origine introuvable).`,
-                        ),
-                    ],
+                    content: `Relance terminée : les nouveaux gagnants ont été annoncés dans ${channel}. (Message d'origine introuvable).`,
                     flags: MessageFlags.Ephemeral,
                 });
             }
@@ -291,12 +280,7 @@ export default {
             }
 
             return InteractionHelper.safeReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        "Relance réussie ✅",
-                        `Tirage relancé avec succès pour **${giveaway.prize}** dans ${channel}. ${newWinners.length} nouveau(x) gagnant(s) sélectionné(s).`,
-                    ),
-                ],
+                content: `Relance réussie ✅ — Tirage relancé avec succès pour **${giveaway.prize}** dans ${channel}. ${newWinners.length} nouveau(x) gagnant(s) sélectionné(s).`,
                 flags: MessageFlags.Ephemeral,
             });
 

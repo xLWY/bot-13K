@@ -1,6 +1,5 @@
 import { getColor } from '../../config/bot.js';
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, LabelBuilder } from 'discord.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -211,18 +210,16 @@ async function handleSetupSubcommand(interaction, client) {
 
         logger.info(`Successfully created Join to Create system in guild ${guildId}`);
 
-        const responseEmbed = successEmbed(
-            '✅ Configuration terminée',
-            `Canal Join to Create créé : ${triggerChannel}\n\n` +
+        const responseContent =
+            `✅ Configuration terminée\nCanal Join to Create créé : ${triggerChannel}\n\n` +
             `**Paramètres :**\n` +
             `• Modèle : \`${nameTemplate}\`\n` +
             `• Limite de membres : ${userLimit === 0 ? 'Illimitée' : userLimit + ' membres'}\n` +
             `• Débit binaire : ${bitrate} kbps\n` +
             `${category ? `• Catégorie : ${category.name}` : '• Catégorie : Racine'}` +
-            `${moderatorRole ? `\n• Rôle modérateur : ${moderatorRole}` : ''}`
-        );
+            `${moderatorRole ? `\n• Rôle modérateur : ${moderatorRole}` : ''}`;
 
-        return await InteractionHelper.safeEditReply(interaction, { embeds: [responseEmbed] });
+        return await InteractionHelper.safeEditReply(interaction, { content: responseContent });
 
     } catch (error) {
         logger.error('Error in handleSetupSubcommand:', error);
@@ -448,7 +445,7 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
         });
 
         await modalSubmission.reply({
-            embeds: [successEmbed('✅ Modifié', `Le modèle de nom est maintenant \`${newTemplate}\``)],
+            content: `✅ Modèle de nom mis à jour : \`${newTemplate}\``,
             flags: MessageFlags.Ephemeral
         });
 
@@ -517,7 +514,7 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig, 
         });
 
         await modalSubmission.reply({
-            embeds: [successEmbed('✅ Modifié', `La limite est maintenant de ${parseInt(userInput) === 0 ? 'illimitée' : parseInt(userInput) + ' membres'}`)],
+            content: `✅ Limite mise à jour : ${parseInt(userInput) === 0 ? 'illimitée' : parseInt(userInput) + ' membres'}`,
             flags: MessageFlags.Ephemeral
         });
 
@@ -586,7 +583,7 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig, cl
         });
 
         await modalSubmission.reply({
-            embeds: [successEmbed('✅ Modifié', `Débit binaire changé à ${parseInt(userInput)} kbps`)],
+            content: `✅ Débit binaire mis à jour : ${parseInt(userInput)} kbps`,
             flags: MessageFlags.Ephemeral
         });
 
@@ -621,7 +618,7 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
         );
 
         await InteractionHelper.safeReply(interaction, {
-            embeds: [errorEmbed('⚠️ Confirmation', `Es-tu sûr de vouloir retirer **${triggerChannel.name}** du système Join to Create ?\n\nCette action est irréversible.`)],
+            content: `⚠️ Confirmation — Es-tu sûr de vouloir retirer **${triggerChannel.name}** du système Join to Create ?\n\nCette action est irréversible.`,
             components: [confirmRow],
             flags: MessageFlags.Ephemeral
         });
@@ -668,13 +665,13 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
                     }
 
                     await buttonInteraction.update({
-                        embeds: [successEmbed('✅ Supprimé', `**${triggerChannel.name}** a été retiré du système Join to Create.`)],
+                        content: `✅ Supprimé — **${triggerChannel.name}** a été retiré du système Join to Create.`,
                         components: []
                     });
 
                 } else {
                     await buttonInteraction.update({
-                        embeds: [successEmbed('✅ Annulé', 'La suppression du canal a été annulée.')],
+                        content: '✅ Annulé — La suppression du canal a été annulée.',
                         components: []
                     });
                 }

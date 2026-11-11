@@ -19,7 +19,6 @@ import {
     TextDisplayBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getWelcomeConfig, saveWelcomeConfig } from '../../../utils/database.js';
@@ -284,24 +283,14 @@ export default {
                         }
 
                         await btnInteraction.followUp({
-                            embeds: [
-                                successEmbed(
-                                    '✅ Bienvenue mise à jour',
-                                    `Les messages de bienvenue sont désormais **${cfg.enabled ? 'activés' : 'désactivés'}**.`,
-                                ),
-                            ],
+                            content: `✅ Bienvenue mise à jour — Les messages de bienvenue sont désormais **${cfg.enabled ? 'activés' : 'désactivés'}**.`,
                             flags: MessageFlags.Ephemeral,
                         });
                     } else if (customId === `greet_cfg_ping_welcome_${guildId}`) {
                         cfg.welcomePing = !cfg.welcomePing;
                         await saveWelcomeConfig(client, guildId, cfg);
                         await btnInteraction.followUp({
-                            embeds: [
-                                successEmbed(
-                                    '✅ Mention de bienvenue mise à jour',
-                                    `Les nouveaux membres seront${cfg.welcomePing ? '' : ' **pas**'} mentionnés dans le message de bienvenue.`,
-                                ),
-                            ],
+                            content: `✅ Mention de bienvenue mise à jour — Les nouveaux membres seront${cfg.welcomePing ? '' : ' **pas**'} mentionnés dans le message de bienvenue.`,
                             flags: MessageFlags.Ephemeral,
                         });
                     } else if (customId === `greet_cfg_preview_${guildId}`) {
@@ -421,7 +410,7 @@ async function handleWelcomeChannel(selectInteraction, rootInteraction, cfg, gui
         }
 
         await chanInteraction.followUp({
-            embeds: [successEmbed('✅ Canal mis à jour', `Les messages de bienvenue seront désormais envoyés dans ${channel}.`)],
+            content: `✅ Canal mis à jour — Les messages de bienvenue seront désormais envoyés dans ${channel}.`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -496,14 +485,11 @@ async function handleWelcomeMessage(selectInteraction, rootInteraction, cfg, gui
     const liveUpdated = await updateLiveWelcomeMessage(client, rootInteraction.guild, cfg);
 
     await submitted.reply({
-        embeds: [
-            successEmbed(
-                '✅ Message de bienvenue mis à jour',
-                liveUpdated
-                    ? 'Le message a été enregistré et le message déjà envoyé dans le salon a été modifié sur place.'
-                    : 'Le message a été enregistré. Aucun message envoyé précédemment n\'a été trouvé à modifier.',
-            ),
-        ],
+        content: `✅ Message de bienvenue mis à jour — ${
+            liveUpdated
+                ? 'Le message a été enregistré et le message déjà envoyé dans le salon a été modifié sur place.'
+                : 'Le message a été enregistré. Aucun message envoyé précédemment n\'a été trouvé à modifier.'
+        }`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -552,14 +538,11 @@ async function handleWelcomeTitle(selectInteraction, rootInteraction, cfg, guild
     const liveUpdated = await updateLiveWelcomeMessage(client, rootInteraction.guild, cfg);
 
     await submitted.reply({
-        embeds: [
-            successEmbed(
-                '✅ Titre de bienvenue mis à jour',
-                liveUpdated
-                    ? 'Le titre a été enregistré et le message déjà envoyé dans le salon a été modifié sur place.'
-                    : 'Le titre a été enregistré. Aucun message envoyé précédemment n\'a été trouvé à modifier.',
-            ),
-        ],
+        content: `✅ Titre de bienvenue mis à jour — ${
+            liveUpdated
+                ? 'Le titre a été enregistré et le message déjà envoyé dans le salon a été modifié sur place.'
+                : 'Le titre a été enregistré. Aucun message envoyé précédemment n\'a été trouvé à modifier.'
+        }`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -817,16 +800,11 @@ async function handleAdoptExistingMessage(btnInteraction, cfg, guildId, client, 
     const preview = cfg.welcomeMessage.length > 300 ? `${cfg.welcomeMessage.slice(0, 300)}…` : cfg.welcomeMessage;
 
     await btnInteraction.followUp({
-        embeds: [
-            successEmbed(
-                '♻️ Ancien message repris',
-                `J'ai récupéré le contenu de mon message dans ${channel} :\n\n> ${preview.replace(/\n/g, '\n> ')}\n\n${
-                    liveUpdated
-                        ? 'Le message déjà présent dans le salon a été modifié sur place : aucun nouveau message n\'a été créé. '
-                        : ''
-                }Les nouveaux membres recevront ce message. Tu peux encore le modifier via « Modifier le message de bienvenue ».`,
-            ),
-        ],
+        content: `♻️ Ancien message repris — J'ai récupéré le contenu de mon message dans ${channel} :\n\n> ${preview.replace(/\n/g, '\n> ')}\n\n${
+            liveUpdated
+                ? 'Le message déjà présent dans le salon a été modifié sur place : aucun nouveau message n\'a été créé. '
+                : ''
+        }Les nouveaux membres recevront ce message. Tu peux encore le modifier via « Modifier le message de bienvenue ».`,
         flags: MessageFlags.Ephemeral,
     });
 }
@@ -904,16 +882,11 @@ async function handleWelcomeImage(selectInteraction, rootInteraction, cfg, guild
     const liveUpdated = await updateLiveWelcomeMessage(client, rootInteraction.guild, cfg);
 
     await submitted.reply({
-        embeds: [
-            successEmbed(
-                '✅ Image de bienvenue mise à jour',
-                `Image ${imageUrl ? 'mise à jour' : 'supprimée'} avec succès.${
-                    liveUpdated
-                        ? '\nLe message déjà envoyé dans le salon a été modifié sur place.'
-                        : '\nAucun message envoyé précédemment n\'a été trouvé à modifier.'
-                }`,
-            ),
-        ],
+        content: `✅ Image de bienvenue mise à jour — Image ${imageUrl ? 'mise à jour' : 'supprimée'} avec succès.${
+            liveUpdated
+                ? '\nLe message déjà envoyé dans le salon a été modifié sur place.'
+                : '\nAucun message envoyé précédemment n\'a été trouvé à modifier.'
+        }`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -929,12 +902,7 @@ async function handleWelcomePing(selectInteraction, rootInteraction, cfg, guildI
     await saveWelcomeConfig(client, guildId, cfg);
 
     await selectInteraction.followUp({
-        embeds: [
-            successEmbed(
-                '✅ Welcome Ping Updated',
-                `Joining users will${cfg.welcomePing ? '' : ' **not**'} be pinged in the welcome message.`,
-            ),
-        ],
+        content: `✅ Welcome Ping Updated — Joining users will${cfg.welcomePing ? '' : ' **not**'} be pinged in the welcome message.`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -997,14 +965,11 @@ async function handleAutoRole(selectInteraction, rootInteraction, cfg, guildId, 
         await saveWelcomeConfig(client, guildId, cfg);
 
         await roleInteraction.followUp({
-            embeds: [
-                successEmbed(
-                    '✅ Rôles auto mis à jour',
-                    selectedRoles.length
-                        ? `Les nouveaux membres recevront : ${selectedRoles.map(id => `<@&${id}>`).join(', ')}.`
-                        : 'Aucun rôle auto n\'est désormais attribué.',
-                ),
-            ],
+            content: `✅ Rôles auto mis à jour — ${
+                selectedRoles.length
+                    ? `Les nouveaux membres recevront : ${selectedRoles.map(id => `<@&${id}>`).join(', ')}.`
+                    : 'Aucun rôle auto n\'est désormais attribué.'
+            }`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -1120,7 +1085,7 @@ async function handleArrivalChannel(selectInteraction, rootInteraction, cfg, gui
         }
 
         await chanInteraction.followUp({
-            embeds: [successEmbed('✅ Salon d\'arrivée mis à jour', `Les messages « X vient d'arriver » seront postés dans ${channel} pendant 10 minutes.`)],
+            content: `✅ Salon d'arrivée mis à jour — Les messages « X vient d'arriver » seront postés dans ${channel} pendant 10 minutes.`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -1176,7 +1141,7 @@ async function handleArrivalMessage(selectInteraction, rootInteraction, cfg, gui
     await saveWelcomeConfig(client, guildId, cfg);
 
     await submitted.reply({
-        embeds: [successEmbed('✅ Message d\'arrivée mis à jour', 'Le message affiché à l\'arrivée d\'un membre a été enregistré.')],
+        content: '✅ Message d\'arrivée mis à jour — Le message affiché à l\'arrivée d\'un membre a été enregistré.',
         flags: MessageFlags.Ephemeral,
     });
 

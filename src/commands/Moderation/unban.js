@@ -1,5 +1,4 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction, moderationMentionPayload } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { ModerationService } from '../../services/moderationService.js';
@@ -47,13 +46,7 @@ export default {
                 });
 
                 await InteractionHelper.safeEditReply(interaction, {
-                    ...moderationMentionPayload(targetUser.id, 'a été débanni du serveur.'),
-                    embeds: [
-                        successEmbed(
-                            "✅ Utilisateur débanni",
-                            `**${targetUser.tag}** a bien été débanni du serveur.\n\n**Raison :** ${reason}\n**ID de cas :** #${result.caseId}`
-                        )
-                    ]
+                    ...moderationMentionPayload(targetUser.id, `a été débanni du serveur.\n\n**Raison :** ${reason}\n**ID de cas :** #${result.caseId}`),
                 });
         } catch (error) {
             logger.error('Unban command error:', error);

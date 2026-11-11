@@ -1,5 +1,4 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
-import { createEmbed, errorEmbed, warningEmbed } from '../../utils/embeds.js';
 import { getConfirmationButtons } from '../../utils/components.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
@@ -24,12 +23,10 @@ export default {
                 `• 📋 Toutes les autres données personnelles\n\n` +
                 `**Cette action ne peut pas être annulée. Es-tu vraiment sûr ?**`;
 
-            const embed = warningEmbed(warningMessage, '🗑️ Effacer Toutes les Données');
-
             const confirmButtons = getConfirmationButtons('wipedata');
 
             await InteractionHelper.safeReply(interaction, {
-                embeds: [embed],
+                content: `🗑️ Effacer Toutes les Données\n\n${warningMessage}`,
                 components: [confirmButtons],
                 flags: MessageFlags.Ephemeral
             });

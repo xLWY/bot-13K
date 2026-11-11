@@ -14,7 +14,6 @@ import {
     StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import {
     getCounterBaseName,
@@ -361,7 +360,7 @@ async function runRefresh(btnInteraction, client) {
     }
 
     await btnInteraction.followUp({
-        embeds: [successEmbed(lines.join('\n'), '🔄 Actualisation')],
+        content: `🔄 Actualisation — ${lines.join('\n')}`,
         flags: MessageFlags.Ephemeral,
     });
 }
@@ -569,12 +568,7 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
         const finalChannel = guild.channels.cache.get(channel.id) || channel;
 
         await lastInteraction.followUp({
-            embeds: [
-                successEmbed(
-                    `**Type :** ${typeLabel(type)}\n**Catégorie :** ${category || '_racine du serveur_'}\n**Salon :** ${finalChannel}\n**Nom actuel :** ${finalChannel.name}${updated ? '' : '\n\n⚠️ Le nom sera corrigé au prochain passage automatique.'}`,
-                    '✅ Compteur créé',
-                ),
-            ],
+            content: `✅ Compteur créé — **Type :** ${typeLabel(type)}\n**Catégorie :** ${category || '_racine du serveur_'}\n**Salon :** ${finalChannel}\n**Nom actuel :** ${finalChannel.name}${updated ? '' : '\n\n⚠️ Le nom sera corrigé au prochain passage automatique.'}`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -676,9 +670,9 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
             const refreshed = await updateCounter(client, guild, counter, stats);
             const updatedChannel = await resolveCounterChannel(guild, counter.channelId);
             await itemInteraction.followUp({
-                embeds: [refreshed
-                    ? successEmbed(`\`${formatCount(await getCounterCount(guild, counter.type, stats))}\`\n**Salon :** ${updatedChannel || 'introuvable'}${updatedChannel ? `\n**Nom :** ${updatedChannel.name}` : ''}`, '🔄 Compteur actualisé')
-                    : warningEmbed('Impossible de modifier le nom du salon. Vérifie que je peux renommer ce salon.', '⚠️ Échec')],
+                content: refreshed
+                    ? `🔄 Compteur actualisé — \`${formatCount(await getCounterCount(guild, counter.type, stats))}\`\n**Salon :** ${updatedChannel || 'introuvable'}${updatedChannel ? `\n**Nom :** ${updatedChannel.name}` : ''}`
+                    : '⚠️ Échec — Impossible de modifier le nom du salon. Vérifie que je peux renommer ce salon.',
                 flags: MessageFlags.Ephemeral,
             });
         }
@@ -700,7 +694,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
                 await updateCounter(client, guild, target, await getGuildCounterStats(guild));
             }
             await itemInteraction.followUp({
-                embeds: [successEmbed(`Le compteur **${typeLabel(target.type)}** est désormais **${target.enabled ? 'actif' : 'désactivé'}**.`, target.enabled ? '▶️ Compteur activé' : '⏸️ Compteur désactivé')],
+                content: `${target.enabled ? '▶️ Compteur activé' : '⏸️ Compteur désactivé'} — Le compteur **${typeLabel(target.type)}** est désormais **${target.enabled ? 'actif' : 'désactivé'}**.`,
                 flags: MessageFlags.Ephemeral,
             });
         }
@@ -708,7 +702,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
         if (itemInteraction.customId === `ss_dash_item_delete:${counter.id}`) {
             const result = await performDeletionByCounterId(client, guild, counter.id);
             await itemInteraction.followUp({
-                embeds: [result.success ? successEmbed(result.message, '🗑️ Compteur supprimé') : warningEmbed(result.message, '⚠️ Échec')],
+                content: `${result.success ? '🗑️ Compteur supprimé' : '⚠️ Échec'} — ${result.message}`,
                 flags: MessageFlags.Ephemeral,
             });
         }

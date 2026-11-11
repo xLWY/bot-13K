@@ -3,7 +3,6 @@ import { getColor } from '../../config/bot.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { logger } from '../../utils/logger.js';
-import { successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { WarningService } from '../../services/warningService.js';
 
@@ -233,7 +232,7 @@ async function openActionModal(btn, action) {
 
     if (!action.noTarget && !targetId) {
         await submitted.reply({
-            embeds: [warningEmbed('Mention ou ID utilisateur invalide.', '\u{26A0}\u{FE0F} Erreur')],
+            content: 'Mention ou ID utilisateur invalide.',
             flags: MessageFlags.Ephemeral,
         }).catch(() => {});
         return;
@@ -251,14 +250,14 @@ async function openActionModal(btn, action) {
 
     if (!result.success) {
         await submitted.reply({
-            embeds: [warningEmbed(result.error, '\u{26A0}\u{FE0F} Action impossible')],
+            content: result.error,
             flags: MessageFlags.Ephemeral,
         }).catch(() => {});
         return;
     }
 
     await submitted.reply({
-        embeds: [successEmbed(result.message, result.title)],
+        content: result.message,
         flags: MessageFlags.Ephemeral,
     }).catch(() => {});
 }
@@ -509,7 +508,7 @@ async function openWarnList(btn) {
     const targetId = resolveUserId(submitted.fields.getTextInputValue('warnuser_input'));
     if (!targetId) {
         await submitted.reply({
-            embeds: [warningEmbed('ID utilisateur invalide.', '\u{26A0}\u{FE0F} Erreur')],
+            content: 'ID utilisateur invalide.',
             flags: MessageFlags.Ephemeral,
         }).catch(() => {});
         return;

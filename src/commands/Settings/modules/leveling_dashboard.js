@@ -13,7 +13,6 @@ import {
     TextInputStyle,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
-import { successEmbed, warningEmbed } from '../../../utils/embeds.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError } from '../../../utils/errorHandler.js';
 import { getLevelingConfig, saveLevelingConfig } from '../../../services/leveling.js';
@@ -228,7 +227,7 @@ async function handleEnable(btnInteraction, client, guildId) {
     }
 
     await btnInteraction.followUp({
-        embeds: [successEmbed(`Le système de leveling est désormais **${cfg.enabled ? 'activé' : 'désactivé'}**.`, '📈 Leveling')],
+        content: `📈 Leveling — Le système de leveling est désormais **${cfg.enabled ? 'activé' : 'désactivé'}**.`,
         flags: MessageFlags.Ephemeral,
     });
 }
@@ -240,7 +239,7 @@ async function handleAnnounce(btnInteraction, client, guildId) {
     await saveLevelingConfig(client, guildId, cfg);
 
     await btnInteraction.followUp({
-        embeds: [successEmbed(`Les annonces de montée de niveau sont **${cfg.announceLevelUp ? 'activées' : 'désactivées'}**.`, '📢 Annonces')],
+        content: `📢 Annonces — Les annonces de montée de niveau sont **${cfg.announceLevelUp ? 'activées' : 'désactivées'}**.`,
         flags: MessageFlags.Ephemeral,
     });
 }
@@ -349,7 +348,7 @@ async function handleXp(btnInteraction, rootInteraction, client, guildId) {
 
     if (Number.isNaN(min) || Number.isNaN(max) || min < 1 || max < 1 || min > max) {
         await submitted.reply({
-            embeds: [warningEmbed('L\'XP minimum doit être inférieur ou égal au maximum, et les deux doivent être ≥ 1.', '⚠️ Plage invalide')],
+            content: '⚠️ Plage invalide — L\'XP minimum doit être inférieur ou égal au maximum, et les deux doivent être ≥ 1.',
             flags: MessageFlags.Ephemeral,
         });
         return;
@@ -360,7 +359,7 @@ async function handleXp(btnInteraction, rootInteraction, client, guildId) {
     await saveLevelingConfig(client, guildId, cfg);
 
     await submitted.reply({
-        embeds: [successEmbed(`Chaque message accorde désormais entre **${min}** et **${max}** XP.`, '💎 Plage d\'XP')],
+        content: `💎 Plage d'XP — Chaque message accorde désormais entre **${min}** et **${max}** XP.`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -404,7 +403,7 @@ async function handleCooldown(btnInteraction, rootInteraction, client, guildId) 
     const seconds = parseInt(submitted.fields.getTextInputValue('seconds_input'), 10);
     if (Number.isNaN(seconds) || seconds < 0 || seconds > 3600) {
         await submitted.reply({
-            embeds: [warningEmbed('Le délai doit être compris entre 0 et 3600 secondes.', '⚠️ Délai invalide')],
+            content: '⚠️ Délai invalide — Le délai doit être compris entre 0 et 3600 secondes.',
             flags: MessageFlags.Ephemeral,
         });
         return;
@@ -415,7 +414,7 @@ async function handleCooldown(btnInteraction, rootInteraction, client, guildId) 
     await saveLevelingConfig(client, guildId, latest);
 
     await submitted.reply({
-        embeds: [successEmbed(`Un utilisateur peut gagner de l'XP toutes les **${seconds}** seconde(s).`, '⏱️ Délai')],
+        content: `⏱️ Délai — Un utilisateur peut gagner de l'XP toutes les **${seconds}** seconde(s).`,
         flags: MessageFlags.Ephemeral,
     });
 

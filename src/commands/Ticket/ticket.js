@@ -5,7 +5,7 @@ import {
   ChannelType,
   MessageFlags,
 } from 'discord.js';
-import { createEmbed, successEmbed } from '../../utils/embeds.js';
+import { createEmbed } from '../../utils/embeds.js';
 import { buildTicketTypeButtons } from '../../services/ticket.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -256,12 +256,7 @@ export default {
                     successMessage += `\n\n**Tickets max par utilisateur :** ${maxTicketsPerUser}\n**MP à la fermeture :** ${dmOnClose ? 'Activé' : 'Désactivé'}`;
 
                     await InteractionHelper.safeEditReply(interaction, {
-                        embeds: [
-                            successEmbed(
-                                "Panneau de tickets configuré",
-                                successMessage,
-                            ),
-                        ],
+                        content: `Panneau de tickets configuré — ${successMessage}`,
                     });
 
                     logger.info('Ticket panel setup completed', {

@@ -1,4 +1,4 @@
-import { createEmbed, successEmbed } from '../utils/embeds.js';
+import { createEmbed } from '../utils/embeds.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { MessageFlags } from 'discord.js';
 import { logger } from '../utils/logger.js';
@@ -111,7 +111,7 @@ const wipedataConfirmHandler = {
         `*Toutes tes données économiques, tes niveaux, tes objets et tes données personnelles ont été supprimés.*`;
 
       await interaction.editReply({
-        embeds: [successEmbed(successMessage, '🗑️ Suppression des données terminée')],
+        content: successMessage,
         components: []
       });
 

@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
 import { getGuildGiveaways, saveGiveaway } from '../../utils/giveaways.js';
@@ -190,12 +189,7 @@ export default {
             logger.info(`Giveaway successfully ended by ${interaction.user.tag}: ${messageId}`);
 
             return InteractionHelper.safeReply(interaction, {
-                embeds: [
-                    successEmbed(
-                        "Concours terminé ✅",
-                        `Le concours **${updatedGiveaway.prize || 'Concours mystère'}** est terminé dans ${channel}. ${winners.length} gagnant(s) sélectionné(s) parmi ${endResult.participantCount} participant(s).`,
-                    ),
-                ],
+                content: `Concours terminé ✅ — Le concours **${updatedGiveaway.prize || 'Concours mystère'}** est terminé dans ${channel}. ${winners.length} gagnant(s) sélectionné(s) parmi ${endResult.participantCount} participant(s).`,
                 flags: MessageFlags.Ephemeral,
             });
 

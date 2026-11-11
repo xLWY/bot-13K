@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { successEmbed } from '../../utils/embeds.js';
 import { logModerationAction, moderationMentionPayload } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -104,13 +103,7 @@ export default {
 
       
       await InteractionHelper.universalReply(interaction, {
-        ...moderationMentionPayload(targetUser.id, 'a été expulsé du serveur.'),
-        embeds: [
-          successEmbed(
-            `👢 **Expulsé** ${targetUser.tag}`,
-            `**Raison :** ${reason}\n**ID de cas :** #${caseId}`,
-          ),
-        ],
+        ...moderationMentionPayload(targetUser.id, `a été expulsé du serveur.\n**Raison :** ${reason}\n**ID de cas :** #${caseId}`),
       });
     } catch (error) {
       logger.error('Kick command error:', error);

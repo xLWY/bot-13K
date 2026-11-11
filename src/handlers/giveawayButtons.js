@@ -1,5 +1,4 @@
 import { MessageFlags, PermissionFlagsBits } from 'discord.js';
-import { successEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
 import { XlwyBotError, ErrorTypes, handleInteractionError } from '../utils/errorHandler.js';
 import { 
@@ -202,12 +201,7 @@ export const giveawayEndHandler = {
             }
 
             await interaction.reply({
-                embeds: [
-                    successEmbed(
-                        `Concours terminé ✅`,
-                        `Le concours est terminé et ${winners.length} gagnant(s) ont été tirés !`
-                    )
-                ],
+                content: `Concours terminé ✅ — Le concours est terminé et ${winners.length} gagnant(s) ont été tirés !`,
                 flags: MessageFlags.Ephemeral
             });
 
@@ -336,12 +330,7 @@ export const giveawayRerollHandler = {
             }
 
             await interaction.reply({
-                embeds: [
-                    successEmbed(
-                        'Concours relancé ✅',
-                        `De nouveaux gagnants ont été tirés !`
-                    )
-                ],
+                content: 'Concours relancé ✅ — De nouveaux gagnants ont été tirés !',
                 flags: MessageFlags.Ephemeral
             });
 
@@ -391,12 +380,7 @@ export const giveawayViewHandler = {
                 : 'Aucun gagnant valide n\'a été tiré pour ce concours.';
 
             await interaction.reply({
-                embeds: [
-                    successEmbed(
-                        `Gagnants pour ${giveaway.prize || 'ce concours'} 🎉`,
-                        winnerMentions
-                    )
-                ],
+                content: `Gagnants pour ${giveaway.prize || 'ce concours'} 🎉 — ${winnerMentions}`,
                 flags: MessageFlags.Ephemeral
             });
         } catch (error) {

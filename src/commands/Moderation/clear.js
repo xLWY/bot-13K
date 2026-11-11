@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed } from '../../utils/embeds.js';
+import { createEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
@@ -87,9 +87,7 @@ export default {
 
       if (!isPrefix) {
         await InteractionHelper.safeEditReply(interaction, {
-          embeds: [
-            successEmbed(`🗑️ ${deletedCount} messages supprimés dans ${channel}.`),
-          ],
+          content: `🗑️ ${deletedCount} messages supprimés dans ${channel}.`,
         flags: MessageFlags.Ephemeral,
         });
 

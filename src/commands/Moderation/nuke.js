@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { errorEmbed } from '../../utils/embeds.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -68,7 +67,7 @@ export default {
             logger.error('Nuke command error:', error);
             try {
                 await channel.send({
-                    embeds: [errorEmbed('Une erreur inattendue est survenue lors de la destruction de ce salon. Vérifie mes permissions (il me faut \'Gérer les salons\').')]
+                    content: 'Une erreur inattendue est survenue lors de la destruction de ce salon. Vérifie mes permissions (il me faut \'Gérer les salons\').'
                 });
             } catch {
                 // Original channel may already be gone at this point; nothing more we can do.

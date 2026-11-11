@@ -1,5 +1,4 @@
 import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logModerationAction, moderationMentionPayload } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -42,13 +41,7 @@ export default {
             });
 
             await InteractionHelper.universalReply(interaction, {
-                ...moderationMentionPayload(user.id, 'a été banni du serveur.'),
-                embeds: [
-                    successEmbed(
-                        `🚫 **Banni** ${user.tag}`,
-                        `**Raison :** ${reason}\n**ID de cas :** #${result.caseId}`,
-                    ),
-                ],
+                ...moderationMentionPayload(user.id, `a été banni du serveur.\n**Raison :** ${reason}\n**ID de cas :** #${result.caseId}`),
             });
         } catch (error) {
             logger.error('Ban command error:', error);
