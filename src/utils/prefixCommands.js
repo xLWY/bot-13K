@@ -447,7 +447,11 @@ export async function handlePrefixCommand(message, client) {
         }
 
         const commandJSON = typeof command.data.toJSON === 'function' ? command.data.toJSON() : command.data;
-        let optionDefs = commandJSON.options || [];
+        // Une commande peut fournir `prefixOptions: []` pour gérer elle-même ses
+        // arguments préfixés (ex: addrole accepte les mentions dans n'importe quel ordre).
+        let optionDefs = Array.isArray(command.prefixOptions)
+            ? command.prefixOptions
+            : (commandJSON.options || []);
         let subcommand = null;
         let subcommandGroup = null;
 
