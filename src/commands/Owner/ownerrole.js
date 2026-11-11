@@ -9,7 +9,7 @@ import {
     StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { successEmbed, errorEmbed, infoEmbed } from '../../utils/embeds.js';
+import { infoEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
 
@@ -160,7 +160,7 @@ function startCollector(interaction, guild, reply, roles) {
 
             if (!role) {
                 await i.editReply({
-                    embeds: [errorEmbed('Ce rôle n\'existe plus.')],
+                    content: 'Ce rôle n\'existe plus.',
                     components: [],
                 });
                 collector.stop('missing_role');
@@ -173,7 +173,7 @@ function startCollector(interaction, guild, reply, roles) {
 
             if (role.id === guild.id || role.managed || role.position >= botHighest.position) {
                 await i.editReply({
-                    embeds: [errorEmbed('Je ne peux plus attribuer ce rôle. Vérifie la position de mon rôle.')],
+                    content: 'Je ne peux plus attribuer ce rôle. Vérifie la position de mon rôle.',
                     components: [],
                 });
                 collector.stop('not_assignable');
@@ -182,7 +182,7 @@ function startCollector(interaction, guild, reply, roles) {
 
             if (ownerMember.roles.cache.has(role.id)) {
                 await i.editReply({
-                    embeds: [infoEmbed(`Tu as déjà le rôle ${role}.`, 'ℹ️ Rôle déjà possédé')],
+                    content: `Tu as déjà le rôle ${role}.`,
                     components: [],
                 });
                 collector.stop('already_owned');
@@ -196,19 +196,14 @@ function startCollector(interaction, guild, reply, roles) {
             );
 
             await i.editReply({
-                embeds: [
-                    successEmbed(
-                        `Je t'ai donné le rôle ${role}.\nPosition : \`${role.position}\` — ${permissionSummary(role)}`,
-                        '✅ Rôle attribué'
-                    ),
-                ],
+                content: `Je t'ai donné le rôle ${role}.\nPosition : \`${role.position}\` — ${permissionSummary(role)}`,
                 components: [],
             });
             collector.stop('assigned');
         } catch (error) {
             logger.error('Error in /ownerrole select:', error);
             await i.editReply({
-                embeds: [errorEmbed('Impossible de te donner ce rôle. Vérifie mes permissions et la position de mon rôle.')],
+                content: 'Impossible de te donner ce rôle. Vérifie mes permissions et la position de mon rôle.',
                 components: [],
             }).catch(() => {});
             collector.stop('error');

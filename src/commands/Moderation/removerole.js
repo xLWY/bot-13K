@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { errorEmbed, infoEmbed, successEmbed } from '../../utils/embeds.js';
 import { moderationMentionPayload } from '../../utils/moderation.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
@@ -30,7 +29,7 @@ function parseMentions(message) {
 
 async function fail(interaction, message) {
     await InteractionHelper.safeEditReply(interaction, {
-        embeds: [errorEmbed(message)],
+        content: message,
     }).catch(() => {});
 }
 
@@ -154,7 +153,7 @@ export default {
 
             if (!targetMember.roles.cache.has(role.id)) {
                 return InteractionHelper.safeEditReply(interaction, {
-                    embeds: [infoEmbed(`${targetMember} n'a pas le rôle **${role.name}**.`, 'ℹ️ Rôle absent')],
+                    content: `${targetMember} n'a pas le rôle **${role.name}**.`,
                 });
             }
 
@@ -185,12 +184,6 @@ export default {
 
             return InteractionHelper.safeEditReply(interaction, {
                 ...moderationMentionPayload(targetMember.id, `a perdu le rôle **${role.name}**.`),
-                embeds: [
-                    successEmbed(
-                        `Le rôle **${role.name}** a été retiré à ${targetMember}.`,
-                        '✅ Rôle retiré',
-                    ),
-                ],
             });
         } catch (error) {
             logger.error('RemoveRole command error:', error);
