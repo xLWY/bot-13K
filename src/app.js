@@ -45,6 +45,7 @@ GatewayIntentBits.GuildBans,
 
     this.config = config;
     this.commands = new Collection();
+    this.commandAliases = new Collection();
     this.events = new Collection();
     this.buttons = new Collection();
     this.selectMenus = new Collection();

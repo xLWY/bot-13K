@@ -74,6 +74,7 @@ async function getAllFiles(directory, fileList = []) {
 
 export async function loadCommands(client) {
     client.commands = new Collection();
+    client.commandAliases = new Collection();
     const commandsPath = path.join(__dirname, '../commands');
     const commandFiles = await getAllFiles(commandsPath);
     
@@ -138,6 +139,36 @@ export async function loadCommands(client) {
     }
     
     logger.info(`Loaded ${uniqueCommands.size} commands`);
+
+    for (const command of client.commands.values()) {
+        const aliases = Array.isArray(command.aliases) ? command.aliases : [];
+
+        for (const alias of aliases) {
+            const normalized = String(alias ?? '').trim().toLowerCase();
+            if (!normalized || normalized === command.data.name.toLowerCase()) continue;
+
+            if (client.commands.has(normalized)) {
+                logger.warn(`Command alias "${normalized}" for "${command.data.name}" conflicts with an existing command; ignored.`);
+                continue;
+            }
+
+            const existing = client.commandAliases.get(normalized);
+            if (existing) {
+                logger.warn(`Command alias "${normalized}" for "${command.data.name}" is already used by "${existing.data.name}"; ignored.`);
+                continue;
+            }
+
+            client.commandAliases.set(normalized, command);
+        }
+    }
+
+    if (client.commandAliases.size > 0) {
+        const aliasSummary = [...client.commandAliases.entries()]
+            .map(([alias, command]) => `${alias} -> ${command.data.name}`)
+            .join(', ');
+        logger.info(`Loaded ${client.commandAliases.size} command alias(es): ${aliasSummary}`);
+    }
+
     return client.commands;
 }
 

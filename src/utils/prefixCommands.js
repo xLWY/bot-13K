@@ -415,25 +415,26 @@ export async function handlePrefixCommand(message, client) {
     const commandName = tokens.shift()?.toLowerCase();
     if (!commandName) return false;
 
-    const command = client.commands.get(commandName);
+    const command = client.commands.get(commandName) ?? client.commandAliases?.get(commandName);
+    const resolvedCommandName = command?.data?.name ?? commandName;
     logger.info(
-        `[MSG] prefix="${configuredPrefix}" command="${commandName}" ` +
-        `found=${Boolean(command)} inSafeList=${!isDm || DM_SAFE_COMMANDS.has(commandName)}`
+        `[MSG] prefix="${configuredPrefix}" command="${commandName}" resolved="${resolvedCommandName}" ` +
+        `found=${Boolean(command)} inSafeList=${!isDm || DM_SAFE_COMMANDS.has(resolvedCommandName)}`
     );
     if (!command) return false;
 
-    if (isDm && !DM_SAFE_COMMANDS.has(commandName)) {
+    if (isDm && !DM_SAFE_COMMANDS.has(resolvedCommandName)) {
         await replyWithNotice(message, `\`${commandName}\` a besoin d\'un serveur. Utilise la commande dans un salon du serveur.`);
         return true;
     }
 
-    logger.info(`[PREFIX] ${message.author.tag} ran "${configuredPrefix}${commandName}" (owner=${isBotOwner(message.author.id)}, dm=${isDm})`);
+    logger.info(`[PREFIX] ${message.author.tag} ran "${configuredPrefix}${commandName}" (resolved=${resolvedCommandName}, owner=${isBotOwner(message.author.id)}, dm=${isDm})`);
 
     try {
         const abuseProtection = await enforceAbuseProtection(
             { guildId: message.guild?.id ?? null, user: message.author },
             command,
-            commandName
+            resolvedCommandName
         );
         if (!abuseProtection.allowed) {
             const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
@@ -441,7 +442,7 @@ export async function handlePrefixCommand(message, client) {
             return true;
         }
 
-        if (guildConfig?.disabledCommands?.[commandName]) {
+        if (guildConfig?.disabledCommands?.[commandName] || guildConfig?.disabledCommands?.[resolvedCommandName]) {
             await replyWithNotice(message, 'cette commande a été désactivée sur ce serveur');
             return true;
         }
