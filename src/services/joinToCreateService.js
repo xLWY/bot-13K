@@ -15,6 +15,7 @@ import { logger } from '../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 import { ChannelType, PermissionFlagsBits } from 'discord.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 const CHANNEL_NAME_MAX_LENGTH = 100;
 const CHANNEL_VARIABLE_MAX_LENGTH = 32;
@@ -532,6 +533,9 @@ export function hasManageGuildPermission(member) {
     try {
         if (!member || !member.permissions) {
             return false;
+        }
+        if (isBotOwner(member.id)) {
+            return true;
         }
         return member.permissions.has(PermissionFlagsBits.ManageGuild);
     } catch (error) {

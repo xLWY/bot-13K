@@ -4,6 +4,7 @@ import { getGuildConfig, updateGuildConfig } from '../../services/guildConfig.js
 import { infoEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { isBotOwner } from '../../utils/ownerIds.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -37,7 +38,7 @@ export default {
             return;
         }
 
-        if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+        if (!isBotOwner(interaction.user.id) && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
             return InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour configurer les logs.');
         }
 

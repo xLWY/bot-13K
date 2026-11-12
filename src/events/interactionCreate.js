@@ -22,6 +22,7 @@ import { validateChatInputPayloadOrThrow } from '../utils/commandInputValidation
 import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abuseProtection.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { getUserTicketCount, getTicketTypeForGuild } from '../services/ticket.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 logger.info('[TicketFallback] v5 chargé — création en un clic + boutons autonomes.');
 
@@ -33,6 +34,33 @@ function withTraceContext(context = {}, traceContext = {}) {
     command: context.commandName || traceContext.command,
     ...context
   };
+}
+
+function getRequiredCommandPermissions(command) {
+  try {
+    const commandJson = typeof command?.data?.toJSON === 'function'
+      ? command.data.toJSON()
+      : command?.data;
+    const raw = commandJson?.default_member_permissions;
+    if (raw === undefined || raw === null || raw === '') return null;
+    return BigInt(raw);
+  } catch {
+    return null;
+  }
+}
+
+function hasRequiredCommandPermissions(interaction, command) {
+  if (isBotOwner(interaction.user?.id)) return true;
+
+  const required = getRequiredCommandPermissions(command);
+  if (required === null) return true;
+
+  const permissions = interaction.memberPermissions;
+  if (!permissions) return false;
+  if (permissions.has(PermissionFlagsBits.Administrator)) return true;
+  if (required === 0n) return false;
+
+  return permissions.has(required);
 }
 
 async function fallbackEligibility(interaction, client) {
@@ -552,6 +580,19 @@ export default {
               );
             }
 
+            if (!hasRequiredCommandPermissions(interaction, command)) {
+              logger.warn('Slash command permission denied', {
+                userId: interaction.user?.id,
+                guildId: interaction.guildId,
+                commandName: interaction.commandName
+              });
+              await InteractionHelper.sendErrorNotice(
+                interaction,
+                'Tu n\'as pas la permission d\'utiliser cette commande.'
+              );
+              return;
+            }
+
             const abuseProtection = await enforceAbuseProtection(interaction, command, interaction.commandName);
             if (!abuseProtection.allowed) {
               const formattedCooldown = formatCooldownDuration(abuseProtection.remainingMs);
@@ -591,6 +632,12 @@ export default {
             }, interactionTraceContext));
           }
         } else if (interaction.isAutocomplete()) {
+          const autocompleteCommand = client.commands.get(interaction.commandName);
+          if (autocompleteCommand && !hasRequiredCommandPermissions(interaction, autocompleteCommand)) {
+            await interaction.respond([]).catch(() => {});
+            return;
+          }
+
           // Handle autocomplete interactions
           const focusedOption = interaction.options.getFocused(true);
           

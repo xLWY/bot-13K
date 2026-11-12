@@ -11,6 +11,7 @@ import { getGuildConfig } from '../../services/guildConfig.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { isBotOwner } from '../../utils/ownerIds.js';
 
 import ticketConfig from './modules/ticket_dashboard.js';
 
@@ -111,6 +112,7 @@ export default {
             }
 
             if (
+                !isBotOwner(interaction.user.id) &&
                 !interaction.member.permissions.has(
                     PermissionFlagsBits.ManageChannels,
                 )

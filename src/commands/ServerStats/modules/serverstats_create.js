@@ -9,6 +9,7 @@ import { logger } from '../../../utils/logger.js';
 
 
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
+import { isBotOwner } from '../../../utils/ownerIds.js';
 export async function handleCreate(interaction, client) {
     const guild = interaction.guild;
     const type = interaction.options.getString("type");
@@ -24,7 +25,7 @@ export async function handleCreate(interaction, client) {
     }
 
     // Check permissions after deferring
-    if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+    if (!isBotOwner(interaction.user.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
         await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission **Gérer les salons** pour créer des compteurs.").catch(logger.error);
         return;
     }

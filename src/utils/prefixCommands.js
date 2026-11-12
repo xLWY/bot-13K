@@ -1,4 +1,4 @@
-import { PermissionsBitField } from 'discord.js';
+import { PermissionsBitField, PermissionFlagsBits } from 'discord.js';
 import { logger } from './logger.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { BotConfig } from '../config/bot.js';
@@ -484,10 +484,12 @@ export async function handlePrefixCommand(message, client) {
         }
 
         const requiredPerms = commandJSON.default_member_permissions;
-        if (requiredPerms !== undefined && requiredPerms !== null) {
+        if (requiredPerms !== undefined && requiredPerms !== null && requiredPerms !== '') {
             const isOwner = isBotOwner(message.author.id);
             const perms = new PermissionsBitField(BigInt(requiredPerms));
-            if (!isOwner && !message.member.permissions.has(perms)) {
+            const isAdmin = Boolean(message.member?.permissions.has(PermissionFlagsBits.Administrator));
+            const requiresExplicitPermission = perms.bitfield === 0n;
+            if (!isOwner && !isAdmin && (requiresExplicitPermission || !message.member?.permissions.has(perms))) {
                 await replyWithNotice(message, 'tu n\'as pas la permission d\'utiliser cette commande');
                 return true;
             }

@@ -98,7 +98,8 @@ export default {
                     
                     if (member) {
                         if (member.roles.highest.position >= interaction.member.roles.highest.position && 
-                            interaction.guild.ownerId !== interaction.user.id) {
+                            interaction.guild.ownerId !== interaction.user.id &&
+                            !isBotOwner(interaction.user.id)) {
                             results.skipped.push({ 
                                 user: user.tag, 
                                 userId, 

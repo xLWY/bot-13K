@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { isBotOwner } from '../../utils/ownerIds.js';
 export default {
     data: new SlashCommandBuilder()
     .setName("lock")
@@ -25,7 +26,7 @@ export default {
       return;
     }
 
-    if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
+    if (!isBotOwner(interaction.user.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
       return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission `Gérer les salons` pour verrouiller des salons.");
 
     const channel = interaction.channel;

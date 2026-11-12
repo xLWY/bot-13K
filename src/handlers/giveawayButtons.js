@@ -16,6 +16,7 @@ import {
 } from '../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 
 
@@ -105,7 +106,7 @@ export const giveawayEndHandler = {
             }
 
             
-            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+            if (!isBotOwner(interaction.user.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission « Gérer le serveur » pour terminer un concours.");
             }
 
@@ -234,7 +235,7 @@ export const giveawayRerollHandler = {
             }
 
             
-            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+            if (!isBotOwner(interaction.user.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission « Gérer le serveur » pour refaire un tirage.");
             }
 

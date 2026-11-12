@@ -10,6 +10,7 @@ import { logger } from '../../../utils/logger.js';
 
 
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
+import { isBotOwner } from '../../../utils/ownerIds.js';
 export async function handleDelete(interaction, client) {
     const guild = interaction.guild;
     const counterId = interaction.options.getString("counter-id");
@@ -23,7 +24,7 @@ export async function handleDelete(interaction, client) {
     }
 
     // Check permissions after deferring
-    if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+    if (!isBotOwner(interaction.user.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
         await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission **Gérer les salons** pour supprimer des compteurs.").catch(logger.error);
         return;
     }

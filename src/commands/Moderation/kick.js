@@ -65,7 +65,7 @@ export default {
       }
 
       
-      if (interaction.member.roles.highest.position <= member.roles.highest.position) {
+      if (!isBotOwner(interaction.user.id) && interaction.member.roles.highest.position <= member.roles.highest.position) {
         throw new XlwyBotError(
           "Cannot kick user",
           ErrorTypes.PERMISSION,

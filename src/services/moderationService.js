@@ -2,6 +2,7 @@ import { PermissionFlagsBits } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { logModerationAction } from '../utils/moderation.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 
 
@@ -21,7 +22,7 @@ export class ModerationService {
     }
 
     
-    if (moderator.guild.ownerId === moderator.id) {
+    if (isBotOwner(moderator.id) || moderator.guild.ownerId === moderator.id) {
       return { valid: true };
     }
 
@@ -107,7 +108,7 @@ export class ModerationService {
       } else {
         // If target is not in guild, we can't check their roles easily.
         // As a safety measure, only allow users with ManageGuild or Administrator to ban non-members.
-        const isOwner = guild.ownerId === moderator.id;
+        const isOwner = isBotOwner(moderator.id) || guild.ownerId === moderator.id;
         const hasHighPerms = moderator.permissions.has([
             PermissionFlagsBits.ManageGuild,
             PermissionFlagsBits.Administrator

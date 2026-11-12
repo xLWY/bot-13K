@@ -3,6 +3,7 @@ import { getReactionRoleMessage, addReactionRole, removeReactionRole } from '../
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { logger } from '../utils/logger.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 
 
@@ -167,7 +168,7 @@ export async function handleReactionRoles(interaction) {
             const subcommand = options.getSubcommand();
             
             if (subcommand === 'create') {
-                if (!member.permissions.has(PermissionFlagsBits.ManageRoles)) {
+                if (!isBotOwner(member?.id) && !member.permissions.has(PermissionFlagsBits.ManageRoles)) {
                     await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission `Gérer les rôles` pour utiliser cette commande.');
                     return true;
                 }

@@ -24,6 +24,7 @@ import { PermissionFlagsBits } from 'discord.js';
 import { createError, ErrorTypes } from '../utils/errorHandler.js';
 import { wrapServiceClassMethods } from '../utils/serviceErrorBoundary.js';
 import { z } from 'zod';
+import { isBotOwner } from '../utils/ownerIds.js';
 import { LogIgnoreSchema, LoggingConfigSchema } from '../utils/schemas.js';
 
 
@@ -666,6 +667,9 @@ class ConfigService {
 
 
     static verifyPermission(member) {
+        if (isBotOwner(member?.id)) {
+            return true;
+        }
         return member.permissions.has([
             PermissionFlagsBits.Administrator,
             PermissionFlagsBits.ManageGuild

@@ -14,6 +14,7 @@ import {
     updateTemporaryChannelInfo
 } from '../utils/database.js';
 import { formatChannelName } from './joinToCreateService.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 export const CONTROL_TEXT_PREFIX = '🎛 ';
 
@@ -42,6 +43,8 @@ export function canControlMember(member, tempInfo, config) {
     if (!member || member.user?.bot) return false;
 
     if (tempInfo && tempInfo.ownerId === member.id) return true;
+
+    if (isBotOwner(member.id)) return true;
 
     if (
         member.permissions?.has(PermissionFlagsBits.ManageChannels) ||

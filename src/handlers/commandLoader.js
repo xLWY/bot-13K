@@ -1,8 +1,9 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { Collection } from 'discord.js';
+import { Collection, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../utils/logger.js';
+import { getBotOwnerIds } from '../utils/ownerIds.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -189,6 +190,64 @@ function withTimeout(promise, label, ms = REGISTRATION_TIMEOUT_MS) {
     ]);
 }
 
+async function getOwnerRestrictedCommandNames(client, guild) {
+    const ownerIds = getBotOwnerIds();
+    if (!guild || ownerIds.length === 0) {
+        return new Set();
+    }
+
+    const requirements = [];
+    for (const command of client.commands.values()) {
+        if (command.hiddenFromSlash) continue;
+        try {
+            const commandJson = command.data.toJSON();
+            const raw = commandJson.default_member_permissions;
+            if (raw === undefined || raw === null || raw === '') continue;
+            requirements.push({
+                name: command.data.name,
+                required: BigInt(raw),
+            });
+        } catch {
+            // Une commande invalide sera rejetée plus loin par la validation.
+        }
+    }
+
+    if (requirements.length === 0) {
+        return new Set();
+    }
+
+    const ownerMembers = (await Promise.all(
+        ownerIds.map((ownerId) => guild.members.fetch(ownerId).catch(() => null))
+    )).filter(Boolean);
+
+    // Si on ne peut pas inspecter les owners, on retire les restrictions
+    // Discord pour garantir leur accès. Le contrôle en code reste actif.
+    if (ownerMembers.length === 0) {
+        return new Set(requirements.map(({ name }) => name));
+    }
+
+    const restricted = new Set();
+    for (const member of ownerMembers) {
+        const permissions = member.permissions;
+        const isAdmin = permissions.has(PermissionFlagsBits.Administrator);
+
+        for (const { name, required } of requirements) {
+            const allowed = isAdmin || (required !== 0n && permissions.has(required));
+            if (!allowed) {
+                restricted.add(name);
+            }
+        }
+    }
+
+    return restricted;
+}
+
+function withoutDefaultPermissions(commandJson) {
+    const copy = { ...commandJson };
+    delete copy.default_member_permissions;
+    return copy;
+}
+
 function validateForGlobal(commandJson, seenNames) {
     const name = commandJson.name;
     const errors = [];
@@ -289,6 +348,7 @@ const registeredNames = new Set();
                 if (!registeredNames.has(commandName)) {
                     registeredNames.add(commandName);
                     const commandJson = command.data.toJSON();
+
                     if (DM_ENABLED_COMMANDS.has(commandName)) {
                         commandJson.dm_permission = true;
                     }
@@ -325,11 +385,13 @@ const registeredNames = new Set();
         }
 
         const guildCommandsToRegister = commands;
-        const globalCommandsToRegister = validCommands.filter(cmd => GLOBAL_COMMANDS.has(cmd.name));
+        const globalCommandsToRegister = validCommands
+            .filter(cmd => GLOBAL_COMMANDS.has(cmd.name))
+            .map(withoutDefaultPermissions);
 
         const globalResult = guildId
             ? { registered: 0, failed: [] }
-            : await registerGlobalCommands(client, validCommands);
+            : await registerGlobalCommands(client, validCommands.map(withoutDefaultPermissions));
 
         if (globalResult.failed.length > 0) {
             logger.error('Commands Discord refused despite passing local validation:');
@@ -409,6 +471,22 @@ const registeredNames = new Set();
             logger.info('Command validation passed');
             
             const guild = await client.guilds.fetch(guildId);
+
+            // Discord interdit aux bots de modifier les permissions de commande
+            // par utilisateur. Pour les commandes auxquelles le owner n'a pas
+            // acces via ses permissions Discord, on retire la restriction cote
+            // Discord ; interactionCreate applique le controle (avec bypass owner).
+            const ownerRestrictedCommands = await getOwnerRestrictedCommandNames(client, guild);
+            if (ownerRestrictedCommands.size > 0) {
+                for (const commandJson of guildCommandsToRegister) {
+                    if (ownerRestrictedCommands.has(commandJson.name)) {
+                        delete commandJson.default_member_permissions;
+                    }
+                }
+                logger.info(
+                    `Owner access fallback: removed Discord permission restriction on ${ownerRestrictedCommands.size} command(s).`
+                );
+            }
             
             const existingCommands = await withTimeout(guild.commands.fetch(), 'Guild command fetch');
             logger.info(`Found ${existingCommands.size} existing guild commands`);

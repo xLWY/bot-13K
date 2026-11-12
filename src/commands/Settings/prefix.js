@@ -2,6 +2,7 @@ import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.
 import { getGuildConfig, setConfigValue } from '../../services/guildConfig.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { isBotOwner } from '../../utils/ownerIds.js';
 
 const MAX_PREFIX_LENGTH = 5;
 
@@ -29,7 +30,7 @@ export default {
             return;
         }
 
-        if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+        if (!isBotOwner(interaction.user.id) && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
             return InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/prefix`.');
         }
 

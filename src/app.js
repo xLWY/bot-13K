@@ -12,6 +12,7 @@ import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
+import { addBotOwnerIds, getApplicationOwnerIds, getBotOwnerIds } from './utils/ownerIds.js';
 
 const presenceDiagWarned = new Map();
 const PRESENCE_DIAG_INTERVAL_MS = 30 * 60 * 1000;
@@ -97,6 +98,20 @@ GatewayIntentBits.GuildBans,
       startupLog('Logging into Discord...');
       await this.login(this.config.bot.token);
       startupLog('Discord login successful');
+
+      // Si OWNER_IDS n'est pas configure, on considere le proprietaire de
+      // l'application Discord comme owner du bot. Cela garantit que le owner
+      // garde l'acces aux commandes protegees meme sans variable d'environnement.
+      if (this.application) {
+        await this.application.fetch().catch(() => {});
+      }
+      const applicationOwnerIds = getApplicationOwnerIds(this.application);
+      if (applicationOwnerIds.length > 0) {
+        addBotOwnerIds(applicationOwnerIds);
+        startupLog(`Owner fallback: ${applicationOwnerIds.length} application owner(s) recognized`);
+      } else if (getBotOwnerIds().length === 0) {
+        logger.warn('No bot owner id found from OWNER_IDS or Discord application owner.');
+      }
       
       startupLog('ONLINE - bot is connected and handling messages');
       

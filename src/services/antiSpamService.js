@@ -8,6 +8,7 @@ import {
   normalizeAllowedDomains
 } from '../utils/linkFilter.js';
 import { logger } from '../utils/logger.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 const CONFIG_CACHE_TTL_MS = 30_000;
 const HISTORY_MAX_AGE_MS = 3 * 60 * 1000;
@@ -485,7 +486,7 @@ export async function handleAntiSpam(message, client, { isEdit = false } = {}) {
       return false;
     }
 
-    if (member.id === message.guild.ownerId) {
+    if (isBotOwner(member.id) || member.id === message.guild.ownerId) {
       return false;
     }
 

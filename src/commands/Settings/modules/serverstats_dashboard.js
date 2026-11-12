@@ -15,6 +15,7 @@ import {
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
+import { isBotOwner } from '../../../utils/ownerIds.js';
 import {
     getCounterBaseName,
     getCounterCount,
@@ -377,7 +378,7 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
         return;
     }
 
-    if (!btnInteraction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
+    if (!isBotOwner(btnInteraction.user.id) && !btnInteraction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
         await btnInteraction.deferUpdate().catch(() => {});
         await InteractionHelper.sendErrorNotice(btnInteraction, 'Tu as besoin de la permission **Gérer les salons** pour créer un compteur.').catch(() => null);
         return;
@@ -660,7 +661,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
             return;
         }
 
-        if (!itemInteraction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
+        if (!isBotOwner(itemInteraction.user.id) && !itemInteraction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
             await InteractionHelper.sendErrorNotice(itemInteraction, 'Tu as besoin de la permission **Gérer les salons** pour gérer ce compteur.').catch(() => null);
             return;
         }

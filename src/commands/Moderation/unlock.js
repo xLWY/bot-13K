@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger.js';
 import { getColor } from '../../config/bot.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { isBotOwner } from '../../utils/ownerIds.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("unlock")
@@ -26,6 +27,7 @@ export default {
         }
 
         if (
+            !isBotOwner(interaction.user.id) &&
             !interaction.member.permissions.has(
                 PermissionFlagsBits.ManageChannels,
             )

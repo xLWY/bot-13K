@@ -14,6 +14,7 @@ import { createEmbed } from '../utils/embeds.js';
 import { logTicketEvent } from '../utils/ticketLogging.js';
 import { BotConfig } from '../config/bot.js';
 import { ensureTypedServiceError } from '../utils/serviceErrorBoundary.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 const DEFAULT_TYPES = {
   support: { emoji: '🛟', label: 'Support', description: 'Une question ou un problème à régler', slug: 'support' },
@@ -1026,7 +1027,7 @@ export async function unclaimTicket(channel, unclaimer) {
       };
     }
 
-    if (ticketData.claimedBy !== unclaimer.id && !unclaimer.permissions.has(PermissionFlagsBits.ManageChannels)) {
+    if (!isBotOwner(unclaimer.id) && ticketData.claimedBy !== unclaimer.id && !unclaimer.permissions.has(PermissionFlagsBits.ManageChannels)) {
       return {
         success: false,
         error: 'Vous ne pouvez retirer le réclamant que de vos propres tickets (ou avec la permission Gérer les salons).',
