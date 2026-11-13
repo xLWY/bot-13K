@@ -174,7 +174,9 @@ function makeOptionsAccessor(values, message, subcommand, subcommandGroup) {
         getMember: (name) => {
             const user = get(name);
             if (!user || !message.guild) return null;
-            return message.guild.members.cache.get(user.id) || null;
+            return message.mentions.members?.get(user.id)
+                || message.guild.members.cache.get(user.id)
+                || null;
         },
         getChannel: (name) => get(name),
         getRole: (name) => get(name),
@@ -493,6 +495,20 @@ export async function handlePrefixCommand(message, client) {
                 await replyWithNotice(message, 'tu n\'as pas la permission d\'utiliser cette commande');
                 return true;
             }
+        }
+
+        // Les membres mentionnés peuvent être absents du cache (gros serveur,
+        // redémarrage récent). On les récupère avant de construire les options
+        // pour que `getMember()` renvoie bien le membre ciblé.
+        const needsMemberLookup = optionDefs.some(
+            (def) => def.type === OPTION_TYPE.USER || def.type === OPTION_TYPE.MENTIONABLE
+        );
+        if (!isDm && needsMemberLookup && message.mentions?.users?.size > 0 && message.guild) {
+            await Promise.all(
+                [...message.mentions.users.keys()].map((id) =>
+                    message.guild.members.fetch(id).catch(() => null)
+                )
+            );
         }
 
         const parsed = buildOptionsFromTokens(message, optionDefs, tokens);
