@@ -3,7 +3,13 @@ const ownerIdCache = { value: null, warned: false };
 function normalize(rawValue) {
     return String(rawValue || '')
         .split(',')
-        .map((id) => id.trim().replace(/^["']|["']$/g, '').trim())
+        .map((id) => id
+            .trim()
+            .replace(/^["']|["']$/g, '')
+            .replace(/^<@!?/, '')
+            .replace(/>$/, '')
+            .replace(/^@/, '')
+            .trim())
         .filter(Boolean);
 }
 

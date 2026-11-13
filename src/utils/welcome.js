@@ -2,7 +2,7 @@ import { logger } from './logger.js';
 
 const DEFAULT_TEMPLATES = {
     welcome: 'Bienvenue {user} sur **{server}** ! 🎉\n\nNous sommes ravis de t\'accueillir parmi nous. N\'oublie pas de te présenter et de lire les salons pour découvrir le serveur !',
-    goodbye: '{user.tag} a quitté le serveur.'
+    goodbye: '{user} a quitté le serveur.'
 };
 
 function replaceAll(message, token, value) {
@@ -106,7 +106,7 @@ function buildChannelLookup(guild) {
     return lookup;
 }
 
-function buildMemberLookup(guild) {
+function buildMemberLookup(guild, extraMember = null) {
     const lookup = new Map();
 
     const register = (name, userId) => {
@@ -115,18 +115,26 @@ function buildMemberLookup(guild) {
         if (key && !lookup.has(key)) lookup.set(key, userId);
     };
 
-    for (const member of guild?.members?.cache?.values?.() || []) {
-        if (!member?.user?.id) continue;
+    const registerMember = (member) => {
+        if (!member?.user?.id) return;
         register(member.user.username, member.user.id);
         register(member.user.globalName, member.user.id);
         register(member.nickname, member.user.id);
         register(member.displayName, member.user.id);
+    };
+
+    for (const member of guild?.members?.cache?.values?.() || []) {
+        registerMember(member);
     }
+
+    // Un membre qui vient de quitter le serveur n'est plus dans le cache.
+    // On l'ajoute quand même pour que `@pseudo` fonctionne dans l'au revoir.
+    registerMember(extraMember);
 
     return lookup;
 }
 
-export async function resolveMentions(message, guild) {
+export async function resolveMentions(message, guild, extraMember = null) {
     if (typeof message !== 'string' || !message || !guild) return message;
     if (!message.includes('#') && !message.includes('@')) return message;
 
@@ -135,7 +143,7 @@ export async function resolveMentions(message, guild) {
     }
 
     const channelLookup = buildChannelLookup(guild);
-    const memberLookup = buildMemberLookup(guild);
+    const memberLookup = buildMemberLookup(guild, extraMember);
     if (channelLookup.size === 0 && memberLookup.size === 0) return message;
 
     const escaped = message
@@ -212,7 +220,7 @@ export async function resolveMentions(message, guild) {
 
 export async function formatWelcomeMessageAsync(message, data) {
     try {
-        const resolved = await resolveMentions(message, data?.guild);
+        const resolved = await resolveMentions(message, data?.guild, data?.member);
         return formatWelcomeMessage(resolved, data);
     } catch (error) {
         logger.debug('Mention resolution failed:', error.message);

@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Client, Collection, GatewayIntentBits, ChannelType, Partials } from 'discord.js';
+import { Client, Collection, GatewayIntentBits, ChannelType, Partials, Events } from 'discord.js';
 import { REST } from '@discordjs/rest';
 import express from 'express';
 import cron from 'node-cron';
@@ -99,19 +99,31 @@ GatewayIntentBits.GuildBans,
       await this.login(this.config.bot.token);
       startupLog('Discord login successful');
 
+      // `login()` peut se résoudre avant que le paquet READY ne soit traité
+      // par le client, donc avant que `client.application` soit disponible.
+      // On attend le READY complet pour que le fallback owner fonctionne.
+      if (!this.isReady()) {
+        await new Promise((resolve) => this.once(Events.ClientReady, resolve));
+      }
+
       // Si OWNER_IDS n'est pas configure, on considere le proprietaire de
       // l'application Discord comme owner du bot. Cela garantit que le owner
       // garde l'acces aux commandes protegees meme sans variable d'environnement.
       if (this.application) {
-        await this.application.fetch().catch(() => {});
+        await this.application.fetch().catch((error) => {
+          logger.warn(`Could not fetch application owner: ${error?.message || error}`);
+        });
+      } else {
+        logger.warn('client.application is unavailable; cannot use the application owner fallback.');
       }
       const applicationOwnerIds = getApplicationOwnerIds(this.application);
       if (applicationOwnerIds.length > 0) {
         addBotOwnerIds(applicationOwnerIds);
-        startupLog(`Owner fallback: ${applicationOwnerIds.length} application owner(s) recognized`);
+        startupLog(`Owner fallback: ${applicationOwnerIds.length} application owner(s) recognized [${applicationOwnerIds.join(', ')}]`);
       } else if (getBotOwnerIds().length === 0) {
         logger.warn('No bot owner id found from OWNER_IDS or Discord application owner.');
       }
+      startupLog(`Bot owner(s): ${getBotOwnerIds().join(', ') || 'none'}`);
       
       startupLog('ONLINE - bot is connected and handling messages');
       

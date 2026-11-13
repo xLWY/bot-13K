@@ -32,7 +32,7 @@ function buildDashboardEmbed(cfg, guild) {
     const goodbyeChannel = cfg.goodbyeChannelId ? `<#${cfg.goodbyeChannelId}>` : '`Non défini`';
 
     const rawWelcome = cfg.welcomeMessage || 'Bienvenue {user} sur {server} !';
-    const rawGoodbye = cfg.leaveMessage || cfg.leaveEmbed?.description || '{user.tag} a quitté le serveur.';
+    const rawGoodbye = cfg.leaveMessage || cfg.leaveEmbed?.description || '{user} a quitté le serveur.';
     const rawArrival = cfg.arrivalMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋";
     const welcomePreview = `\`${rawWelcome.length > 55 ? rawWelcome.substring(0, 55) + '…' : rawWelcome}\``;
     const goodbyePreview = `\`${rawGoodbye.length > 55 ? rawGoodbye.substring(0, 55) + '…' : rawGoodbye}\``;
@@ -60,7 +60,7 @@ function buildDashboardEmbed(cfg, guild) {
             { name: '🔔 Mention de bienvenue', value: cfg.welcomePing ? '✅ Activée' : '❌ Désactivée', inline: true },
             { name: '🔴 Canal d\'au revoir', value: goodbyeChannel, inline: true },
             { name: '⚙️ Statut d\'au revoir', value: cfg.goodbyeEnabled ? '✅ Activé' : '❌ Désactivé', inline: true },
-            { name: '🔔 Mention d\'au revoir', value: cfg.goodbyePing ? '✅ Activée' : '❌ Désactivée', inline: true },
+            { name: '🔔 Mention automatique', value: cfg.goodbyePing ? '✅ Activée' : '❌ Désactivée', inline: true },
             { name: '🎭 Rôle(s) auto', value: autoRolePreview, inline: true },
             { name: '🏷️ Titre du message de bienvenue', value: titlePreview, inline: false },
             { name: '💬 Message de bienvenue', value: welcomePreview, inline: false },
@@ -361,7 +361,9 @@ export default {
                         cfg.goodbyePing = !cfg.goodbyePing;
                         await saveWelcomeConfig(client, guildId, cfg);
                         await btnInteraction.followUp({
-                            content: `✅ Mention d'au revoir mise à jour — Les membres qui partent seront${cfg.goodbyePing ? '' : ' **pas**'} mentionnés dans le message d'au revoir.`,
+                            content: cfg.goodbyePing
+                                ? '✅ Mention d\'au revoir activée — La mention du membre sera ajoutée au message. ⚠️ Discord ne peut pas notifier un membre qui a déjà quitté le serveur.'
+                                : '✅ Mention d\'au revoir désactivée — Le bot n\'ajoutera pas de mention automatique au message. La mention du champ « Membre » reste affichée sans notification.',
                             flags: MessageFlags.Ephemeral,
                         });
                     } else if (customId === `greet_cfg_preview_${guildId}`) {
@@ -760,7 +762,7 @@ async function handlePreview(btnInteraction, cfg, guild) {
         formatData,
     );
     const goodbyeDescription = await formatWelcomeMessageAsync(
-        cfg.leaveMessage || cfg.leaveEmbed?.description || '{user.tag} a quitté le serveur.',
+        cfg.leaveMessage || cfg.leaveEmbed?.description || '{user} a quitté le serveur.',
         formatData,
     );
     const goodbyeFooter = cfg.leaveEmbed?.footer
@@ -1153,7 +1155,7 @@ async function handleGoodbyeMessage(selectInteraction, rootInteraction, cfg, gui
                     .setCustomId('message_input')
                     .setLabel('Message ({user}, {server}, #salon, @membre)')
                     .setStyle(TextInputStyle.Paragraph)
-                    .setValue(cfg.leaveMessage || cfg.leaveEmbed?.description || '{user.tag} a quitté le serveur.')
+                    .setValue(cfg.leaveMessage || cfg.leaveEmbed?.description || '{user} a quitté le serveur.')
                     .setMaxLength(2000)
                     .setMinLength(1)
                     .setRequired(true),

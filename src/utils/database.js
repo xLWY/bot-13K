@@ -781,13 +781,23 @@ function normalizeWelcomeConfig(raw = {}) {
         footer: "Nous sommes déjà {memberCount} membres sur {server} !"
     };
 
-    const leaveMessage = base.leaveMessage ?? "{user.tag} a quitté le serveur.";
+    const legacyGoodbyeMessage = "{user.tag} a quitté le serveur.";
+    const defaultGoodbyeMessage = "{user} a quitté le serveur.";
+    const rawLeaveMessage = base.leaveMessage ?? defaultGoodbyeMessage;
+    const leaveMessage = rawLeaveMessage === legacyGoodbyeMessage
+        ? defaultGoodbyeMessage
+        : rawLeaveMessage;
 
     const leaveEmbed = (typeof base.leaveEmbed === "object" && base.leaveEmbed !== null)
-        ? base.leaveEmbed
+        ? {
+            ...base.leaveEmbed,
+            description: base.leaveEmbed.description === legacyGoodbyeMessage
+                ? defaultGoodbyeMessage
+                : (base.leaveEmbed.description ?? defaultGoodbyeMessage)
+        }
         : {
             title: "👋 Au revoir",
-            description: "{user.tag} a quitté le serveur.",
+            description: defaultGoodbyeMessage,
             color: getColor("error"),
             thumbnail: true,
             footer: "Au revoir de la part de {server} !"

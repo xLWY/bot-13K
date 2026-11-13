@@ -33,7 +33,7 @@ export default {
                     if (permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
                         const formatData = { user, guild, member, config: welcomeConfig };
                         const goodbyeMessage = await formatWelcomeMessageAsync(
-                            welcomeConfig.leaveMessage || welcomeConfig.leaveEmbed?.description || '{user.tag} a quitté le serveur.',
+                            welcomeConfig.leaveMessage || welcomeConfig.leaveEmbed?.description || '{user} a quitté le serveur.',
                             formatData,
                         );
                         const embedTitle = await formatWelcomeMessageAsync(
@@ -63,7 +63,7 @@ export default {
                                 .setColor(welcomeConfig.leaveEmbed?.color || getColor('error'))
                                 .setThumbnail(user.displayAvatarURL())
                                 .addFields(
-                                    { name: '👤 Membre', value: `${user.tag} (${user.id})`, inline: true },
+                                    { name: '👤 Membre', value: `<@${user.id}>`, inline: true },
                                     { name: '👥 Membres', value: guild.memberCount.toString(), inline: true },
                                 )
                                 .setTimestamp()
