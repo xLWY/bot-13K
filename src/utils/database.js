@@ -769,6 +769,7 @@ function normalizeWelcomeConfig(raw = {}) {
     const base = typeof raw === "object" && raw !== null ? raw : {};
 
     const channelId = base.channelId ?? null;
+    const goodbyeChannelId = base.goodbyeChannelId ?? null;
 
     const welcomeMessage = base.welcomeMessage ?? "Bienvenue {user} sur **{server}** ! 🎉\n\nNous sommes ravis de t'accueillir parmi nous. N'oublie pas de te présenter et de lire les salons pour découvrir le serveur !";
 
@@ -780,6 +781,18 @@ function normalizeWelcomeConfig(raw = {}) {
         footer: "Nous sommes déjà {memberCount} membres sur {server} !"
     };
 
+    const leaveMessage = base.leaveMessage ?? "{user.tag} a quitté le serveur.";
+
+    const leaveEmbed = (typeof base.leaveEmbed === "object" && base.leaveEmbed !== null)
+        ? base.leaveEmbed
+        : {
+            title: "👋 Au revoir",
+            description: "{user.tag} a quitté le serveur.",
+            color: getColor("error"),
+            thumbnail: true,
+            footer: "Au revoir de la part de {server} !"
+        };
+
     const roleIds = Array.isArray(base.roleIds) ? base.roleIds : [];
 
     return {
@@ -790,6 +803,12 @@ function normalizeWelcomeConfig(raw = {}) {
         welcomeEmbed,
         welcomePing: Boolean(base.welcomePing),
         welcomeImage: base.welcomeImage ?? null,
+        goodbyeEnabled: Boolean(base.goodbyeEnabled),
+        goodbyeChannelId,
+        goodbyePing: Boolean(base.goodbyePing),
+        leaveMessage,
+        leaveEmbed,
+        leaveImage: base.leaveImage ?? null,
         pingChannelId: base.pingChannelId ?? null,
         arrivalChannelId: base.arrivalChannelId ?? null,
         arrivalMessage: base.arrivalMessage ?? "**{user}** vient d'arriver, dites-lui bonjour ! 👋",

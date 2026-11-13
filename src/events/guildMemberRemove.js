@@ -1,5 +1,7 @@
-import { Events } from 'discord.js';
-import { getUserApplications, deleteApplication } from '../utils/database.js';
+import { Events, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
+import { getColor } from '../config/bot.js';
+import { getUserApplications, deleteApplication, getWelcomeConfig } from '../utils/database.js';
+import { formatWelcomeMessageAsync } from '../utils/welcome.js';
 import { logEvent, EVENT_TYPES } from '../services/loggingService.js';
 import { getServerCounters, updateCounter } from '../services/serverstatsService.js';
 import { getGuildBirthdays, deleteBirthday } from '../utils/database.js';
@@ -13,6 +15,81 @@ export default {
   async execute(member) {
     try {
         const { guild, user } = member;
+
+        try {
+            const welcomeConfig = await getWelcomeConfig(member.client, guild.id);
+            const goodbyeChannelId = welcomeConfig?.goodbyeChannelId;
+
+            if (welcomeConfig?.goodbyeEnabled && goodbyeChannelId) {
+                let channel = guild.channels.cache.get(goodbyeChannelId);
+                if (!channel) {
+                    channel = await guild.channels.fetch(goodbyeChannelId).catch(() => null);
+                }
+
+                if (channel?.isTextBased?.()) {
+                    const me = guild.members.me;
+                    const permissions = me ? channel.permissionsFor(me) : null;
+
+                    if (permissions?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages])) {
+                        const formatData = { user, guild, member, config: welcomeConfig };
+                        const goodbyeMessage = await formatWelcomeMessageAsync(
+                            welcomeConfig.leaveMessage || welcomeConfig.leaveEmbed?.description || '{user.tag} a quitté le serveur.',
+                            formatData,
+                        );
+                        const embedTitle = await formatWelcomeMessageAsync(
+                            welcomeConfig.leaveEmbed?.title || '👋 Au revoir',
+                            formatData,
+                        );
+                        const embedFooter = welcomeConfig.leaveEmbed?.footer
+                            ? await formatWelcomeMessageAsync(welcomeConfig.leaveEmbed.footer, formatData)
+                            : `Au revoir de la part de ${guild.name} !`;
+
+                        const canEmbed = permissions.has(PermissionFlagsBits.EmbedLinks);
+                        const allowedMentions = welcomeConfig.goodbyePing
+                            ? { users: [user.id] }
+                            : { parse: [] };
+                        const mention = welcomeConfig.goodbyePing ? `<@${user.id}>` : null;
+
+                        if (!canEmbed) {
+                            const content = mention && !goodbyeMessage.includes(`<@${user.id}>`)
+                                ? `${mention} ${goodbyeMessage}`
+                                : goodbyeMessage;
+
+                            await channel.send({ content, allowedMentions });
+                        } else {
+                            const embed = new EmbedBuilder()
+                                .setTitle(embedTitle)
+                                .setDescription(goodbyeMessage)
+                                .setColor(welcomeConfig.leaveEmbed?.color || getColor('error'))
+                                .setThumbnail(user.displayAvatarURL())
+                                .addFields(
+                                    { name: '👤 Membre', value: `${user.tag} (${user.id})`, inline: true },
+                                    { name: '👥 Membres', value: guild.memberCount.toString(), inline: true },
+                                )
+                                .setTimestamp()
+                                .setFooter({ text: embedFooter });
+
+                            const leaveImage = (typeof welcomeConfig.leaveEmbed?.image === 'string' && welcomeConfig.leaveEmbed.image)
+                                ? welcomeConfig.leaveEmbed.image
+                                : welcomeConfig.leaveEmbed?.image?.url
+                                    || (typeof welcomeConfig.leaveImage === 'string' ? welcomeConfig.leaveImage : null);
+
+                            if (leaveImage) {
+                                embed.setImage(leaveImage);
+                            }
+
+                            await channel.send({
+                                content: mention,
+                                allowedMentions,
+                                embeds: [embed],
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            logger.debug('Error sending goodbye message:', error);
+        }
         
         try {
             await logEvent({

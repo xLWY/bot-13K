@@ -43,9 +43,16 @@ export function openPanel(interaction, client, guildId) {
         const rrList = reactionRoles.status === 'fulfilled' ? reactionRoles.value : [];
         const antiSpam = antiSpamConfig.status === 'fulfilled' ? antiSpamConfig.value : null;
 
-        const welcomeStatus = welcomeConfig?.channelId
+        const welcomeChannelStatus = welcomeConfig?.channelId
             ? (guild.channels.cache.get(welcomeConfig.channelId) ? `<#${welcomeConfig.channelId}>` : '`⚠️ Introuvable`')
             : '`Non configuré`';
+        const goodbyeChannelStatus = welcomeConfig?.goodbyeChannelId
+            ? (guild.channels.cache.get(welcomeConfig.goodbyeChannelId) ? `<#${welcomeConfig.goodbyeChannelId}>` : '`⚠️ Introuvable`')
+            : '`Non configuré`';
+        const welcomeStatus = [
+            `Bienvenue : ${welcomeConfig?.enabled ? '✅' : '❌'} ${welcomeChannelStatus}`,
+            `Au revoir : ${welcomeConfig?.goodbyeEnabled ? '✅' : '❌'} ${goodbyeChannelStatus}`,
+        ].join('\n');
         const ticketStatus = guildConfig?.ticketPanelChannelId
             ? (guild.channels.cache.get(guildConfig.ticketPanelChannelId) ? `<#${guildConfig.ticketPanelChannelId}>` : '`⚠️ Introuvable`')
             : '`Non configuré`';
@@ -66,6 +73,12 @@ export function openPanel(interaction, client, guildId) {
         }
         if (welcomeConfig?.pingChannelId && !guild.channels.cache.get(welcomeConfig.pingChannelId)) {
             alerts.push('⚠️ Le salon de ping de bienvenue n\'existe plus.');
+        }
+        if (welcomeConfig?.goodbyeChannelId && !guild.channels.cache.get(welcomeConfig.goodbyeChannelId)) {
+            alerts.push('⚠️ Le canal d\'au revoir n\'existe plus — reconfigure via `/panel` → **Bienvenue**.');
+        }
+        if (welcomeConfig?.goodbyeEnabled && !welcomeConfig?.goodbyeChannelId) {
+            alerts.push('⚠️ L\'au revoir est activé mais aucun canal n\'est défini — configure-le via `/panel` → **Bienvenue**.');
         }
         if (guildConfig?.ticketPanelChannelId && !guild.channels.cache.get(guildConfig.ticketPanelChannelId)) {
             alerts.push('⚠️ Le salon du panneau de tickets n\'existe plus.');

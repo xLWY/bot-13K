@@ -1,7 +1,8 @@
 import { logger } from './logger.js';
 
 const DEFAULT_TEMPLATES = {
-    welcome: 'Bienvenue {user} sur **{server}** ! 🎉\n\nNous sommes ravis de t\'accueillir parmi nous. N\'oublie pas de te présenter et de lire les salons pour découvrir le serveur !'
+    welcome: 'Bienvenue {user} sur **{server}** ! 🎉\n\nNous sommes ravis de t\'accueillir parmi nous. N\'oublie pas de te présenter et de lire les salons pour découvrir le serveur !',
+    goodbye: '{user.tag} a quitté le serveur.'
 };
 
 function replaceAll(message, token, value) {
@@ -51,6 +52,8 @@ export function formatWelcomeMessage(message, data) {
         '{memberCount}': guild?.memberCount?.toString?.() || '0',
         '{membercount}': guild?.memberCount?.toString?.() || '0',
         '{welcomeChannel}': config.channelId ? `<#${config.channelId}>` : '',
+        '{goodbyeChannel}': config.goodbyeChannelId ? `<#${config.goodbyeChannelId}>` : '',
+        '{leaveChannel}': config.goodbyeChannelId ? `<#${config.goodbyeChannelId}>` : '',
         '{arrivalChannel}': config.arrivalChannelId ? `<#${config.arrivalChannelId}>` : '',
         '{pingChannel}': config.pingChannelId ? `<#${config.pingChannelId}>` : ''
     };
@@ -219,6 +222,10 @@ export async function formatWelcomeMessageAsync(message, data) {
 
 export function getDefaultWelcomeMessage() {
     return DEFAULT_TEMPLATES.welcome;
+}
+
+export function getDefaultGoodbyeMessage() {
+    return DEFAULT_TEMPLATES.goodbye;
 }
 
 
