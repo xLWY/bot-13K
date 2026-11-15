@@ -8,6 +8,24 @@ function parseMentions(message) {
     const roles = [...(message.mentions.roles?.values?.() ?? [])];
     const users = [...(message.mentions.users?.values?.() ?? [])];
 
+    // Un ID brut n'apparaît pas dans message.mentions : on l'extrait du texte.
+    const withoutMentions = String(message.content || '')
+        .replace(/<@!?\d+>/g, ' ')
+        .replace(/<@&\d+>/g, ' ')
+        .replace(/<#\d+>/g, ' ');
+    const rawIds = [...withoutMentions.matchAll(/\b(\d{15,20})\b/g)].map((match) => match[1]);
+
+    for (const id of rawIds) {
+        if (users.some((user) => user.id === id)) continue;
+
+        const role = message.guild?.roles?.cache?.get(id);
+        if (role) {
+            if (!roles.some((entry) => entry.id === id)) roles.push(role);
+        } else {
+            users.push({ id });
+        }
+    }
+
     if (roles.length === 0 && users.length === 0) {
         return { error: 'Il manque : **un rôle** et **un membre**.' };
     }
