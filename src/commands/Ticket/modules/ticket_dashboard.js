@@ -76,7 +76,6 @@ function buildDashboardEmbed(config, guild) {
             { name: '📝 Message du panneau', value: panelMsg, inline: false },
             { name: '🏷️ Libellé du bouton', value: btnLabel, inline: true },
             { name: '🔢 Tickets max/Utilisateur', value: String(config.maxTicketsPerUser || 3), inline: true },
-            { name: '📬 MP à la fermeture', value: config.dmOnClose !== false ? '✅ Activé' : '❌ Désactivé', inline: true },
             { name: '🎫 Salon des logs tickets', value: ticketLogsChannel, inline: true },
             { name: '📜 Salon des transcripts', value: transcriptChannel, inline: true },
             { name: '🔘 Boutons du panneau', value: typesSummary, inline: false },
@@ -143,15 +142,8 @@ function buildSelectMenu(guildId) {
         );
 }
 
-function buildButtonRow(guildConfig, guildId, disabled = false) {
-    const dmEnabled = guildConfig.dmOnClose !== false;
+function buildButtonRow(guildId, disabled = false) {
     return new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId(`ticket_cfg_dm_toggle_${guildId}`)
-            .setLabel('MP à la fermeture')
-            .setStyle(dmEnabled ? ButtonStyle.Success : ButtonStyle.Danger)
-            .setEmoji(dmEnabled ? '📬' : '📭')
-            .setDisabled(disabled),
         new ButtonBuilder()
             .setCustomId(`ticket_cfg_staff_role_btn_${guildId}`)
             .setLabel('Rôles staff')
@@ -181,7 +173,7 @@ function buildBackRow(disabled = false) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function refreshDashboard(rootInteraction, guildConfig, guildId) {
-    const buttonRow = buildButtonRow(guildConfig, guildId);
+    const buttonRow = buildButtonRow(guildId);
     const selectRow = new ActionRowBuilder().addComponents(buildSelectMenu(guildId));
     await InteractionHelper.safeEditReply(rootInteraction, {
         embeds: [buildDashboardEmbed(guildConfig, rootInteraction.guild)],
@@ -236,7 +228,7 @@ export default {
 
             const selectMenu = buildSelectMenu(guildId);
             const selectRow = new ActionRowBuilder().addComponents(selectMenu);
-            const buttonRow = buildButtonRow(guildConfig, guildId);
+            const buttonRow = buildButtonRow(guildId);
 
             await InteractionHelper.safeDeferOrUpdate(interaction, {});
 
@@ -264,8 +256,7 @@ export default {
                 filter: i =>
                     i.user.id === interaction.user.id &&
                     (!replyMessageId || i.message.id === replyMessageId) &&
-                    (i.customId === `ticket_cfg_dm_toggle_${guildId}` ||
-                        i.customId === `ticket_cfg_staff_role_btn_${guildId}` ||
+                    (i.customId === `ticket_cfg_staff_role_btn_${guildId}` ||
                         i.customId === `ticket_cfg_delete_${guildId}` ||
                         i.customId === `ticket_cfg_back`),
 
@@ -331,9 +322,7 @@ export default {
             buttonCollector.on('collect', async (btnInteraction) => {
                 InteractionHelper.armDashboardSession(interaction);
                 try {
-                    if (btnInteraction.customId === `ticket_cfg_dm_toggle_${guildId}`) {
-                        await handleDmOnClose(btnInteraction, interaction, guildConfig, guildId, client);
-                    } else if (btnInteraction.customId === `ticket_cfg_staff_role_btn_${guildId}`) {
+                    if (btnInteraction.customId === `ticket_cfg_staff_role_btn_${guildId}`) {
                         await handleStaffRole(btnInteraction, interaction, guildConfig, guildId, client);
                     } else if (btnInteraction.customId === `ticket_cfg_delete_${guildId}`) {
                         await handleDeleteSystem(btnInteraction, interaction, guildConfig, guildId, client);
@@ -1027,23 +1016,6 @@ async function handleRemoveType(selectInteraction, rootInteraction, guildConfig,
     });
 }
 
-// ─── DM on Close Toggle ───────────────────────────────────────────────────────
-
-async function handleDmOnClose(btnInteraction, rootInteraction, guildConfig, guildId, client) {
-    await btnInteraction.deferUpdate();
-
-    const newState = guildConfig.dmOnClose === false;
-    guildConfig.dmOnClose = newState;
-    await client.db.set(getGuildConfigKey(guildId), guildConfig);
-
-    await btnInteraction.followUp({
-        content: `✅ MP à la fermeture mis à jour — Les utilisateurs **${newState ? 'recevront désormais' : 'ne recevront plus'}** un message privé à la fermeture de leur ticket.`,
-        flags: MessageFlags.Ephemeral,
-    });
-
-    await refreshDashboard(rootInteraction, guildConfig, guildId);
-}
-
 // ─── Feedback Logs Channel ────────────────────────────────────────────────────
 
 async function handleLogsChannel(selectInteraction, rootInteraction, guildConfig, guildId, client) {
@@ -1263,7 +1235,6 @@ async function handleDeleteSystem(btnInteraction, rootInteraction, guildConfig, 
         'ticketPanelMessage',
         'ticketButtonLabel',
         'maxTicketsPerUser',
-        'dmOnClose',
         'ticketLogsChannelId',
         'ticketTranscriptChannelId',
     ];

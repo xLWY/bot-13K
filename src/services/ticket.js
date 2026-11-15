@@ -348,7 +348,6 @@ export async function closeTicket(channel, closer, reason = 'Aucun motif précis
     }
 
     const config = await getGuildConfig(channel.client, channel.guild.id);
-    const dmOnClose = config.dmOnClose !== false;
     const closedCategoryId = config.ticketClosedCategoryId || null;
     let movedToClosedCategory = false;
 
@@ -373,56 +372,6 @@ export async function closeTicket(channel, closer, reason = 'Aucun motif précis
         }
       } else {
         logger.warn(`Configured closed category is invalid for guild ${channel.guild.id}: ${closedCategoryId}`);
-      }
-    }
-
-    if (dmOnClose) {
-      try {
-        const ticketCreator = await channel.client.users.fetch(ticketData.userId).catch(() => null);
-        if (ticketCreator) {
-          const dmEmbed = createEmbed({
-            title: '🎫 Votre ticket a été fermé',
-            description: `Votre ticket **${channel.name}** a été fermé.\n\n**Motif :** ${reason}\n**Fermé par :** ${closer.tag}\n**Fermé le :** <t:${Math.floor(Date.now() / 1000)}:F>\n\nMerci d'avoir utilisé notre support ! Si vous avez d'autres questions, n'hésitez pas à créer un nouveau ticket.`,
-            color: '#e74c3c',
-            footer: ticketData.ticketNumber ? { text: `Ticket #${ticketData.ticketNumber}` } : null
-          });
-
-          await ticketCreator.send({ embeds: [dmEmbed] });
-
-          // Sondage de satisfaction — message DM séparé pour être modifiable après réponse
-          try {
-            const feedbackEmbed = createEmbed({
-              title: '⭐ Comment s\'est passée votre expérience ?',
-              description: `Nous aimerions connaître votre avis sur le ticket **${channel.name}**.\nChoisissez une note ci-dessous — cela ne prend qu'une seconde !`,
-              color: '#F1C40F',
-              footer: { text: 'Votre avis nous aide à nous améliorer.' },
-            });
-
-            const base = `ticket_feedback:${channel.guild.id}:${channel.id}`;
-            const starsRow = new ActionRowBuilder().addComponents(
-new ButtonBuilder().setCustomId(`${base}:1`).setLabel('⭐ 1').setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder().setCustomId(`${base}:2`).setLabel('⭐⭐ 2').setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder().setCustomId(`${base}:3`).setLabel('⭐⭐⭐ 3').setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder().setCustomId(`${base}:4`).setLabel('⭐⭐⭐⭐ 4').setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder().setCustomId(`${base}:5`).setLabel('⭐⭐⭐⭐⭐ 5').setStyle(ButtonStyle.Secondary),
-            );
-            const declineRow = new ActionRowBuilder().addComponents(
-              new ButtonBuilder()
-                .setCustomId(`ticket_feedback_decline:${channel.guild.id}:${channel.id}`)
-                .setLabel('❌ Non merci')
-                .setStyle(ButtonStyle.Secondary),
-            );
-
-            await ticketCreator.send({
-              embeds: [feedbackEmbed],
-              components: [starsRow, declineRow],
-            });
-          } catch (feedbackError) {
-            logger.warn(`Could not send feedback survey to ticket creator ${ticketData.userId}: ${feedbackError.message}`);
-          }
-        }
-      } catch (dmError) {
-        logger.warn(`Could not send DM to ticket creator ${ticketData.userId}: ${dmError.message}`);
       }
     }
 
@@ -464,7 +413,7 @@ try {
 
     const closeEmbed = createEmbed({
       title: '🔒 Ticket fermé',
-      description: `Ce ticket a été fermé par ${closer}.\n**Motif :** ${reason}${dmOnClose ? '\n\n📩 Un message a été envoyé au créateur du ticket.' : ''}`,
+      description: `Ce ticket a été fermé par ${closer}.\n**Motif :** ${reason}`,
       color: '#e74c3c',
       footer: ticketData.ticketNumber ? { text: `Ticket #${ticketData.ticketNumber}` } : null
     });
@@ -499,7 +448,6 @@ try {
         executorId: closer.id,
         reason: reason,
         metadata: {
-          dmSent: dmOnClose,
           closedAt: ticketData.closedAt,
           movedToClosedCategory,
         },

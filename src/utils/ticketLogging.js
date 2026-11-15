@@ -209,7 +209,6 @@ async function createTicketLogEmbed(client, guild, event) {
     const knownLabels = {
       channelId: 'Salon',
       categoryName: 'Catégorie',
-      dmSent: 'MP envoyé',
       closedAt: 'Fermé le',
       openedAt: 'Ouvert le',
       movedToClosedCategory: 'Déplacé dans la catégorie fermée',

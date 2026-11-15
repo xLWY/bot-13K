@@ -32,7 +32,6 @@ export const GuildConfigSchema = z
     welcomeChannel: z.string().nullable().optional(),
     welcomeMessage: z.string().optional(),
     autoRole: z.string().nullable().optional(),
-    dmOnClose: z.boolean().optional(),
     birthdayChannelId: z.string().nullable().optional(),
     premiumRoleId: z.string().nullable().optional(),
     logIgnore: LogIgnoreSchema.optional(),

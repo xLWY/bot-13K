@@ -12,7 +12,6 @@ const GUILD_CONFIG_DEFAULTS = {
     welcomeChannel: null,
     welcomeMessage: 'Bienvenue {user} sur {server} !',
     autoRole: null,
-    dmOnClose: true,
     logIgnore: { users: [], channels: [] },
     logging: {
         enabled: false,

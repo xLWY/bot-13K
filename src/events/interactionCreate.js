@@ -297,21 +297,6 @@ async function closeTicketFallback(channel, closer) {
     } catch (_) {}
 
     try {
-      const ticketCreator = await channel.client.users.fetch(ticketData.userId).catch(() => null);
-      if (ticketCreator) {
-        await ticketCreator.send({
-          embeds: [
-            createEmbed({
-              title: '🎫 Votre ticket a été fermé',
-              description: `Votre ticket **${channel.name}** a été fermé.\n\n**Fermé par :** ${closer}\n**Fermé le :** <t:${Math.floor(Date.now() / 1000)}:F>\n\nMerci d'avoir utilisé notre support !`,
-              color: '#e74c3c',
-            }),
-          ],
-        });
-      }
-    } catch (_) {}
-
-    try {
       const overwrite = channel.permissionOverwrites.cache.get(ticketData.userId);
       if (overwrite) {
         await overwrite.edit({ ViewChannel: false, SendMessages: false });

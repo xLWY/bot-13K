@@ -84,12 +84,6 @@ export default {
                         .setMinValue(1)
                         .setMaxValue(10)
                         .setRequired(false),
-                )
-                .addBooleanOption((option) =>
-                    option
-                        .setName("dm_on_close")
-                        .setDescription("Envoyer un MP à l'utilisateur quand son ticket est fermé (défaut : oui)")
-                        .setRequired(false),
                 ),
         )
         .addSubcommand((subcommand) =>
@@ -200,7 +194,6 @@ export default {
                     interaction.options.getString("button_label") ||
                     "Ouvrir un ticket";
                 const maxTicketsPerUser = interaction.options.getInteger("max_tickets_per_user") || 3;
-                const dmOnClose = interaction.options.getBoolean("dm_on_close") !== false;
 
                 const setupEmbed = createEmbed({
                     title: "🎫 Centre d'aide",
@@ -225,7 +218,6 @@ export default {
                         currentConfig.ticketPanelMessage = panelMessage;
                         currentConfig.ticketButtonLabel = buttonLabel;
                         currentConfig.maxTicketsPerUser = maxTicketsPerUser;
-                        currentConfig.dmOnClose = dmOnClose;
 
                         const { getGuildConfigKey } = await import('../../utils/database.js');
                         const configKey = getGuildConfigKey(interaction.guildId);
@@ -236,8 +228,7 @@ export default {
                             closedCategoryId: closedCategoryChannel?.id,
                             staffRoleId: staffRole?.id,
                             staffRoleIds: currentConfig.ticketStaffRoleIds,
-                            maxTickets: maxTicketsPerUser,
-                            dmOnClose: dmOnClose
+                            maxTickets: maxTicketsPerUser
                         });
                     }
 
@@ -257,7 +248,7 @@ export default {
                         successMessage += `Le rôle **${staffRole.name}** aura accès aux tickets. Tu peux ajouter d'autres rôles via \`/ticket dashboard\`. `;
                     }
 
-                    successMessage += `\n\n**Tickets max par utilisateur :** ${maxTicketsPerUser}\n**MP à la fermeture :** ${dmOnClose ? 'Activé' : 'Désactivé'}`;
+                    successMessage += `\n\n**Tickets max par utilisateur :** ${maxTicketsPerUser}`;
 
                     await InteractionHelper.safeEditReply(interaction, {
                         content: `Panneau de tickets configuré — ${successMessage}`,
@@ -272,7 +263,6 @@ export default {
                         closedCategoryId: closedCategoryChannel?.id,
                         staffRoleId: staffRole?.id,
                         maxTickets: maxTicketsPerUser,
-                        dmOnClose: dmOnClose,
                         commandName: 'ticket_setup'
                     });
 
@@ -311,11 +301,6 @@ export default {
                             {
                                 name: "Tickets max par utilisateur",
                                 value: maxTicketsPerUser.toString(),
-                                inline: true,
-                            },
-                            {
-                                name: "MP à la fermeture",
-                                value: dmOnClose ? 'Activé' : 'Désactivé',
                                 inline: true,
                             },
                             {
