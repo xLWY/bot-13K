@@ -2,6 +2,7 @@ import { PermissionFlagsBits } from 'discord.js';
 import { getGuildConfig } from '../services/guildConfig.js';
 import { getTicketData } from './database.js';
 import { isBotOwner } from './ownerIds.js';
+import { getTicketStaffRoleIds } from './ticketStaffRoles.js';
 
 export async function getTicketPermissionContext({ client, interaction }) {
   const guildId = interaction.guildId;
@@ -13,9 +14,12 @@ export async function getTicketPermissionContext({ client, interaction }) {
   ]);
 
   const hasManageChannels = isBotOwner(interaction.user.id)
-    || interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);
-  const staffRoleId = config.ticketStaffRoleId || null;
-  const hasTicketStaffRole = Boolean(staffRoleId && interaction.member.roles?.cache?.has(staffRoleId));
+    || Boolean(interaction.member?.permissions?.has(PermissionFlagsBits.ManageChannels));
+  const staffRoleIds = getTicketStaffRoleIds(config);
+  const hasTicketStaffRole = Boolean(
+    interaction.member?.roles?.cache &&
+    staffRoleIds.some((roleId) => interaction.member.roles.cache.has(roleId))
+  );
   const isTicketCreator = Boolean(ticketData?.userId && ticketData.userId === interaction.user.id);
 
   return {

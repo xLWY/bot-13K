@@ -73,7 +73,7 @@ export default {
                     option
                         .setName("staff_role")
                         .setDescription(
-                            "Le rôle qui peut accéder aux tickets (facultatif).",
+                            "Le rôle qui peut accéder aux tickets (facultatif). Pour en ajouter plusieurs, utilise /ticket dashboard.",
                         )
                         .setRequired(false),
                 )
@@ -219,6 +219,7 @@ export default {
                         const currentConfig = existingConfig;
                         currentConfig.ticketCategoryId = categoryChannel ? categoryChannel.id : null;
                         currentConfig.ticketClosedCategoryId = closedCategoryChannel ? closedCategoryChannel.id : null;
+                        currentConfig.ticketStaffRoleIds = staffRole ? [staffRole.id] : [];
                         currentConfig.ticketStaffRoleId = staffRole ? staffRole.id : null;
                         currentConfig.ticketPanelChannelId = panelChannel.id;
                         currentConfig.ticketPanelMessage = panelMessage;
@@ -234,6 +235,7 @@ export default {
                             categoryId: categoryChannel?.id,
                             closedCategoryId: closedCategoryChannel?.id,
                             staffRoleId: staffRole?.id,
+                            staffRoleIds: currentConfig.ticketStaffRoleIds,
                             maxTickets: maxTicketsPerUser,
                             dmOnClose: dmOnClose
                         });
@@ -252,7 +254,7 @@ export default {
                     }
 
                     if (staffRole) {
-                        successMessage += `Le rôle **${staffRole.name}** aura accès aux tickets. `;
+                        successMessage += `Le rôle **${staffRole.name}** aura accès aux tickets. Tu peux ajouter d'autres rôles via \`/ticket dashboard\`. `;
                     }
 
                     successMessage += `\n\n**Tickets max par utilisateur :** ${maxTicketsPerUser}\n**MP à la fermeture :** ${dmOnClose ? 'Activé' : 'Désactivé'}`;
@@ -300,7 +302,7 @@ export default {
                                 inline: true,
                             },
                             {
-                                name: "Rôle staff",
+                                name: "Rôles staff",
                                 value: staffRole
                                     ? staffRole.toString()
                                     : "Aucun spécifié.",

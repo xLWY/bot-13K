@@ -23,6 +23,7 @@ import { enforceAbuseProtection, formatCooldownDuration } from '../utils/abusePr
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { getUserTicketCount, getTicketTypeForGuild } from '../services/ticket.js';
 import { isBotOwner } from '../utils/ownerIds.js';
+import { getTicketStaffRoleIds } from '../utils/ticketStaffRoles.js';
 
 logger.info('[TicketFallback] v5 chargé — création en un clic + boutons autonomes.');
 
@@ -164,6 +165,8 @@ async function createTicketFallback(guild, member, options = {}) {
       PermissionFlagsBits.MentionEveryone,
     ];
 
+    const staffRoleIds = getTicketStaffRoleIds(config);
+
     createdChannel = await guild.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
@@ -172,9 +175,7 @@ async function createTicketFallback(guild, member, options = {}) {
         { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
         { id: guild.client.user.id, allow: allowPerms },
         { id: member.id, allow: allowPerms },
-        ...(config.ticketStaffRoleId
-          ? [{ id: config.ticketStaffRoleId, allow: allowPerms }]
-          : []),
+        ...staffRoleIds.map((roleId) => ({ id: roleId, allow: allowPerms })),
       ],
     });
 
@@ -206,7 +207,7 @@ async function createTicketFallback(guild, member, options = {}) {
     });
 
     const embedMessage = await createdChannel.send({
-      content: `${member.toString()}${config.ticketStaffRoleId ? ` <@&${config.ticketStaffRoleId}>` : ''}`,
+      content: `${member.toString()}${staffRoleIds.length ? ` ${staffRoleIds.map((roleId) => `<@&${roleId}>`).join(' ')}` : ''}`,
       embeds: [embed],
       components: [
         new ActionRowBuilder().addComponents(

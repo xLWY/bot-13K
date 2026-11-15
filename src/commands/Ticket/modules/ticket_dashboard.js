@@ -15,23 +15,34 @@ import {
     MessageFlags,
     ComponentType,
     EmbedBuilder,
+    PermissionFlagsBits,
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { getGuildConfig } from '../../../services/guildConfig.js';
 import { getGuildConfigKey } from '../../../utils/database.js';
+import { formatTicketStaffRoles, getTicketStaffRoleIds } from '../../../utils/ticketStaffRoles.js';
 import { getUserTicketCount, buildTicketTypeButtons, resolveTicketTypes } from '../../../services/ticket.js';
 
 const DEFAULT_PANEL_MESSAGE =
     "Bonjour ! Besoin d'aide ou d'une question ? Cliquez sur le bouton ci-dessous pour ouvrir un ticket.";
 const DEFAULT_BUTTON_LABEL = 'Ouvrir un ticket';
 
+const TICKET_STAFF_ALLOW_PERMISSIONS = [
+    PermissionFlagsBits.ViewChannel,
+    PermissionFlagsBits.SendMessages,
+    PermissionFlagsBits.AttachFiles,
+    PermissionFlagsBits.ReadMessageHistory,
+    PermissionFlagsBits.AddReactions,
+    PermissionFlagsBits.MentionEveryone,
+];
+
 // ─── Embed & Menu Builders ────────────────────────────────────────────────────
 
 function buildDashboardEmbed(config, guild) {
     const panelChannel = config.ticketPanelChannelId ? `<#${config.ticketPanelChannelId}>` : '`Non défini`';
-    const staffRole = config.ticketStaffRoleId ? `<@&${config.ticketStaffRoleId}>` : '`Non défini`';
+    const staffRole = formatTicketStaffRoles(config);
     const ticketLogsChannel = config.ticketLogsChannelId ? `<#${config.ticketLogsChannelId}>` : '`Non défini`';
     const transcriptChannel = config.ticketTranscriptChannelId ? `<#${config.ticketTranscriptChannelId}>` : '`Non défini`';
 
@@ -57,7 +68,7 @@ function buildDashboardEmbed(config, guild) {
         .setColor(getColor('info'))
         .addFields(
             { name: '📢 Salon du panneau', value: panelChannel, inline: true },
-            { name: '🛡️ Rôle staff', value: staffRole, inline: true },
+            { name: '🛡️ Rôles staff', value: staffRole, inline: true },
             { name: '\u200B', value: '\u200B', inline: true },
             { name: '📁 Catégorie des tickets ouverts', value: openCategory, inline: true },
             { name: '📂 Catégorie des tickets fermés', value: closedCategory, inline: true },
@@ -143,7 +154,7 @@ function buildButtonRow(guildConfig, guildId, disabled = false) {
             .setDisabled(disabled),
         new ButtonBuilder()
             .setCustomId(`ticket_cfg_staff_role_btn_${guildId}`)
-            .setLabel('Rôle staff')
+            .setLabel('Rôles staff')
             .setStyle(ButtonStyle.Secondary)
             .setEmoji('🛡️')
             .setDisabled(disabled),
@@ -546,22 +557,80 @@ async function handleButtonLabel(selectInteraction, rootInteraction, guildConfig
 
 // ─── Staff Role ───────────────────────────────────────────────────────────────
 
+async function syncStaffRolePermissions(guild, guildConfig, oldRoleIds, newRoleIds) {
+    if (!guild) return true;
+
+    const categoryIds = new Set(
+        [guildConfig.ticketCategoryId, guildConfig.ticketClosedCategoryId].filter(Boolean),
+    );
+
+    if (!guildConfig.ticketCategoryId) {
+        for (const channel of guild.channels.cache.values()) {
+            if (
+                channel.type === ChannelType.GuildCategory &&
+                channel.name.toLowerCase().includes('tickets')
+            ) {
+                categoryIds.add(channel.id);
+            }
+        }
+    }
+
+    if (categoryIds.size === 0) return true;
+
+    const ticketChannels = guild.channels.cache.filter(
+        channel => channel.parentId && categoryIds.has(channel.parentId),
+    );
+
+    let failed = 0;
+
+    for (const channel of ticketChannels.values()) {
+        for (const roleId of oldRoleIds) {
+            if (newRoleIds.includes(roleId)) continue;
+            if (!channel.permissionOverwrites.cache.has(roleId)) continue;
+            await channel.permissionOverwrites.delete(roleId).catch(error => {
+                failed += 1;
+                logger.warn(`Could not remove ticket staff role ${roleId} from ${channel.id}: ${error.message}`);
+            });
+        }
+
+        for (const roleId of newRoleIds) {
+            const existingOverwrite = channel.permissionOverwrites.cache.get(roleId);
+            const alreadyAllowed = existingOverwrite &&
+                TICKET_STAFF_ALLOW_PERMISSIONS.every(permission =>
+                    existingOverwrite.allow.has(permission) && !existingOverwrite.deny.has(permission),
+                );
+
+            if (alreadyAllowed) continue;
+
+            await channel.permissionOverwrites.edit(roleId, {
+                allow: TICKET_STAFF_ALLOW_PERMISSIONS,
+            }).catch(error => {
+                failed += 1;
+                logger.warn(`Could not add ticket staff role ${roleId} to ${channel.id}: ${error.message}`);
+            });
+        }
+    }
+
+    return failed === 0;
+}
+
 async function handleStaffRole(selectInteraction, rootInteraction, guildConfig, guildId, client) {
     await selectInteraction.deferUpdate();
 
     const roleSelect = new RoleSelectMenuBuilder()
         .setCustomId('ticket_cfg_staff_role')
-        .setPlaceholder('Sélectionnez le rôle staff…')
-        .setMaxValues(1);
+        .setPlaceholder('Sélectionnez un ou plusieurs rôles staff…')
+        .setMinValues(0)
+        .setMaxValues(25);
 
     const row = new ActionRowBuilder().addComponents(roleSelect);
 
     await selectInteraction.followUp({
         embeds: [
             new EmbedBuilder()
-                .setTitle('🛡️ Changer le rôle staff')
+                .setTitle('🛡️ Changer les rôles staff')
                 .setDescription(
-                    `**Actuel :** ${guildConfig.ticketStaffRoleId ? `<@&${guildConfig.ticketStaffRoleId}>` : '`Non défini`'}\n\nSélectionnez le rôle qui doit avoir accès à la gestion des tickets.`,
+                    `**Actuel :** ${formatTicketStaffRoles(guildConfig)}\n\nSélectionnez le ou les rôles qui doivent avoir accès à la gestion des tickets. Tu peux en choisir plusieurs.`,
                 )
                 .setColor(getColor('info')),
         ],
@@ -579,13 +648,31 @@ async function handleStaffRole(selectInteraction, rootInteraction, guildConfig, 
 
     roleCollector.on('collect', async roleInteraction => {
         await roleInteraction.deferUpdate();
-        const role = roleInteraction.roles.first();
+        const selectedRoles = [...roleInteraction.roles.values()];
+        const oldRoleIds = getTicketStaffRoleIds(guildConfig);
+        const newRoleIds = selectedRoles.map(role => role.id);
 
-        guildConfig.ticketStaffRoleId = role.id;
+        guildConfig.ticketStaffRoleIds = newRoleIds;
+        guildConfig.ticketStaffRoleId = newRoleIds[0] ?? null;
         await client.db.set(getGuildConfigKey(guildId), guildConfig);
 
+        const permissionsSynced = await syncStaffRolePermissions(
+            rootInteraction.guild,
+            guildConfig,
+            oldRoleIds,
+            newRoleIds,
+        );
+
         await roleInteraction.followUp({
-            content: `✅ Rôle staff défini — Le rôle staff est désormais ${role}.`,
+            content: `${
+                newRoleIds.length
+                    ? `✅ Rôles staff définis — ${selectedRoles.map(role => role.toString()).join(', ')} ont accès aux tickets.`
+                    : '✅ Rôles staff retirés — Aucun rôle staff n\'a accès aux tickets.'
+            }${
+                permissionsSynced
+                    ? ''
+                    : '\n⚠️ Certains salons de tickets n\'ont pas pu être mis à jour. Vérifie que le bot a la permission `Gérer les rôles`.'
+            }`,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -594,7 +681,10 @@ async function handleStaffRole(selectInteraction, rootInteraction, guildConfig, 
 
     roleCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun rôle sélectionné. Le rôle staff n\'a pas été modifié.');
+            selectInteraction.followUp({
+                content: `<@${selectInteraction.user.id}> Aucun rôle sélectionné. Les rôles staff n\'ont pas été modifiés.`,
+                flags: MessageFlags.Ephemeral,
+            }).catch(() => {});
         }
     });
 }
@@ -1167,6 +1257,7 @@ async function handleDeleteSystem(btnInteraction, rootInteraction, guildConfig, 
         'ticketPanelChannelId',
         'ticketPanelMessageId',
         'ticketStaffRoleId',
+        'ticketStaffRoleIds',
         'ticketCategoryId',
         'ticketClosedCategoryId',
         'ticketPanelMessage',

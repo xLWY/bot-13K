@@ -15,6 +15,7 @@ import { logTicketEvent } from '../utils/ticketLogging.js';
 import { BotConfig } from '../config/bot.js';
 import { ensureTypedServiceError } from '../utils/serviceErrorBoundary.js';
 import { isBotOwner } from '../utils/ownerIds.js';
+import { getTicketStaffRoleIds } from '../utils/ticketStaffRoles.js';
 
 const DEFAULT_TYPES = {
   support: { emoji: '🛟', label: 'Support', description: 'Une question ou un problème à régler', slug: 'support' },
@@ -217,7 +218,7 @@ export async function createTicket(guild, member, options = {}) {
     const ticketNumber = await getNextTicketNumber(guild.id);
     let channelName = `${type.emoji}-${type.slug}-ticket-${ticketNumber}`;
 
-const allowPerms = [
+    const allowPerms = [
       PermissionFlagsBits.ViewChannel,
       PermissionFlagsBits.SendMessages,
       PermissionFlagsBits.AttachFiles,
@@ -226,7 +227,9 @@ const allowPerms = [
       PermissionFlagsBits.MentionEveryone,
     ];
 
-channel = await guild.channels.create({
+    const staffRoleIds = getTicketStaffRoleIds(config);
+
+    channel = await guild.channels.create({
       name: channelName,
       type: ChannelType.GuildText,
       parent: category?.id,
@@ -243,14 +246,10 @@ channel = await guild.channels.create({
           id: member.id,
           allow: allowPerms,
         },
-        ...(config.ticketStaffRoleId
-          ? [
-              {
-                id: config.ticketStaffRoleId,
-                allow: allowPerms,
-              },
-            ]
-          : []),
+        ...staffRoleIds.map((roleId) => ({
+          id: roleId,
+          allow: allowPerms,
+        })),
       ],
     });
     channelCreated = true;
@@ -273,8 +272,8 @@ channel = await guild.channels.create({
 
     const embed = buildTicketEmbed({ ticketData, guild, member, ticketNumber });
     const rows = buildTicketButtons(ticketData);
-    const staffMention = config.ticketStaffRoleId ? ` <@&${config.ticketStaffRoleId}>` : '';
-    const messageContent = `${member.toString()}${staffMention}`;
+    const staffMention = staffRoleIds.map((roleId) => `<@&${roleId}>`).join(' ');
+    const messageContent = `${member.toString()}${staffMention ? ` ${staffMention}` : ''}`;
 
     const ticketMessage = await channel.send({
       content: messageContent,
