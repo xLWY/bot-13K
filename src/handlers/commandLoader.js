@@ -11,11 +11,11 @@ const __dirname = path.dirname(__filename);
 // Commandes autorisees en message prive (slash + prefixe).
 // Celles de GLOBAL_COMMANDS sont enregistrees aussi globalement pour que le
 // slash fonctionne aussi en MP ; les autres restent en mode serveur.
-const DM_ENABLED_COMMANDS = new Set(['ping', 'diag', 'logtest', 'help', 'avatar', 'ownerrole']);
+const DM_ENABLED_COMMANDS = new Set(['ping', 'diag', 'logtest', 'help', 'avatar', 'ownerrole', 'manage']);
 
 // Commandes enregistrees aussi globalement (en plus du serveur) pour pouvoir
 // etre utilisees en MP. Elles restent protegees par le code (owner-only).
-const GLOBAL_COMMANDS = new Set(['ownerrole']);
+const GLOBAL_COMMANDS = new Set(['ownerrole', 'manage']);
 
 
 

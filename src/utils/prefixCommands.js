@@ -371,7 +371,7 @@ async function replyWithNotice(message, text) {
     scheduleNoticeDeletion(sent);
 }
 
-const DM_SAFE_COMMANDS = new Set(['ping', 'diag', 'logtest', 'help', 'avatar', 'ownerrole']);
+const DM_SAFE_COMMANDS = new Set(['ping', 'diag', 'logtest', 'help', 'avatar', 'ownerrole', 'manage']);
 
 export async function handlePrefixCommand(message, client) {
     if (message.author.bot) return false;

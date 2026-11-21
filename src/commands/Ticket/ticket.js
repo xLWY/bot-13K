@@ -73,7 +73,7 @@ export default {
                     option
                         .setName("staff_role")
                         .setDescription(
-                            "Le rôle qui peut accéder aux tickets (facultatif). Pour en ajouter plusieurs, utilise /ticket dashboard.",
+                            "Rôle ayant accès aux tickets. Ajoute les autres via /ticket dashboard.",
                         )
                         .setRequired(false),
                 )
