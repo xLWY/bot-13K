@@ -9,7 +9,7 @@ function truncate(value, max = 500) {
 
 export default [
   {
-    name: Events.EmojiCreate,
+    name: Events.GuildEmojiCreate,
     once: false,
     async execute(emoji, client) {
       try {
@@ -33,7 +33,7 @@ export default [
   },
 
   {
-    name: Events.EmojiUpdate,
+    name: Events.GuildEmojiUpdate,
     once: false,
     async execute(before, after, client) {
       try {
@@ -66,7 +66,7 @@ export default [
   },
 
   {
-    name: Events.EmojiDelete,
+    name: Events.GuildEmojiDelete,
     once: false,
     async execute(emoji, client) {
       try {
@@ -89,7 +89,7 @@ export default [
   },
 
   {
-    name: Events.StickerCreate,
+    name: Events.GuildStickerCreate,
     once: false,
     async execute(sticker, client) {
       try {
@@ -114,7 +114,7 @@ export default [
   },
 
   {
-    name: Events.StickerUpdate,
+    name: Events.GuildStickerUpdate,
     once: false,
     async execute(before, after, client) {
       try {
@@ -138,7 +138,7 @@ export default [
   },
 
   {
-    name: Events.StickerDelete,
+    name: Events.GuildStickerDelete,
     once: false,
     async execute(sticker, client) {
       try {
@@ -218,27 +218,23 @@ export default [
   },
 
   {
-    name: Events.WebhookUpdate,
+    name: Events.WebhooksUpdate,
     once: false,
-    async execute(webhook, client) {
+    // discord.js émet `webhooksUpdate` avec le Guild (pas un webhook).
+    async execute(guild, client) {
       try {
-        if (!webhook.guild) return;
+        if (!guild) return;
         await logEvent({
-          client: client ?? webhook.client,
-          guildId: webhook.guild.id,
+          client: client ?? guild.client,
+          guildId: guild.id,
           eventType: EVENT_TYPES.WEBHOOK_UPDATE,
           data: {
-            description: `Webhook modifié : ${webhook.name}`,
-            channelId: webhook.channelId,
-            fields: [
-              { name: '🪝 Nom', value: webhook.name, inline: true },
-              { name: '📍 Salon', value: `<#${webhook.channelId}>`, inline: true },
-              { name: '🔗 URL', value: truncate(webhook.url, 200), inline: false },
-            ],
+            description: 'Les webhooks du serveur ont été modifiés.',
+            fields: [{ name: '🏛️ Serveur', value: guild.name, inline: false }],
           },
         });
       } catch (error) {
-        logger.error('Error in webhookUpdate event:', error);
+        logger.error('Error in webhooksUpdate event:', error);
       }
     },
   },

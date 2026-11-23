@@ -20,6 +20,31 @@ const LIST_NEXT = 'manage_list_next';
 const LEAVE_YES = 'manage_leave_yes';
 const LEAVE_NO = 'manage_leave_no';
 
+/**
+ * Le token d'un bouton peut devenir invalide (DiscordAPIError 50027) quand le
+ * bot quitte le serveur où l'interaction a eu lieu. Dans ce cas, on envoie le
+ * résultat en MP au propriétaire au lieu de perdre la confirmation.
+ */
+async function safeComponentReply(componentInteraction, payload, ownerId) {
+    try {
+        await componentInteraction.editReply(payload);
+        return;
+    } catch (error) {
+        logger.debug(`[Manage] component reply failed (${error?.code ?? error?.message ?? 'inconnu'})`);
+    }
+
+    try {
+        const owner = await componentInteraction.client.users.fetch(ownerId);
+        await owner.send({
+            content: payload.content ?? 'Résultat de `/manage` :',
+            embeds: payload.embeds ?? [],
+            allowedMentions: { parse: [] },
+        });
+    } catch (dmError) {
+        logger.debug(`[Manage] DM fallback failed: ${dmError.message}`);
+    }
+}
+
 const VERIFICATION_LABELS = {
     0: 'Aucune',
     1: 'Faible',
@@ -255,11 +280,12 @@ async function sendResolveError(interaction, needle, matches, guilds) {
     });
 }
 
-function attachCollector(reply, ownerId, onCollect) {
+function attachCollector(reply, ownerId, onCollect, allowedIds = null) {
     if (!reply?.createMessageComponentCollector) return null;
 
     const collector = reply.createMessageComponentCollector({
-        filter: (interaction) => interaction.user.id === ownerId,
+        filter: (interaction) => interaction.user.id === ownerId
+            && (!allowedIds || allowedIds.includes(interaction.customId)),
         time: COLLECTOR_MS,
     });
 
@@ -275,11 +301,11 @@ function attachCollector(reply, ownerId, onCollect) {
             await onCollect(componentInteraction);
         } catch (error) {
             logger.error('[Manage] component handler failed:', error);
-            await componentInteraction.editReply({
+            await safeComponentReply(componentInteraction, {
                 content: 'Une erreur est survenue. Réessaie avec la commande.',
                 components: [],
                 embeds: [],
-            }).catch(() => {});
+            }, ownerId);
         }
     });
 
@@ -356,8 +382,12 @@ export default {
                         return;
                     }
 
-                    await componentInteraction.editReply(buildListPayload(guilds, page));
-                });
+                    await safeComponentReply(
+                        componentInteraction,
+                        buildListPayload(guilds, page),
+                        interaction.user.id,
+                    );
+                }, [LIST_PREV, LIST_NEXT]);
                 return;
             }
 
@@ -390,21 +420,26 @@ export default {
                 let collector = null;
                 collector = attachCollector(reply, interaction.user.id, async (componentInteraction) => {
                     if (componentInteraction.customId === LEAVE_NO) {
-                        collector?.stop('cancelled');
-                        await componentInteraction.editReply({
+                        await safeComponentReply(componentInteraction, {
                             embeds: [successEmbed('Départ annulé.')],
                             components: [],
-                        });
+                        }, interaction.user.id);
+                        collector?.stop('cancelled');
                         return;
                     }
                     if (componentInteraction.customId !== LEAVE_YES) return;
 
+                    // On retire les boutons avant l'action pour éviter un double-clic,
+                    // et avant de quitter un serveur qui pourrait rendre le message
+                    // (et donc le token du webhook) inaccessible.
+                    await reply.edit({ components: [] }).catch(() => {});
+
                     const freshGuild = await discordClient.guilds.fetch(guild.id).catch(() => null);
                     if (!freshGuild) {
-                        await componentInteraction.editReply({
+                        await safeComponentReply(componentInteraction, {
                             embeds: [errorEmbed(`Je ne suis plus dans \`${guild.id}\`.`)],
                             components: [],
-                        });
+                        }, interaction.user.id);
                         collector?.stop('already_left');
                         return;
                     }
@@ -416,21 +451,22 @@ export default {
                         await freshGuild.leave();
                     } catch (error) {
                         logger.error(`[Manage] could not leave ${id}: ${error.message}`);
-                        await componentInteraction.editReply({
+                        await safeComponentReply(componentInteraction, {
                             embeds: [errorEmbed(`Impossible de quitter **${name}** (\`${id}\`) : ${error.message}`)],
                             components: [],
-                        });
+                        }, interaction.user.id);
+                        collector?.stop('failed');
                         return;
                     }
 
                     logger.info(`[Manage] ${interaction.user.tag} a fait quitter le serveur ${name} (${id})`);
 
-                    collector?.stop('left');
-                    await componentInteraction.editReply({
+                    await safeComponentReply(componentInteraction, {
                         embeds: [successEmbed(`J’ai quitté **${name}** (\`${id}\`).`)],
                         components: [],
-                    });
-                });
+                    }, interaction.user.id);
+                    collector?.stop('left');
+                }, [LEAVE_YES, LEAVE_NO]);
                 return;
             }
 
