@@ -34,7 +34,7 @@ A modular Discord.js v14 bot for moderation, tickets, giveaways, leveling, serve
 | Join-to-create | temporary voice channels created on demand |
 | Settings | prefix, logs, anti-spam and dashboards for most modules |
 | Utilities | `embedbuilder`, `serverinfo`, `userinfo`, `avatar`, `hoxley`, `wipedata` |
-| Owner tools | `/diag`, `/ownerrole` and `/manage` (list / info / leave servers, usable in DMs) |
+| Owner tools | `/diag`, `/ownerrole` and `/manage` (list / info / leave servers, plus an OAuth2 invite link, usable in DMs) |
 
 The authoritative command inventory is in [docs/COMMANDS.md](docs/COMMANDS.md).
 
@@ -92,7 +92,9 @@ Connection URL precedence: `DATABASE_URL` > `POSTGRES_URL` > `POSTGRES_CONNECTIO
 
 ## Commands
 
-Slash commands are registered globally for the DM-enabled owner commands (`/ownerrole`, `/manage`) and per-guild for everything else. Most commands also accept a `!` prefix in guilds; the owner may use a small allowlist in DMs.
+Slash commands are registered globally for the DM-enabled owner commands (`/ownerrole`, `/manage`) and per-guild for everything else. Global commands use explicit interaction contexts (`[0, 1]`) so they stay available in bot DMs. Most commands also accept a `!` prefix in guilds; the owner may use a small allowlist in DMs.
+
+Run `/manage invite` (or `!manage invite`) to get a link that adds the bot to a server with either recommended permissions or administrator.
 
 See [docs/COMMANDS.md](docs/COMMANDS.md) for categories, subcommands, aliases and DM availability.
 

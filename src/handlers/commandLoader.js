@@ -244,6 +244,23 @@ function withoutDefaultPermissions(commandJson) {
     return copy;
 }
 
+/**
+ * Prépare une commande pour l'enregistrement global.
+ *
+ * Discord remplace le champ déprécié `dm_permission` par `contexts` : le
+ * définir explicitement évite qu'une commande autorisée en MP soit masquée
+ * par les contexts par défaut du serveur Discord.
+ * 0 = Guild, 1 = BotDM (les DMs avec le bot, pas les DMs entre utilisateurs).
+ */
+function forGlobalRegistration(commandJson) {
+    const payload = withoutDefaultPermissions(commandJson);
+    delete payload.dm_permission;
+    payload.contexts = DM_ENABLED_COMMANDS.has(commandJson.name)
+        ? [0, 1]
+        : [0];
+    return payload;
+}
+
 function validateForGlobal(commandJson, seenNames) {
     const name = commandJson.name;
     const errors = [];
@@ -383,11 +400,11 @@ const registeredNames = new Set();
         const guildCommandsToRegister = validCommands;
         const globalCommandsToRegister = validCommands
             .filter(cmd => GLOBAL_COMMANDS.has(cmd.name))
-            .map(withoutDefaultPermissions);
+            .map(forGlobalRegistration);
 
         const globalResult = guildId
             ? { registered: 0, failed: [] }
-            : await registerGlobalCommands(client, validCommands.map(withoutDefaultPermissions));
+            : await registerGlobalCommands(client, validCommands.map(forGlobalRegistration));
 
         if (globalResult.failed.length > 0) {
             logger.error('Commands Discord refused despite passing local validation:');

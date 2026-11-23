@@ -6,6 +6,7 @@ import {
     ButtonStyle,
     ChannelType,
     MessageFlags,
+    PermissionsBitField,
 } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
@@ -317,6 +318,66 @@ function attachCollector(reply, ownerId, onCollect, allowedIds = null) {
     return collector;
 }
 
+const INVITE_PERMISSION_SETS = {
+    recommended: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.EmbedLinks,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.AddReactions,
+        PermissionFlagsBits.UseExternalEmojis,
+        PermissionFlagsBits.ManageRoles,
+        PermissionFlagsBits.ManageChannels,
+        PermissionFlagsBits.KickMembers,
+        PermissionFlagsBits.BanMembers,
+    ],
+    admin: [PermissionFlagsBits.Administrator],
+};
+
+function buildInviteUrl(client, mode) {
+    const clientId = process.env.CLIENT_ID || client?.user?.id;
+    if (!clientId) return null;
+
+    const permissions = new PermissionsBitField(
+        INVITE_PERMISSION_SETS[mode] ?? INVITE_PERMISSION_SETS.recommended,
+    );
+    const params = new URLSearchParams();
+    params.set('client_id', String(clientId));
+    params.set('scope', 'bot applications.commands');
+    params.set('permissions', permissions.bitfield.toString());
+
+    return `https://discord.com/oauth2/authorize?${params.toString().replace(/\+/g, '%20')}`;
+}
+
+function buildInvitePayload(url, mode) {
+    const label = mode === 'admin' ? 'Administrateur' : 'Recommandées';
+
+    return {
+        embeds: [createEmbed({
+            title: 'Inviter le bot sur un serveur',
+            description: [
+                'Ouvre le lien ci-dessous, choisis le serveur voulu et valide les permissions.',
+                'Le bot et ses commandes slash seront ajoutés en une seule étape.',
+            ].join('\n'),
+            fields: [
+                { name: 'Permissions', value: label, inline: true },
+                { name: 'Portée', value: 'Bot + commandes slash', inline: true },
+                {
+                    name: 'Lien manuel',
+                    value: `\`${url}\``,
+                },
+            ],
+        })],
+        components: [new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setLabel('Ajouter le bot à un serveur')
+                .setStyle(ButtonStyle.Link)
+                .setURL(url),
+        )],
+        allowedMentions: { parse: [] },
+    };
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName('manage')
@@ -339,11 +400,23 @@ export default {
             .addStringOption((option) => option
                 .setName('serveur')
                 .setDescription('Nom ou ID du serveur')
-                .setRequired(true))),
+                .setRequired(true)))
+        .addSubcommand((subcommand) => subcommand
+            .setName('invite')
+            .setDescription('Générer un lien pour ajouter le bot à un serveur')
+            .addStringOption((option) => option
+                .setName('permissions')
+                .setDescription('Permissions demandées (par défaut : recommandées)')
+                .setRequired(false)
+                .addChoices(
+                    { name: 'Recommandées', value: 'recommended' },
+                    { name: 'Administrateur', value: 'admin' },
+                ))),
 
     category: 'Owner',
     ownerOnly: true,
     deferEphemeral: true,
+    allowPrefixWithoutSubcommand: true,
 
     async execute(interaction, config, client) {
         if (!isBotOwner(interaction.user.id)) {
@@ -388,6 +461,24 @@ export default {
                         interaction.user.id,
                     );
                 }, [LIST_PREV, LIST_NEXT]);
+                return;
+            }
+
+            if (subcommand === 'invite') {
+                const mode = interaction.options.getString('permissions', false) === 'admin'
+                    ? 'admin'
+                    : 'recommended';
+                const url = buildInviteUrl(discordClient, mode);
+                if (!url) {
+                    await InteractionHelper.safeEditReply(interaction, {
+                        embeds: [errorEmbed(
+                            'Impossible de générer le lien : `CLIENT_ID` est absent de la configuration.',
+                        )],
+                    });
+                    return;
+                }
+
+                await InteractionHelper.safeEditReply(interaction, buildInvitePayload(url, mode));
                 return;
             }
 
@@ -475,8 +566,8 @@ export default {
                 content: [
                     `Sous-commande inconnue : \`${subcommand}\`.`,
                     isPrefix
-                        ? `Utilisation : \`${prefix}manage list\`, \`${prefix}manage info <serveur>\`, \`${prefix}manage leave <serveur>\`.`
-                        : 'Utilisation : `/manage list`, `/manage info`, `/manage leave`.',
+                        ? `Utilisation : \`${prefix}manage list\`, \`${prefix}manage info <serveur>\`, \`${prefix}manage leave <serveur>\`, \`${prefix}manage invite\`.`
+                        : 'Utilisation : `/manage list`, `/manage info`, `/manage leave`, `/manage invite`.',
                 ].join('\n'),
             });
         } catch (error) {

@@ -10,13 +10,14 @@ Generated from `src/commands/` (November 2026). Files directly inside `modules/`
 | Per-guild | Every other command, registered in `GUILD_ID` when set, otherwise globally. |
 | Prefix | Most commands also work with `!` in guilds (`!ping`, `!manage list`, …). In DMs the prefix is restricted to the owner and to an explicit allowlist. |
 
-The allowlists live in:
+The allowlists live in a single source of truth: `src/config/commandMeta.js`
+(`DM_ENABLED_COMMANDS`, `GLOBAL_COMMANDS`). `commandLoader.js`, `help.js` and
+`prefixCommands.js` import it. Owner checks use the `ownerOnly: true` flag on
+the command itself, enforced by `isBotOwner()`.
 
-- `src/handlers/commandLoader.js` — `DM_ENABLED_COMMANDS`, `GLOBAL_COMMANDS`
-- `src/utils/prefixCommands.js` — `DM_SAFE_COMMANDS`
-- `src/commands/help.js` — `OWNER_ONLY_COMMANDS`
-
-Keep all three in sync when adding a DM-capable command.
+Global commands are sent with explicit `contexts: [0, 1]` (guild + bot DM), and
+`default_member_permissions` is stripped, so `/manage` is visible in DMs. DM
+visibility can take up to an hour to propagate after a global command change.
 
 ## Root commands
 
@@ -69,6 +70,9 @@ Dashboards: `modules/setup.js`, `modules/config_setup.js`.
 | `/manage list` | List every guild the bot is in (paginated) | yes, owner |
 | `/manage info <serveur>` | Detailed guild information | yes, owner |
 | `/manage leave <serveur>` | Make the bot leave a guild, with confirmation | yes, owner |
+| `/manage invite [permissions]` | Generate an OAuth2 link to add the bot to a server (`recommended` or `admin`) | yes, owner |
+
+`!manage` alone defaults to `list` in prefix form.
 
 ## Reaction roles
 
@@ -125,6 +129,6 @@ No standalone slash command; configuration is exposed through `commands/Welcome/
 
 1. Create `src/commands/<Category>/<name>.js` exporting `{ data, execute }`.
 2. Set `category` on the export for `/help` grouping.
-3. For owner-only commands, add `isBotOwner(interaction.user.id)` in `execute()` **and** add the name to `OWNER_ONLY_COMMANDS` in `src/commands/help.js`.
-4. For DM support, update all three allowlists listed above.
+3. For owner-only commands, set `ownerOnly: true` and keep the `isBotOwner(interaction.user.id)` guard in `execute()`.
+4. For DM support, add the name to `DM_ENABLED_COMMANDS` in `src/config/commandMeta.js` (and to `GLOBAL_COMMANDS` if it must be registered globally when `GUILD_ID` is set).
 5. Add a test under `tests/unit/` for any pure helper you introduce.

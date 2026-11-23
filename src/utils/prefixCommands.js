@@ -477,13 +477,19 @@ export async function handlePrefixCommand(message, client) {
             optionDefs = sub.options || [];
         } else if (optionDefs[0]?.type === OPTION_TYPE.SUBCOMMAND) {
             const subToken = tokens.shift();
-            const sub = optionDefs.find(o => o.name === subToken?.toLowerCase());
-            if (!sub) {
-                await replyWithNotice(message, `utilisation : \`${configuredPrefix}${commandName} <sous-commande>\` — disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
-                return true;
+            if (subToken === undefined && command.allowPrefixWithoutSubcommand) {
+                // La commande gère elle-même l'absence de sous-commande
+                // (ex. `!manage` qui affiche la liste par défaut).
+                optionDefs = [];
+            } else {
+                const sub = optionDefs.find(o => o.name === subToken?.toLowerCase());
+                if (!sub) {
+                    await replyWithNotice(message, `utilisation : \`${configuredPrefix}${commandName} <sous-commande>\` — disponibles : ${optionDefs.map(o => o.name).join(', ')}`);
+                    return true;
+                }
+                subcommand = sub.name;
+                optionDefs = sub.options || [];
             }
-            subcommand = sub.name;
-            optionDefs = sub.options || [];
         }
 
         const requiredPerms = commandJSON.default_member_permissions;

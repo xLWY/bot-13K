@@ -53,10 +53,11 @@ Database abstraction layer
   all data is lost on restart. /health reports database.degraded, /ready returns 503.
 
 Command registration notes
-- DM_ENABLED_COMMANDS + GLOBAL_COMMANDS (src/handlers/commandLoader.js)
-- DM_SAFE_COMMANDS (src/utils/prefixCommands.js)
-- OWNER_ONLY_COMMANDS (src/commands/help.js)
-- Keep the three lists aligned when adding a DM-capable or owner-only command.
+- DM_ENABLED_COMMANDS + GLOBAL_COMMANDS live in src/config/commandMeta.js
+  (imported by commandLoader.js, help.js and prefixCommands.js).
+- Owner-only commands use `ownerOnly: true` plus isBotOwner() in execute().
+- Global commands are registered with contexts [0, 1] so /manage stays usable in DMs;
+  default_member_permissions is stripped globally and rechecked in code.
 
 Notes
 - Architecture: commands -> handlers -> services -> utils.
