@@ -245,6 +245,8 @@ function createPrefixInteraction(message, client, commandName, optionsAccessor) 
         createdTimestamp: message.createdTimestamp,
         memberPermissions: message.member?.permissions ?? new PermissionsBitField(),
         options: optionsAccessor,
+        inGuild: () => Boolean(message.guild),
+        inPrivateChannel: () => !message.guild,
         isChatInputCommand: () => true,
         isPrefixCommand: () => true,
         isAutocomplete: () => false,

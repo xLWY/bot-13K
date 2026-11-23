@@ -604,7 +604,7 @@ export default {
                 throw createError(
                   `Command ${interaction.commandName} is disabled in this guild`,
                   ErrorTypes.CONFIGURATION,
-                  'This command has been disabled for this server.',
+                  'Cette commande a été désactivée sur ce serveur.',
                   withTraceContext({ commandName: interaction.commandName, guildId: interaction.guild.id }, interactionTraceContext)
                 );
               }
@@ -628,6 +628,10 @@ export default {
           const focusedOption = interaction.options.getFocused(true);
           
           if (interaction.commandName === 'reactroles' && focusedOption.name === 'panel') {
+            if (!interaction.guild) {
+              await interaction.respond([]).catch(() => {});
+              return;
+            }
             try {
               const { getAllReactionRoleMessages, deleteReactionRoleMessage } = await import('../services/reactionRoleService.js');
               const guildId = interaction.guildId;
@@ -696,7 +700,7 @@ export default {
                 guildId: interaction.guildId,
                 commandName: interaction.commandName
               });
-              await interaction.respond([]);
+              await interaction.respond([]).catch(() => {});
             }
           }
         } else if (interaction.isButton()) {

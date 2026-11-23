@@ -322,7 +322,7 @@ export const botConfig = {
     // Welcome template posted when a user joins.
     // Placeholders: {user}, {server}, {memberCount}
     defaultWelcomeMessage:
-      "Welcome {user} to {server}! We now have {memberCount} members!",
+      'Bienvenue {user} sur {server} ! Nous sommes {memberCount} membres.',
     // Channel ID for welcome messages.
     defaultWelcomeChannel: null,
   },

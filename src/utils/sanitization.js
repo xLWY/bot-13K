@@ -75,7 +75,8 @@ export function sanitizeInput(input, maxLength = 2000) {
 
 
 export function sanitizeMention(mention) {
-  const validId = mention.replace(/[<@!&#]/g, '');
+  if (typeof mention !== 'string') return null;
+  const validId = mention.replace(/[<@!&#>]/g, '');
   return /^\d+$/.test(validId) ? validId : null;
 }
 

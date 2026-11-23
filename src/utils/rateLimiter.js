@@ -1,6 +1,19 @@
 import { logger } from './logger.js';
 
 const rateLimitStore = new Map();
+const SWEEP_INTERVAL_MS = 60_000;
+let lastSweep = Date.now();
+
+/** Supprime les entrées périmées sans timer persistant (appelé au plus une fois/minute). */
+function sweepExpiredEntries(now) {
+  if (now - lastSweep < SWEEP_INTERVAL_MS) return;
+  lastSweep = now;
+  for (const [key, entry] of rateLimitStore) {
+    if (now - entry.windowStart > (entry.windowMs ?? SWEEP_INTERVAL_MS)) {
+      rateLimitStore.delete(key);
+    }
+  }
+}
 
 
 
@@ -12,13 +25,15 @@ const rateLimitStore = new Map();
 export async function checkRateLimit(key, maxAttempts = 5, windowMs = 60000) {
   try {
     const now = Date.now();
+    sweepExpiredEntries(now);
     const entry = rateLimitStore.get(key);
 
     
     if (!entry || now - entry.windowStart > windowMs) {
       rateLimitStore.set(key, {
         count: 1,
-        windowStart: now
+        windowStart: now,
+        windowMs
       });
       return true;
     }

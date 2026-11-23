@@ -111,7 +111,8 @@ export default {
 
                     await interaction.guild.members.ban(userId, {
                         reason: reason,
-                        deleteMessageDays: deleteDays
+                        // discord.js v14 attend des secondes, pas des jours.
+                        deleteMessageSeconds: deleteDays * 86400
                     });
 
                     results.successful.push({

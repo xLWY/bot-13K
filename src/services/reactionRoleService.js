@@ -378,19 +378,19 @@ export async function getAllReactionRoleMessages(client, guildId) {
             keys = await client.db.list(prefix);
             
             if (keys && typeof keys === 'object') {
-                if (Array.isArray(keys)) {
-                    
-                } else if (keys.value && Array.isArray(keys.value)) {
-                    keys = keys.value;
-                } else {
-                    const allKeys = await client.db.list();
-                    
-                    if (Array.isArray(allKeys)) {
-                        keys = allKeys.filter(key => key.startsWith(prefix));
-                    } else if (allKeys.value && Array.isArray(allKeys.value)) {
-                        keys = allKeys.value.filter(key => key.startsWith(prefix));
+                if (!Array.isArray(keys)) {
+                    if (keys.value && Array.isArray(keys.value)) {
+                        keys = keys.value;
                     } else {
-                        return [];
+                        const allKeys = await client.db.list();
+                        
+                        if (Array.isArray(allKeys)) {
+                            keys = allKeys.filter(key => key.startsWith(prefix));
+                        } else if (allKeys.value && Array.isArray(allKeys.value)) {
+                            keys = allKeys.value.filter(key => key.startsWith(prefix));
+                        } else {
+                            return [];
+                        }
                     }
                 }
             } else {

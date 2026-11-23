@@ -208,19 +208,26 @@ class EconomyService {
     receiverData.wallet = receiverNext;
 
     try {
-      // Step 1: Deduct from sender
-      await setEconomyData(client, guildId, senderId, senderData);
+      // Step 1: Deduct from sender. setEconomyData returns false on failure
+      // instead of throwing, so the old code could report a one-sided transfer.
+      if (!(await setEconomyData(client, guildId, senderId, senderData))) {
+        throw new Error('Impossible de débiter l’expéditeur.');
+      }
       
       try {
         // Step 2: Add to receiver
-        await setEconomyData(client, guildId, receiverId, receiverData);
+        if (!(await setEconomyData(client, guildId, receiverId, receiverData))) {
+          throw new Error('Impossible de créditer le destinataire.');
+        }
       } catch (receiverError) {
         // ROLLBACK: Try to restore sender's money if receiver update fails
         logger.error(`[ECONOMY_CRITICAL] Failed to credit receiver ${receiverId}. Attempting rollback for sender ${senderId}...`, receiverError);
         
         senderData.wallet = walletBefore;
         try {
-          await setEconomyData(client, guildId, senderId, senderData);
+          if (!(await setEconomyData(client, guildId, senderId, senderData))) {
+            throw new Error('Rollback write failed');
+          }
           logger.info(`[ECONOMY_ROLLBACK] Successfully rolled back sender ${senderId} after receiver credit failure.`);
         } catch (rollbackError) {
           logger.error(`[ECONOMY_FATAL] ROLLBACK FAILED for sender ${senderId}! Data is now inconsistent.`, rollbackError);

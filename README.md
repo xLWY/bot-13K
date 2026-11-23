@@ -1,257 +1,141 @@
-# xlwy bot - Ultimate Discord Bot
+# xlwy bot
 
-**xlwy bot** is a powerful, feature-rich Discord bot designed to enhance your server experience with comprehensive moderation tools, engaging economy systems, utility features, and much more. Built with modern Discord.js v14 and PostgreSQL for optimal performance and data persistence.
+A modular Discord.js v14 bot for moderation, tickets, giveaways, leveling, server statistics and server configuration. Data is persisted in PostgreSQL, with an in-memory fallback when the database is unavailable.
 
 [![Support Server](https://img.shields.io/badge/-Support%20Server-%235865F2?logo=discord&logoColor=white&style=flat-square&logoWidth=20)](https://discord.gg/8kJBYhTGW9)
 [![Discord.js](https://img.shields.io/npm/v/discord.js?style=flat-square&labelColor=%23202225&color=%23202225&logo=npm&logoColor=white&logoWidth=20)](https://www.npmjs.com/package/discord.js)
 ![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-%23336791?logo=postgresql&logoColor=white&style=flat-square&logoWidth=20)
 
-## Table of Contents
+## Contents
 
-- [Features Overview](#features-overview)
-- [Quick Setup](#quick-setup)
-- [Manual Installation Steps](#manual-installation-steps)
-- [Support Server](https://discord.gg/QnWNz2dKCE)
-- [Required Bot Intents](#bot-intents)
+- [Features](#features)
+- [Quick setup (Docker)](#quick-setup-docker)
+- [Manual installation](#manual-installation)
+- [Configuration](#configuration)
+- [Commands](#commands)
+- [Tests](#tests)
+- [Database fallback](#database-fallback)
+- [Required intents and permissions](#required-intents-and-permissions)
+- [Deployment](#deployment)
 - [Contributing](#contributing)
+- [License](#license)
 
-<a name="features-overview"></a>
-## Features Overview
+## Features
 
-xlwy bot offers a complete suite of tools for Discord server management and community engagement:
+| Area | What it does |
+| --- | --- |
+| Moderation | ban, kick, timeout, warn, clear, role management, mass actions, lock/unlock, nuke, staff tools |
+| Tickets | ticket panel, claim, close, configurable types/staff roles, per-guild limits |
+| Giveaways | create, end, delete and reroll with multi-winner support |
+| Leveling | XP from messages, configurable levels, leveling dashboard |
+| Server statistics | member/online/bot/voice counter channels with throttled updates |
+| Reaction roles | self-assignable roles through panels |
+| Welcome | greeting messages, auto roles and the `greet` dashboard |
+| Join-to-create | temporary voice channels created on demand |
+| Settings | prefix, logs, anti-spam and dashboards for most modules |
+| Utilities | `embedbuilder`, `serverinfo`, `userinfo`, `avatar`, `hoxley`, `wipedata` |
+| Owner tools | `/diag`, `/ownerrole` and `/manage` (list / info / leave servers, usable in DMs) |
 
-<table>
-<tr>
-<td width="50%" valign="top">
+The authoritative command inventory is in [docs/COMMANDS.md](docs/COMMANDS.md).
 
-### Moderation & Administration
-- **Mass Actions** - Bulk ban/kick capabilities
-- **User Notes** - Keep detailed moderation records
-- **Case Management** - View and track all mod actions
-
-### Economy System
-- **Shop & Inventory** - Buy and manage items
-- **Gambling** - Risk it for rewards
-- **Pay System** - Transfer money between users
-
-### Fun & Entertainment
-- **Random Facts** - Learn something new
-- **Wanted Poster** - Create fun wanted images
-- **Text Reversal** - Reverse any text
-
-### Advanced Ticket System
-- **Claim & Priority** - Staff ticket management
-- **Ticket Limits** - Prevent spam
-- **Transcript System** - Save ticket history
-
-### Server Stats
-- **Member Counter** - Live member count channels
-- **Voice Counters** - Track voice stats
-- **Dynamic Updates** - Real-time channel updates
-
-### Reaction Roles
-- **Role Assignment** - Self-assignable roles
-- **Emoji Selection** - Reaction-based system
-- **Multi-role Support** - Multiple role options
-
-</td>
-<td width="50%" valign="top">
-
-### Leveling & XP System
-- **XP Tracking** - Automatic message-based XP
-- **Level Roles** - Auto-assign roles by level
-- **Custom Configuration** - Personalize leveling
-
-### Giveaways & Events
-- **Multiple Winners** - Support multi-winner giveaways
-- **Auto Picking** - Automatic winner selection
-- **Reroll System** - Pick new winners if needed
-
-### Birthday System
-- **Birthday Tracking** - Never miss a birthday
-- **Auto Announcements** - Celebrate automatically
-- **Timezone Support** - Accurate worldwide tracking
-
-### Utility Tools
-- **Report System** - Report issues to staff
-- **Todo Lists** - Personal task management
-- **First Message** - Jump to channel's first message
-
-### Welcome System
-- **Welcome Messages** - Greet new members
-- **Auto Roles** - Assign roles on join
-- **Custom Embeds** - Personalized messages
-
-</td>
-</tr>
-</table>
-
-<a name="quick-setup"></a>
-## Quick Setup (Recommended for non-coders)
-
-### Video Tutorial
-For a detailed step-by-step setup guide, watch our comprehensive video tutorial:
-[**xlwy bot Setup Tutorial**](https://www.youtube.com/@TouchDisc)
-
-## Docker Deployment (Recommended)
-
-xlwy bot is fully containerized for easy deployment.
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/xLWY/bot-13K.git
-   cd bot-13K
-   ```
-
-2. **Configure environment variables:**
-   Create a `.env` file from `.env.example` and fill in your bot details and PostgreSQL credentials.
-
-3. **Start the containers:**
-   ```bash
-   docker-compose up -d
-   ```
-
-This will start both the bot and a persistent PostgreSQL database.
-
-### Using GitHub Container Registry
-
-The bot is automatically published to GitHub Container Registry on every push to main.
+## Quick setup (Docker)
 
 ```bash
-docker pull ghcr.io/xLWY/bot-13K:main
+git clone https://github.com/xLWY/bot-13K.git
+cd bot-13K
+copy .env.example .env   # Linux/macOS: cp .env.example .env
+# edit .env: DISCORD_TOKEN, CLIENT_ID, OWNER_IDS, database credentials
+docker compose up -d
 ```
 
-<a name="manual-installation-steps"></a>
-## Manual Installation Steps
+Compose starts the bot and a PostgreSQL 15 container with a persistent volume.
 
-### Prerequisites
-- Node.js 18.0.0 or higher
-- PostgreSQL server (recommended) or memory storage fallback
-- Discord bot application with proper intents
+## Manual installation
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/xLWY/bot-13K.git
-   cd bot-13K
-   ```
+Prerequisites: Node.js >= 18, npm, and PostgreSQL (recommended) or the in-memory fallback.
 
-2. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+copy .env.example .env   # Linux/macOS: cp .env.example .env
+# edit .env
+npm run migrate:check    # verify the database before starting
+npm start
+```
 
-3. **Configure Environment Variables**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` with your configuration (only the following variables require configuration, leave remaining variables as default):
-   ```env
-   # Discord Bot Configuration
-   DISCORD_TOKEN=your_discord_bot_token_here
-   CLIENT_ID=your_discord_client_id_here
-   GUILD_ID=your_discord_guild_id_here
+Useful scripts:
 
-   # PostgreSQL Configuration (Primary Database)
-   POSTGRES_URL=postgresql://postgres:yourpassword@localhost:5432/xlwybot
-   POSTGRES_HOST=localhost
-   POSTGRES_PORT=5432
-   POSTGRES_DB=xlwybot
-   POSTGRES_USER=postgres
-   POSTGRES_PASSWORD=yourpassword
-   ```
+| Script | Purpose |
+| --- | --- |
+| `npm start` | Start the bot (`node src/app.js`) |
+| `npm test` | Run the unit/failure-path test suite |
+| `npm run migrate` | Apply database migrations |
+| `npm run migrate:check` | Check pending migrations without applying them |
+| `npm run migrate:status` | Show migration/schema status |
+| `npm run backup:db` | Dump the database |
+| `npm run restore:db` | Restore a dump |
+| `npm run backup:drill` | Restore drill in a scratch database |
 
-   Production note:
-   - `NODE_ENV=production`
-   - `LOG_LEVEL=warn` for a clean production console (critical issues + startup status)
-   - `LOG_LEVEL=info` if you want more detailed operational logs
-   - If your chosen `PORT` is already used, xlwy bot automatically tries the next port(s)
+## Configuration
 
-   Environment options reference:
-   - `NODE_ENV`: `development`, `production`, `test` (any non-`production` value is treated as non-production)
-   - `LOG_LEVEL`: `error`, `warn`, `info`, `http`, `verbose`, `debug`, `silly`
-   - Accepted aliases for `LOG_LEVEL` in this bot: `warns`, `warning`, `warnings` → `warn`
+All settings are read from `.env`; see [`.env.example`](.env.example) for the full commented list. The minimum required values are:
 
-   Recommended production `.env` (easy mode + default mode):
-   ```env
-   NODE_ENV=production
-   LOG_LEVEL=warn
-   WEB_HOST=0.0.0.0
-   PORT=3000
-   PORT_RETRY_ATTEMPTS=5
-   ```
-   This gives clear startup/online status messages while keeping logs simple for non-technical operators.
-   If port `3000` is busy, the bot tries the next available ports automatically (up to `PORT_RETRY_ATTEMPTS`).
+```env
+DISCORD_TOKEN=<bot token>
+CLIENT_ID=<application id>
+OWNER_IDS=<your Discord user id, digits only>
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+```
 
-4. **Setup PostgreSQL Database** (Optional but recommended)
-   ```bash
-   # Create database and user
-   createdb xlwybot
-   createuser xlwybot
-   psql -c "ALTER USER xlwybot PASSWORD 'yourpassword';"
-   psql -c "GRANT ALL PRIVILEGES ON DATABASE xlwybot TO xlwybot;"
-   ```
+`OWNER_IDS` accepts several comma-separated IDs. When it is empty, the Discord application owner is used as a fallback. The bot exposes `GET /health` and `GET /ready` on `PORT` (default `3000`) for process managers.
 
-5. **Test Database Connection**
-   ```bash
-   npm test
-   ```
+Connection URL precedence: `DATABASE_URL` > `POSTGRES_URL` > `POSTGRES_CONNECTION_URL` > `PGURL` > individual `POSTGRES_*` variables. Set **one** URL variable to avoid pointing migrations at an unintended host.
 
-6. **Start the Bot**
-   ```bash
-   npm start
-   ```
-<a name="bot-intents"></a>
+## Commands
 
-## Required Bot Intents
-xlwy bot requires the following Discord intents:
-- **Guilds**
-- **Guild Messages**
-- **Message Content**
-- **Guild Members**
-- **Guild Message Reactions**
-- **Guild Voice States**
-- **Direct Messages**
-- **Bot**
-- **Applications.commands**
+Slash commands are registered globally for the DM-enabled owner commands (`/ownerrole`, `/manage`) and per-guild for everything else. Most commands also accept a `!` prefix in guilds; the owner may use a small allowlist in DMs.
 
-### Required Permissions
-- **View Channels**
-- **Send Messages**
-- **Embed Links**
-- **Attach Files**
-- **Read Message History**
-- **Manage Messages**
-- **Manage Channels**
-- **Manage Roles**
-- **Kick Members**
-- **Manage Messages**
-- **Ban Members**
-- **Moderate Members**
-- **Connect**
+See [docs/COMMANDS.md](docs/COMMANDS.md) for categories, subcommands, aliases and DM availability.
 
-<a name="contributing"></a>
+## Tests
+
+```bash
+npm install
+npm test
+```
+
+The suite uses Node's built-in test runner (`node --test`) and needs no test framework. It currently covers failure paths and pure utilities under `tests/failure-paths/` and `tests/unit/`. Some service tests need a real `npm install` because they import discord.js, winston or Zod.
+
+## Database fallback
+
+If PostgreSQL cannot be reached, the bot logs a clear warning and continues with **in-memory storage**: nothing is persisted and all data is lost on restart. Production deployments should monitor `/health` (`database.degraded`) and fix the connection before trusting any data.
+
+## Required intents and permissions
+
+Enable these privileged intents in the Discord Developer Portal (Bot → Privileged Gateway Intents):
+
+- **Server Members**
+- **Presence** (needed for online counters)
+- **Message Content** (needed for prefix commands)
+
+Gateway intents used by the client: Guilds, GuildMembers, GuildPresences, GuildMessages, GuildMessageReactions, MessageContent, GuildVoiceStates, GuildBans and GuildModeration.
+
+Recommended bot permissions: View Channels, Send Messages, Embed Links, Attach Files, Read Message History, Manage Messages, Manage Channels, Manage Roles, Kick/Ban Members, Moderate Members and Connect. Some commands require the corresponding permission; owner commands bypass the Discord-side check but are still gated by `OWNER_IDS`.
+
+## Deployment
+
+Docker, Compose, Railway and migration/backup guidance live in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Contributing
 
-We welcome contributions to xlwy bot! Here's how you can help:
-
-1. **Fork the repository**
-2. **Create a feature branch**
-3. **Make your changes**
-4. **Test thoroughly**
-5. **Submit a pull request**
-
-### Development Guidelines
-- Follow existing code style
-- Add proper error handling
-- Include documentation for new features
-- Test with PostgreSQL and memory storage
+1. Fork the repository and create a feature branch.
+2. Follow the existing module layout: `commands` → `handlers` → `services` → `utils`, and the user-facing conventions in [docs/STYLE.md](docs/STYLE.md).
+3. Add or update tests for changed behaviour.
+4. Run `npm test` and `npm run migrate:check` before opening a pull request.
 
 ## License
 
-xlwy bot is released under the MIT License. See [LICENSE](LICENSE) for details.
+Released under the MIT License. See [LICENSE](LICENSE).
 
-## Thank You
+---
 
-Thank you for choosing xlwy bot for your Discord server! We're constantly working to improve and add new features based on community feedback.
-
-*Last updated: May 2026*
+*README refreshed: November 2026.*

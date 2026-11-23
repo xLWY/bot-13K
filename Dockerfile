@@ -1,22 +1,20 @@
 FROM node:20-alpine
 
-# Create app directory
 WORKDIR /usr/src/app
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# Install dependencies from the lockfile for reproducible builds.
 COPY package*.json ./
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
-# Install only production dependencies
-# `npm install` (instead of `npm ci`) tolerates a lockfile that is slightly out of sync
-RUN npm install --omit=dev --no-audit --no-fund
-
-# Bundle app source
-RUN echo "cache bust v3"
 COPY . .
 
-# Expose the health check port from src/app.js
+# Run as an unprivileged user.
+RUN addgroup -S bot && adduser -S bot -G bot && chown -R bot:bot /usr/src/app
+USER bot
+
 EXPOSE 3000
 
-# Start the bot
-CMD [ "npm", "start" ]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+CMD ["npm", "start"]

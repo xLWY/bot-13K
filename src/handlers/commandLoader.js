@@ -99,7 +99,7 @@ export async function loadCommands(client) {
                 continue;
             }
             
-            command.category = category;
+            command.category = command.category ?? category;
             command.filePath = normalizedPath;
             
             const primaryCommandName = command.data.name;
@@ -184,10 +184,11 @@ const GLOBAL_NAME_LIMIT = 32;
 const REGISTRATION_TIMEOUT_MS = 30000;
 
 function withTimeout(promise, label, ms = REGISTRATION_TIMEOUT_MS) {
-    return Promise.race([
-        promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms))
-    ]);
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 async function getOwnerRestrictedCommandNames(client, guild) {
@@ -349,9 +350,9 @@ const registeredNames = new Set();
                     registeredNames.add(commandName);
                     const commandJson = command.data.toJSON();
 
-                    if (DM_ENABLED_COMMANDS.has(commandName)) {
-                        commandJson.dm_permission = true;
-                    }
+                    // Les commandes globales sont visibles en DM par défaut :
+                    // il faut désactiver explicitement celles qui exigent un serveur.
+                    commandJson.dm_permission = DM_ENABLED_COMMANDS.has(commandName);
 
                     commands.push(commandJson);
                     
@@ -384,7 +385,7 @@ const registeredNames = new Set();
             logger.error(`${rejected.length} command(s) rejected locally and excluded from registration`);
         }
 
-        const guildCommandsToRegister = commands;
+        const guildCommandsToRegister = validCommands;
         const globalCommandsToRegister = validCommands
             .filter(cmd => GLOBAL_COMMANDS.has(cmd.name))
             .map(withoutDefaultPermissions);

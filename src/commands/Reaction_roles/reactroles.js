@@ -776,6 +776,10 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
                     content: `⚠️ Aucun rôle valide\n${rejected.join('\n')}`,
                     flags: MessageFlags.Ephemeral,
                 });
+                // max: 1 arrête déjà le collecteur : il faut résoudre ici,
+                // sinon le `end` (c.size > 0) ne résout jamais la promesse.
+                roleCollector.stop('invalid');
+                resolve({ ok: false, reason: 'invalid' });
                 return;
             }
 

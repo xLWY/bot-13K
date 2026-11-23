@@ -36,6 +36,19 @@ const RISKY_COMMAND_NAMES = new Set([
 ]);
 
 const blockedAttemptStore = new Map();
+const SWEEP_INTERVAL_MS = 60_000;
+let lastSweep = Date.now();
+
+/** Nettoie les anomalies périmées sans garder de timer ouvert. */
+function sweepExpiredAttempts(now) {
+  if (now - lastSweep < SWEEP_INTERVAL_MS) return;
+  lastSweep = now;
+  for (const [key, entry] of blockedAttemptStore) {
+    if (now - entry.windowStart > entry.windowMs) {
+      blockedAttemptStore.delete(key);
+    }
+  }
+}
 
 function normalizeCommandCategory(command) {
   return String(command?.category || '').trim().toLowerCase();
@@ -77,6 +90,7 @@ function getProtectionKey(interaction, commandName) {
 
 function recordBlockedAttempt(key, commandName, interaction, command, remainingMs) {
   const now = Date.now();
+  sweepExpiredAttempts(now);
   const anomalyPolicy = getAnomalyPolicy(command);
   const current = blockedAttemptStore.get(key);
 
@@ -84,6 +98,7 @@ function recordBlockedAttempt(key, commandName, interaction, command, remainingM
     blockedAttemptStore.set(key, {
       count: 1,
       windowStart: now,
+      windowMs: anomalyPolicy.windowMs,
       thresholdReachedAt: null
     });
     return;

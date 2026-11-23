@@ -44,7 +44,7 @@ export default {
 
                 const formatData = { user, guild, member, config: welcomeConfig };
                 const welcomeMessage = await formatWelcomeMessageAsync(
-                    welcomeConfig.welcomeMessage || welcomeConfig.welcomeEmbed?.description || 'Welcome {user} to {server}!',
+                    welcomeConfig.welcomeMessage || welcomeConfig.welcomeEmbed?.description || 'Bienvenue {user} sur {server} !',
                     formatData
                 );
 

@@ -172,26 +172,34 @@ GatewayIntentBits.GuildBans,
     });
 
     const requestCounts = new Map();
-    const windowMs = 60000; 
+    const windowMs = 60000;
     const maxRequests = this.config.api?.rateLimit?.max || 100;
-    
+    let lastSweep = Date.now();
+
     app.use((req, res, next) => {
       const ip = req.ip;
       const now = Date.now();
       const windowStart = now - windowMs;
-      
-      if (!requestCounts.has(ip)) {
-        requestCounts.set(ip, []);
+
+      // Une passe de nettoyage par fenêtre suffit : O(1) par requête.
+      if (now - lastSweep >= windowMs) {
+        lastSweep = now;
+        for (const [key, entry] of requestCounts) {
+          if (entry.windowStart <= windowStart) requestCounts.delete(key);
+        }
       }
-      
-      const times = requestCounts.get(ip).filter(t => t > windowStart);
-      
-      if (times.length >= maxRequests) {
+
+      let entry = requestCounts.get(ip);
+      if (!entry || entry.windowStart <= windowStart) {
+        entry = { count: 0, windowStart: now };
+        requestCounts.set(ip, entry);
+      }
+
+      if (entry.count >= maxRequests) {
         return res.status(429).json({ error: 'Too many requests' });
       }
-      
-      times.push(now);
-      requestCounts.set(ip, times);
+
+      entry.count += 1;
       next();
     });
 

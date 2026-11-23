@@ -64,6 +64,11 @@ export default {
             await saveTicketData(guildId, channelId, ticketData);
         } catch (err) {
             logger.error('ticketFeedback: failed to save feedback', { guildId, channelId, rating, error: err.message });
+            await InteractionHelper.sendErrorNotice(
+                interaction,
+                'Impossible d’enregistrer ton avis pour le moment. Réessaie dans un instant.'
+            );
+            return;
         }
 
         // Envoyer l'avis au salon de logs

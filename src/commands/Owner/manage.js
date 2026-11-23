@@ -5,10 +5,11 @@ import {
     ButtonBuilder,
     ButtonStyle,
     ChannelType,
+    MessageFlags,
 } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { createEmbed, warningEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 
@@ -89,7 +90,7 @@ function buildListPayload(guilds, page) {
         const position = currentPage * LIST_PAGE_SIZE + index + 1;
         return [
             `**${position}. ${cleanName(guild.name)}**`,
-            `　\`${guild.id}\` • 👥 \`${guild.memberCount ?? '?'}\` • 👑 <@${guild.ownerId}> • ${timestamp(guild.joinedAt)}`,
+            `ID : \`${guild.id}\` • 👥 \`${guild.memberCount ?? '?'}\` • 👑 <@${guild.ownerId}> • ${timestamp(guild.joinedAt)}`,
         ].join('\n');
     });
 
@@ -207,7 +208,7 @@ async function buildInfoPayload(guild, client) {
                 inline: false,
             },
         ],
-        footer: { text: 'Géré via /manage • owner uniquement' },
+        footer: { text: 'Géré via /manage • propriétaire du bot' },
     });
 
     return { embeds: [embed], components: [] };
@@ -217,7 +218,7 @@ function buildLeavePayload(guild, isMainGuild) {
     const embed = warningEmbed(
         [
             `Tu es sur le point de faire quitter **${cleanName(guild.name)}** (\`${guild.id}\`) au bot.`,
-            `Membres : \`${guild.memberCount ?? '?'}\` • propriétaire : <@${guild.ownerId}>`,
+            `Membres : \`${guild.memberCount ?? '?'}\` • 👑 Propriétaire : <@${guild.ownerId}>`,
             '',
             isMainGuild
                 ? '⚠️ C\'est le serveur principal (`GUILD_ID`) : les commandes de serveur ne seront plus enregistrées.'
@@ -293,7 +294,7 @@ function attachCollector(reply, ownerId, onCollect) {
 export default {
     data: new SlashCommandBuilder()
         .setName('manage')
-        .setDescription('Gérer les serveurs du bot (owner, utilisable en DM)')
+        .setDescription('Gérer les serveurs du bot (propriétaire, utilisable en MP)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .setDMPermission(true)
         .addSubcommand((subcommand) => subcommand
@@ -301,7 +302,7 @@ export default {
             .setDescription('Lister tous les serveurs où le bot est présent'))
         .addSubcommand((subcommand) => subcommand
             .setName('info')
-            .setDescription('Voir les détails d un serveur')
+            .setDescription('Voir les détails d’un serveur')
             .addStringOption((option) => option
                 .setName('serveur')
                 .setDescription('Nom ou ID du serveur')
@@ -319,9 +320,10 @@ export default {
 
     async execute(interaction, config, client) {
         if (!isBotOwner(interaction.user.id)) {
-            await InteractionHelper.safeReply(interaction, {
-                content: '`/manage` est réservé au owner du bot.',
-            });
+            await InteractionHelper.sendErrorNotice(
+                interaction,
+                'Cette commande est réservée au propriétaire du bot.',
+            );
             return;
         }
 
@@ -330,7 +332,8 @@ export default {
         const isPrefix = interaction.isPrefixCommand?.() === true;
 
         try {
-            await InteractionHelper.safeDefer(interaction, {});
+            const deferOptions = interaction.guild ? { flags: MessageFlags.Ephemeral } : {};
+            await InteractionHelper.safeDefer(interaction, deferOptions);
 
             if (subcommand === 'list') {
                 const guilds = await fetchAllGuilds(discordClient);
@@ -388,8 +391,7 @@ export default {
                     if (componentInteraction.customId === LEAVE_NO) {
                         collector?.stop('cancelled');
                         await componentInteraction.editReply({
-                            content: '✅ Départ annulé.',
-                            embeds: [],
+                            embeds: [successEmbed('Départ annulé.')],
                             components: [],
                         });
                         return;
@@ -399,8 +401,7 @@ export default {
                     const freshGuild = await discordClient.guilds.fetch(guild.id).catch(() => null);
                     if (!freshGuild) {
                         await componentInteraction.editReply({
-                            content: `❌ Je ne suis plus dans \`${guild.id}\`.`,
-                            embeds: [],
+                            embeds: [errorEmbed(`Je ne suis plus dans \`${guild.id}\`.`)],
                             components: [],
                         });
                         collector?.stop('already_left');
@@ -415,8 +416,7 @@ export default {
                     } catch (error) {
                         logger.error(`[Manage] could not leave ${id}: ${error.message}`);
                         await componentInteraction.editReply({
-                            content: `❌ Impossible de quitter **${name}** (\`${id}\`) : ${error.message}`,
-                            embeds: [],
+                            embeds: [errorEmbed(`Impossible de quitter **${name}** (\`${id}\`) : ${error.message}`)],
                             components: [],
                         });
                         return;
@@ -426,26 +426,26 @@ export default {
 
                     collector?.stop('left');
                     await componentInteraction.editReply({
-                        content: `✅ J'ai quitté **${name}** (\`${id}\`).`,
-                        embeds: [],
+                        embeds: [successEmbed(`J’ai quitté **${name}** (\`${id}\`).`)],
                         components: [],
                     });
                 });
                 return;
             }
 
+            const prefix = config?.prefix ?? '!';
             await InteractionHelper.safeEditReply(interaction, {
                 content: [
                     `Sous-commande inconnue : \`${subcommand}\`.`,
                     isPrefix
-                        ? 'Utilisation : `!manage list`, `!manage info <serveur>`, `!manage leave <serveur>`.'
+                        ? `Utilisation : \`${prefix}manage list\`, \`${prefix}manage info <serveur>\`, \`${prefix}manage leave <serveur>\`.`
                         : 'Utilisation : `/manage list`, `/manage info`, `/manage leave`.',
                 ].join('\n'),
             });
         } catch (error) {
             logger.error('[Manage] command failed:', error);
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [warningEmbed('Impossible de terminer la commande. Réessaie dans un instant.', '❌ Erreur')],
+                embeds: [errorEmbed('Impossible de terminer la commande. Réessaie dans un instant.')],
                 components: [],
             });
         }

@@ -110,6 +110,9 @@ export const giveawayEndHandler = {
                 return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission « Gérer le serveur » pour terminer un concours.");
             }
 
+            // Le tirage peut prendre du temps : on accuse réception avant le token 3s.
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
             const guildGiveaways = await getGuildGiveaways(client, interaction.guildId);
             const giveaway = guildGiveaways.find(g => g.messageId === interaction.message.id);
 
@@ -201,9 +204,8 @@ export const giveawayEndHandler = {
                 logger.debug('Error logging giveaway end event:', logError);
             }
 
-            await interaction.reply({
+            await interaction.editReply({
                 content: `Concours terminé ✅ — Le concours est terminé et ${winners.length} gagnant(s) ont été tirés !`,
-                flags: MessageFlags.Ephemeral
             });
 
         } catch (error) {
@@ -238,6 +240,8 @@ export const giveawayRerollHandler = {
             if (!isBotOwner(interaction.user.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission « Gérer le serveur » pour refaire un tirage.");
             }
+
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
             const guildGiveaways = await getGuildGiveaways(client, interaction.guildId);
             const giveaway = guildGiveaways.find(g => g.messageId === interaction.message.id);
@@ -330,9 +334,8 @@ export const giveawayRerollHandler = {
                 logger.debug('Error logging giveaway reroll event:', logError);
             }
 
-            await interaction.reply({
+            await interaction.editReply({
                 content: 'Concours relancé ✅ — De nouveaux gagnants ont été tirés !',
-                flags: MessageFlags.Ephemeral
             });
 
         } catch (error) {

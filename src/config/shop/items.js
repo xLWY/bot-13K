@@ -27,7 +27,7 @@ export function validatePurchase(itemId, userData) {
         if (currentQuantity >= item.maxQuantity) {
             return {
                 valid: false,
-                reason: `You can only have a maximum of ${item.maxQuantity} ${item.name}s`
+                reason: `Tu ne peux avoir qu’un maximum de ${item.maxQuantity} × ${item.name}.`
             };
         }
     }
@@ -36,7 +36,7 @@ export function validatePurchase(itemId, userData) {
         if (upgrades[itemId]) {
             return {
                 valid: false,
-                reason: `You've already purchased ${item.name}`
+                reason: `Tu as déjà acheté ${item.name}.`
             };
         }
     }
@@ -46,7 +46,7 @@ export function validatePurchase(itemId, userData) {
         if (itemId !== 'bank_note' && currentQuantity > 0) {
             return {
                 valid: false,
-                reason: `You already have a ${item.name}`
+                reason: `Tu possèdes déjà ${item.name}.`
             };
         }
     }
@@ -55,7 +55,7 @@ export function validatePurchase(itemId, userData) {
         if (userData.roles?.includes(item.roleId)) {
             return {
                 valid: false,
-                reason: `You already have the ${item.name} role`
+                reason: `Tu possèdes déjà le rôle ${item.name}.`
             };
         }
     }

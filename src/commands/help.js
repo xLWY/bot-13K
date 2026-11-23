@@ -9,6 +9,7 @@ import {
     ComponentType,
     MessageFlags,
     PermissionFlagsBits,
+    PermissionsBitField,
 } from 'discord.js';
 import { getColor } from '../config/bot.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
@@ -18,6 +19,23 @@ import { isBotOwner } from '../utils/ownerIds.js';
 const PER_PAGE = 8;
 const SESSION_MS = 600_000;
 const OWNER_ONLY_COMMANDS = new Set(['diag', 'logtest', 'ownerrole', 'manage']);
+const activeHelpCollectors = new Map();
+const CATEGORY_LABELS = {
+    commands: 'Général',
+    general: 'Général',
+    debug: 'Diagnostic',
+    Owner: 'Propriétaire',
+    Moderation: 'Modération',
+    Reaction_roles: 'Rôles par réaction',
+    JoinToCreate: 'Salons temporaires',
+    ServerStats: 'Statistiques',
+    Settings: 'Paramètres',
+    Ticket: 'Tickets',
+    Utility: 'Utilitaire',
+    Utilitaire: 'Utilitaire',
+    Giveaway: 'Giveaways',
+    Welcome: 'Bienvenue',
+};
 
 function getCommandDefaultPermissions(command) {
     const json = typeof command.data?.toJSON === 'function' ? command.data.toJSON() : command.data;
@@ -41,8 +59,8 @@ function canUseCommand(interaction, command) {
     if (required === null) return true;
     if (isBotOwner(interaction.user?.id)) return true;
 
-    const permissions = interaction.memberPermissions;
-    if (!permissions) return false;
+    const permissions = interaction.memberPermissions ?? new PermissionsBitField();
+    if (!interaction.inGuild() && required !== 0n) return false;
     if (permissions.has(PermissionFlagsBits.Administrator)) return true;
     if (required === 0n) return false;
 
@@ -57,7 +75,7 @@ function collectCategories(interaction, client) {
         if (command.hiddenFromSlash) continue;
         if (!canUseCommand(interaction, command)) continue;
 
-        const category = command.category || 'Divers';
+        const category = CATEGORY_LABELS[command.category] || command.category || 'Divers';
         if (!groups.has(category)) groups.set(category, []);
         groups.get(category).push(command);
     }
@@ -75,10 +93,14 @@ function getSubcommandNames(command) {
     const names = [];
 
     for (const option of json?.options || []) {
-        if (option.type === 1 && Array.isArray(option.options)) {
-            names.push(...option.options.map(o => o.name));
-        } else if (option.type === 1) {
+        if (option.type === 1) {
             names.push(option.name);
+        } else if (option.type === 2) {
+            for (const subOption of option.options || []) {
+                if (subOption.type === 1) {
+                    names.push(`${option.name}/${subOption.name}`);
+                }
+            }
         }
     }
 
@@ -99,13 +121,12 @@ function buildOverview(categories, total) {
     return new EmbedBuilder()
         .setTitle('\u{1F4D6} Commandes du bot')
         .setDescription(
-            `${total} commandes reparties en ${categories.length} categories.\n` +
-            'Les commandes avec `*` sont accessibles aux membres.\n' +
-            'Choisis une categorie ci-dessous, ou navigue avec les fleches.\n\n' +
+            `${total} commandes réparties en ${categories.length} catégories.\n` +
+            'Choisis une catégorie ci-dessous, ou navigue avec les flèches.\n\n' +
             lines.join('\n'),
         )
-        .setColor(getColor('primary'))
-        .setFooter({ text: 'Utilise /help ou !help dans n importe quel salon.' })
+        .setColor(getColor('info'))
+        .setFooter({ text: 'Utilise /help sur un serveur ou en MP (propriétaire).' })
         .setTimestamp();
 }
 
@@ -123,7 +144,7 @@ function buildCategoryPage(categoryName, commands, pageIndex, pageCount) {
         .setDescription(body)
         .setColor(getColor('info'))
         .setFooter({
-            text: `Page ${pageIndex + 1}/${pageCount} \u{2022} ${commands.length} commande(s) \u{2022} ${slice.length} affichee(s)`,
+            text: `Page ${pageIndex + 1}/${pageCount} \u{2022} ${commands.length} commande(s) \u{2022} ${slice.length} affichée(s)`,
         })
         .setTimestamp();
 
@@ -133,7 +154,7 @@ function buildCategoryPage(categoryName, commands, pageIndex, pageCount) {
 function buildOverviewRows(categories) {
     const menu = new StringSelectMenuBuilder()
         .setCustomId('help_category')
-        .setPlaceholder('Aller directement a une categorie...')
+        .setPlaceholder('Aller directement à une catégorie…')
         .addOptions(
             categories.slice(0, 25).map(([name, commands]) =>
                 new StringSelectMenuOptionBuilder({
@@ -152,7 +173,7 @@ function buildOverviewRows(categories) {
 function buildNavRows(pageIndex, pageCount, categories, canPrev, canNext) {
     const menu = new StringSelectMenuBuilder()
         .setCustomId('help_category')
-        .setPlaceholder('Aller directement a une categorie...')
+        .setPlaceholder('Aller directement à une catégorie…')
         .addOptions(
             categories.slice(0, 25).map(([name, commands]) =>
                 new StringSelectMenuOptionBuilder({
@@ -164,9 +185,9 @@ function buildNavRows(pageIndex, pageCount, categories, canPrev, canNext) {
         );
 
     const buttons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('help_prev').setLabel('Precedent').setEmoji('\u{2B05}\u{FE0F}').setStyle(ButtonStyle.Secondary).setDisabled(!canPrev),
-        new ButtonBuilder().setCustomId('help_next').setLabel('Suivant').setEmoji('\u{27A1}\u{FE0F}').setStyle(ButtonStyle.Secondary).setDisabled(!canNext),
-        new ButtonBuilder().setCustomId('help_overview').setLabel('Overview').setEmoji('\u{1F5C2}\u{FE0F}').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('help_prev').setLabel('◀ Précédent').setStyle(ButtonStyle.Secondary).setDisabled(!canPrev),
+        new ButtonBuilder().setCustomId('help_next').setLabel('Suivant ▶').setStyle(ButtonStyle.Secondary).setDisabled(!canNext),
+        new ButtonBuilder().setCustomId('help_overview').setLabel('📖 Vue d’ensemble').setStyle(ButtonStyle.Primary),
     );
 
     return [buttons, new ActionRowBuilder().addComponents(menu)];
@@ -204,17 +225,25 @@ async function renderHelp(interaction, client, state) {
 }
 
 async function startCollector(interaction, client) {
-    const channel = await resolveChannel(interaction);
-    if (!channel) return;
+    const reply = await interaction.fetchReply?.().catch(() => null);
+    const target = reply && typeof reply.createMessageComponentCollector === 'function'
+        ? reply
+        : await resolveChannel(interaction);
+    if (!target) return;
+
+    // Un seul collecteur par utilisateur : évite que plusieurs /help se répondent.
+    const key = `${interaction.guildId ?? 'dm'}:${interaction.user.id}`;
+    activeHelpCollectors.get(key)?.stop('replaced');
 
     const state = { categoryIndex: null, page: 0 };
     let lastInteraction = null;
 
-    const collector = channel.createMessageComponentCollector({
+    const collector = target.createMessageComponentCollector({
         componentType: [ComponentType.Button, ComponentType.StringSelect],
         filter: i => i.user.id === interaction.user.id,
         time: SESSION_MS,
     });
+    activeHelpCollectors.set(key, collector);
 
     collector.on('collect', async i => {
         lastInteraction = i;
@@ -243,6 +272,7 @@ async function startCollector(interaction, client) {
     });
 
     collector.on('end', async () => {
+        if (activeHelpCollectors.get(key) === collector) activeHelpCollectors.delete(key);
         if (!lastInteraction) return;
         try {
             await lastInteraction.editReply({ components: [] });
@@ -255,7 +285,7 @@ async function startCollector(interaction, client) {
 export default {
     data: new SlashCommandBuilder()
         .setName('help')
-        .setDescription('* Liste toutes les commandes du bot')
+        .setDescription('Liste toutes les commandes du bot')
         .setDMPermission(true),
 
     category: 'Utilitaire',
@@ -276,7 +306,7 @@ export default {
             await startCollector(interaction, client);
         } catch (error) {
             logger.error('Error in /help:', error);
-            await InteractionHelper.sendErrorNotice(interaction, 'Impossible d afficher la liste des commandes.').catch(() => {});
+            await InteractionHelper.sendErrorNotice(interaction, 'Impossible d’afficher la liste des commandes.').catch(() => {});
         }
     },
 };
