@@ -1,15 +1,67 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { logger } from '../../utils/logger.js';
-import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes, getUserMessage } from '../../utils/errorHandler.js';
 import { getGuildGiveaways, saveGiveaway } from '../../utils/giveaways.js';
-import { 
+import {
     selectWinners,
-    createGiveawayEmbed, 
-    createGiveawayButtons 
+    createGiveawayEmbed,
+    createGiveawayButtons
 } from '../../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { errorEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
+import { brandFooter, formatNumber, guildIconUrl } from '../../ui/kit.js';
+
+const FOOTER_CONTEXT = 'Relance de concours';
+const NO_MENTIONS = { parse: [], repliedUser: false };
+
+/** Les réponses de gestion sont privées en serveur et ne mentionnent personne. */
+function privatePayload(interaction, payload) {
+    return {
+        ...payload,
+        allowedMentions: NO_MENTIONS,
+        ...(interaction.inGuild() ? { flags: MessageFlags.Ephemeral } : {}),
+    };
+}
+
+function errorPayload(text) {
+    const embed = errorEmbed(text);
+    embed.setFooter(brandFooter(FOOTER_CONTEXT));
+    return { embeds: [embed], components: [] };
+}
+
+async function replyError(interaction, error) {
+    logger.error('Error in greroll command:', error);
+    await InteractionHelper.safeReply(
+        interaction,
+        privatePayload(interaction, errorPayload(getUserMessage(error))),
+    );
+}
+
+function cleanText(value) {
+    return String(value ?? 'Concours mystère').replace(/[`@]/g, '').slice(0, 80);
+}
+
+function buildRerollPayload({ interaction, giveaway, messageId, newWinners, participantsCount, description, warning = false }) {
+    const embed = warning
+        ? warningEmbed(description, '⚠️ Relance enregistrée')
+        : successEmbed(description, '✅ Tirage relancé');
+
+    embed.setThumbnail(guildIconUrl(interaction.guild, 96));
+    embed.setFields([
+        {
+            name: '🏆 Nouveaux gagnants',
+            value: newWinners.map((id) => `<@${id}>`).join(', '),
+            inline: false,
+        },
+        { name: '👥 Participants', value: formatNumber(participantsCount), inline: true },
+        { name: '🆔 Message', value: `\`${messageId}\``, inline: true },
+    ]);
+    embed.setFooter(brandFooter(FOOTER_CONTEXT));
+
+    return { embeds: [embed], components: [] };
+}
 
 export default {
     data: new SlashCommandBuilder()
@@ -23,9 +75,11 @@ export default {
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
+    deferEphemeral: true,
+
     async execute(interaction) {
         try {
-            
+
             if (!interaction.inGuild()) {
                 throw new XlwyBotError(
                     'Giveaway command used outside guild',
@@ -35,12 +89,12 @@ export default {
                 );
             }
 
-            
+
             if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new XlwyBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "Vous devez avoir la permission `Gérer le serveur` pour relancer le tirage d'un concours.",
+                    'Tu dois avoir la permission `Gérer le serveur` pour relancer le tirage d’un concours.',
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -49,12 +103,12 @@ export default {
 
             const messageId = interaction.options.getString("messageid");
 
-            
+
             if (!messageId || !/^\d+$/.test(messageId)) {
                 throw new XlwyBotError(
                     'Invalid message ID format',
                     ErrorTypes.VALIDATION,
-                    'Veuillez fournir un identifiant de message valide.',
+                    'Fournis un identifiant de message valide.',
                     { providedId: messageId }
                 );
             }
@@ -64,46 +118,46 @@ export default {
                 interaction.guildId,
             );
 
-            
+
             const giveaway = giveaways.find(g => g.messageId === messageId);
 
             if (!giveaway) {
                 throw new XlwyBotError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "Aucun concours n'a été trouvé avec cet identifiant de message dans la base de données.",
+                    'Aucun concours n’a été trouvé avec cet identifiant de message dans la base de données. Vérifie l’ID et réessaie.',
                     { messageId, guildId: interaction.guildId }
                 );
             }
 
-            
+
             if (!giveaway.isEnded && !giveaway.ended) {
                 throw new XlwyBotError(
                     `Giveaway still active: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "Ce concours est encore actif. Utilisez `/gend` pour le terminer d'abord.",
+                    'Ce concours est encore actif. Utilise `/gend` pour le terminer d’abord.',
                     { messageId, status: 'active' }
                 );
             }
 
             const participants = giveaway.participants || [];
-            
+
             if (participants.length < giveaway.winnerCount) {
                 throw new XlwyBotError(
                     `Insufficient participants for reroll: ${participants.length} < ${giveaway.winnerCount}`,
                     ErrorTypes.VALIDATION,
-                    "Pas assez de participations pour tirer le nombre de gagnants requis.",
+                    'Pas assez de participations pour tirer le nombre de gagnants requis.',
                     { participantsCount: participants.length, winnersNeeded: giveaway.winnerCount }
                 );
             }
 
-            
+
             const newWinners = selectWinners(
                 participants,
                 giveaway.winnerCount,
             );
 
-            
+
             const updatedGiveaway = {
                 ...giveaway,
                 winnerIds: newWinners,
@@ -111,7 +165,7 @@ export default {
                 rerolledBy: interaction.user.id
             };
 
-            
+
             const channel = await interaction.client.channels.fetch(
                 giveaway.channelId,
             ).catch(err => {
@@ -120,22 +174,32 @@ export default {
             });
 
             if (!channel || !channel.isTextBased()) {
-                
+
                 await saveGiveaway(
                     interaction.client,
                     interaction.guildId,
                     updatedGiveaway,
                 );
-                
+
+
                 logger.warn(`Could not find channel for giveaway ${messageId}, but saved new winners to database`);
-                
-                return InteractionHelper.safeReply(interaction, {
-                    content: "Relance terminée : les nouveaux gagnants ont été sélectionnés et enregistrés dans la base de données. Impossible de trouver le salon pour l'annoncer.",
-                    flags: MessageFlags.Ephemeral,
-                });
+
+
+                return InteractionHelper.safeReply(
+                    interaction,
+                    privatePayload(interaction, buildRerollPayload({
+                        interaction,
+                        giveaway,
+                        messageId,
+                        newWinners,
+                        participantsCount: participants.length,
+                        description: `Les nouveaux gagnants de **${cleanText(giveaway.prize)}** ont été enregistrés. Le salon est introuvable pour publier l’annonce.`,
+                        warning: true,
+                    })),
+                );
             }
 
-            
+
             const message = await channel.messages
                 .fetch(messageId)
                 .catch(err => {
@@ -144,7 +208,7 @@ export default {
                 });
 
             if (!message) {
-                
+
                 await saveGiveaway(
                     interaction.client,
                     interaction.guildId,
@@ -154,8 +218,8 @@ export default {
                 const winnerMentions = newWinners
                     .map((id) => `<@${id}>`)
                     .join(", ");
-                
-                // Edit the original winner ping if it still exists, otherwise send a new one
+
+                // On modifie l'annonce d'origine si elle existe encore, sinon on en publie une nouvelle.
                 const existingPingMsg = giveaway.winnerPingMessageId
                     ? await channel.messages.fetch(giveaway.winnerPingMessageId).catch(() => null)
                     : null;
@@ -204,13 +268,20 @@ export default {
                     logger.debug('Error logging giveaway reroll:', logError);
                 }
 
-                return InteractionHelper.safeReply(interaction, {
-                    content: `Relance terminée : les nouveaux gagnants ont été annoncés dans ${channel}. (Message d'origine introuvable).`,
-                    flags: MessageFlags.Ephemeral,
-                });
+                return InteractionHelper.safeReply(
+                    interaction,
+                    privatePayload(interaction, buildRerollPayload({
+                        interaction,
+                        giveaway,
+                        messageId,
+                        newWinners,
+                        participantsCount: participants.length,
+                        description: `Un nouveau tirage a eu lieu pour **${cleanText(giveaway.prize)}**. L’annonce a été publiée dans ${channel}, mais le message d’origine est introuvable.`,
+                    })),
+                );
             }
 
-            
+
             await saveGiveaway(
                 interaction.client,
                 interaction.guildId,
@@ -229,8 +300,8 @@ export default {
             const winnerMentions = newWinners
                 .map((id) => `<@${id}>`)
                 .join(", ");
-            
-            // Edit the original winner ping if it still exists, otherwise send a new one
+
+            // On modifie l'annonce d'origine si elle existe encore, sinon on en publie une nouvelle.
             const existingPingMsg = giveaway.winnerPingMessageId
                 ? await channel.messages.fetch(giveaway.winnerPingMessageId).catch(() => null)
                 : null;
@@ -279,21 +350,20 @@ export default {
                 logger.debug('Error logging giveaway reroll event:', logError);
             }
 
-            return InteractionHelper.safeReply(interaction, {
-                content: `Relance réussie ✅ — Tirage relancé avec succès pour **${giveaway.prize}** dans ${channel}. ${newWinners.length} nouveau(x) gagnant(s) sélectionné(s).`,
-                flags: MessageFlags.Ephemeral,
-            });
+            return InteractionHelper.safeReply(
+                interaction,
+                privatePayload(interaction, buildRerollPayload({
+                    interaction,
+                    giveaway,
+                    messageId,
+                    newWinners,
+                    participantsCount: participants.length,
+                    description: `Un nouveau tirage a eu lieu pour **${cleanText(giveaway.prize)}** dans ${channel}.`,
+                })),
+            );
 
         } catch (error) {
-            logger.error('Error in greroll command:', error);
-            await handleInteractionError(interaction, error, {
-                type: 'command',
-                commandName: 'greroll',
-                context: 'giveaway_reroll'
-            });
+            await replyError(interaction, error);
         }
     },
 };
-
-
-

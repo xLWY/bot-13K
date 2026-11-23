@@ -1,51 +1,67 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { logModerationAction, moderationMentionPayload } from '../../utils/moderation.js';
+import { logModerationAction } from '../../utils/moderation.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { brandFooter, discordTimestamp } from '../../ui/kit.js';
 import { logger } from '../../utils/logger.js';
+import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { XlwyBotError, ErrorTypes } from '../../utils/errorHandler.js';
 
+const NO_MENTIONS = { parse: [], repliedUser: false };
+const CONTEXT = 'Timeout';
 
-import { InteractionHelper } from '../../utils/interactionHelper.js';
 const durationChoices = [
-    { name: "5 minutes", value: 5 },
-    { name: "10 minutes", value: 10 },
-    { name: "30 minutes", value: 30 },
-    { name: "1 heure", value: 60 },
-    { name: "6 heures", value: 360 },
-    { name: "1 jour", value: 1440 },
-    { name: "1 semaine", value: 10080 },
+    { name: '5 minutes', value: 5 },
+    { name: '10 minutes', value: 10 },
+    { name: '30 minutes', value: 30 },
+    { name: '1 heure', value: 60 },
+    { name: '6 heures', value: 360 },
+    { name: '1 jour', value: 1440 },
+    { name: '1 semaine', value: 10080 },
 ];
+
+function payload(embed) {
+    return {
+        embeds: [embed.setFooter(brandFooter(CONTEXT))],
+        components: [],
+        allowedMentions: NO_MENTIONS,
+    };
+}
+
+function short(value, limit = 400) {
+    return String(value ?? 'Aucune raison fournie').replace(/`/g, '').slice(0, limit);
+}
+
 export default {
     data: new SlashCommandBuilder()
-        .setName("timeout")
-        .setDescription("Mettre un utilisateur en timeout pour une durée précise.")
+        .setName('timeout')
+        .setDescription('Mettre un utilisateur en timeout pour une durée précise.')
         .addUserOption((option) =>
             option
-                .setName("target")
-                .setDescription("Utilisateur à mettre en timeout")
+                .setName('target')
+                .setDescription('Utilisateur à mettre en timeout')
                 .setRequired(true),
         )
-        .addIntegerOption(
-            (option) =>
-                option
-                    .setName("duration")
-                    .setDescription("Durée du timeout")
-                    .setRequired(true)
-.addChoices(...durationChoices),
+        .addIntegerOption((option) =>
+            option
+                .setName('duration')
+                .setDescription('Durée du timeout')
+                .setRequired(true)
+                .addChoices(...durationChoices),
         )
         .addStringOption((option) =>
-            option.setName("reason").setDescription("Raison du timeout"),
+            option.setName('reason').setDescription('Raison du timeout'),
         )
-.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
-    category: "moderation",
+        .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
+    category: 'moderation',
 
     async execute(interaction, config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
-            logger.warn(`Timeout interaction defer failed`, {
+            logger.warn('Timeout interaction defer failed', {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
-                commandName: 'timeout'
+                commandName: 'timeout',
             });
             return;
         }
@@ -53,44 +69,44 @@ export default {
         try {
             if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
                 throw new XlwyBotError(
-                    "User lacks permission",
+                    'User lacks permission',
                     ErrorTypes.PERMISSION,
-                    "Tu as besoin de la permission `Modérer les membres` pour définir un timeout."
+                    'Tu as besoin de la permission **Modérer les membres** pour définir un timeout.',
                 );
             }
 
-            const targetUser = interaction.options.getUser("target");
-            const member = interaction.options.getMember("target");
-            const durationMinutes = interaction.options.getInteger("duration");
-            const reason = interaction.options.getString("reason") || "Aucune raison fournie";
+            const targetUser = interaction.options.getUser('target');
+            const member = interaction.options.getMember('target');
+            const durationMinutes = interaction.options.getInteger('duration');
+            const reason = interaction.options.getString('reason') || 'Aucune raison fournie';
 
             if (targetUser.id === interaction.user.id) {
                 throw new XlwyBotError(
-                    "Cannot timeout self",
+                    'Cannot timeout self',
                     ErrorTypes.VALIDATION,
-                    "Tu ne peux pas te mettre en timeout toi-même."
+                    'Tu ne peux pas te mettre en timeout toi-même.',
                 );
             }
             if (targetUser.id === client.user.id) {
                 throw new XlwyBotError(
-                    "Cannot timeout bot",
+                    'Cannot timeout bot',
                     ErrorTypes.VALIDATION,
-                    "Tu ne peux pas mettre le bot en timeout."
+                    'Tu ne peux pas mettre le bot en timeout.',
                 );
             }
             if (!member) {
                 throw new XlwyBotError(
-                    "Target not found",
+                    'Target not found',
                     ErrorTypes.USER_INPUT,
-                    "L'utilisateur ciblé n'est actuellement pas dans ce serveur."
+                    'L’utilisateur ciblé n’est actuellement pas dans ce serveur.',
                 );
             }
 
             if (!member.moderatable) {
                 throw new XlwyBotError(
-                    "Cannot timeout member",
+                    'Cannot timeout member',
                     ErrorTypes.PERMISSION,
-                    "Je ne peux pas mettre cet utilisateur en timeout. Il a peut-être un rôle plus élevé que moi ou que toi."
+                    'Je ne peux pas mettre cet utilisateur en timeout. Il a peut-être un rôle plus élevé que moi ou que toi.',
                 );
             }
 
@@ -98,14 +114,13 @@ export default {
             await member.timeout(durationMs, reason);
 
             const durationDisplay =
-                durationChoices.find((c) => c.value === durationMinutes)
-                    ?.name || `${durationMinutes} minutes`;
+                durationChoices.find((c) => c.value === durationMinutes)?.name || `${durationMinutes} minutes`;
 
             const caseId = await logModerationAction({
                 client,
                 guild: interaction.guild,
                 event: {
-                    action: "Member Timed Out",
+                    action: 'Member Timed Out',
                     target: `<@${targetUser.id}> (${targetUser.id})`,
                     executor: `<@${interaction.user.id}> (${interaction.user.id})`,
                     reason: `${reason}\nDurée : ${durationDisplay}`,
@@ -114,20 +129,26 @@ export default {
                         userId: targetUser.id,
                         moderatorId: interaction.user.id,
                         durationMinutes,
-                        timeoutEnds: new Date(Date.now() + durationMs).toISOString()
-                    }
-                }
+                        timeoutEnds: new Date(Date.now() + durationMs).toISOString(),
+                    },
+                },
             });
 
-            await InteractionHelper.safeEditReply(interaction, {
-                ...moderationMentionPayload(targetUser.id, `a été mis en timeout pendant ${durationDisplay}.\n**Raison :** ${reason}\n**ID de cas :** #${caseId}`),
-            });
+            return InteractionHelper.safeEditReply(interaction, payload(
+                successEmbed(`<@${targetUser.id}> est en timeout pendant ${durationDisplay}.`, '⏳ Timeout appliqué')
+                    .addFields(
+                        { name: 'Membre', value: `<@${targetUser.id}> • \`${targetUser.id}\``, inline: false },
+                        { name: 'Durée', value: durationDisplay, inline: true },
+                        { name: 'Fin', value: discordTimestamp(Date.now() + durationMs, 'F'), inline: true },
+                        { name: 'Motif', value: short(reason), inline: false },
+                        { name: 'Dossier', value: `\`#${caseId}\``, inline: true },
+                    ),
+            ));
         } catch (error) {
             logger.error('Timeout command error:', error);
-            return await InteractionHelper.sendErrorNotice(interaction, error.userMessage || "Une erreur inattendue est survenue pendant le timeout. Vérifie mes permissions de rôle.");
+            return InteractionHelper.safeEditReply(interaction, payload(
+                errorEmbed(error?.userMessage || 'Impossible de mettre ce membre en timeout. Vérifie mes permissions de rôle.'),
+            ));
         }
-    }
+    },
 };
-
-
-

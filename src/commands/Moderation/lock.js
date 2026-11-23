@@ -1,87 +1,91 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { errorEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
+import { brandFooter } from '../../ui/kit.js';
 import { logEvent } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
-import { getColor } from '../../config/bot.js';
-
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
+
+const NO_MENTIONS = { parse: [], repliedUser: false };
+const CONTEXT = 'Verrouillage du salon';
+
+function payload(embed) {
+    return {
+        embeds: [embed.setFooter(brandFooter(CONTEXT))],
+        components: [],
+        allowedMentions: NO_MENTIONS,
+    };
+}
+
 export default {
     data: new SlashCommandBuilder()
-    .setName("lock")
-    .setDescription(
-      "Verrouille le salon actuel (empêche @everyone d'envoyer des messages).",
-    )
-.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
-  category: "moderation",
+        .setName('lock')
+        .setDescription("Verrouille le salon actuel (empêche @everyone d'envoyer des messages).")
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+    category: 'moderation',
 
-  async execute(interaction, config, client) {
-    const deferSuccess = await InteractionHelper.safeDefer(interaction);
-    if (!deferSuccess) {
-      logger.warn(`Lock interaction defer failed`, {
-        userId: interaction.user.id,
-        guildId: interaction.guildId,
-        commandName: 'lock'
-      });
-      return;
-    }
-
-    if (!isBotOwner(interaction.user.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels))
-      return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission `Gérer les salons` pour verrouiller des salons.");
-
-    const channel = interaction.channel;
-    const everyoneRole = interaction.guild.roles.everyone;
-
-    try {
-      const currentPermissions = channel.permissionsFor(everyoneRole);
-      if (currentPermissions.has(PermissionFlagsBits.SendMessages) === false) {
-        return await InteractionHelper.sendErrorNotice(interaction, `${channel} est déjà verrouillé.`);
-      }
-
-      await channel.permissionOverwrites.edit(
-        everyoneRole,
-        { SendMessages: false },
-{ type: 0, reason: `Salon verrouillé par ${interaction.user.tag}` },
-      );
-
-      const lockEmbed = createEmbed(
-        "🔒 Salon verrouillé (Journal d'actions)",
-        `${channel} a été verrouillé par ${interaction.user}.`,
-      )
-.setColor(getColor('moderation'))
-        .addFields(
-          { name: "Salon", value: channel.toString(), inline: true },
-          {
-            name: "Modérateur",
-            value: `${interaction.user.tag} (${interaction.user.id})`,
-            inline: true,
-          },
-        );
-
-      await logEvent({
-        client,
-        guild: interaction.guild,
-        event: {
-          action: "Channel Locked",
-          target: channel.toString(),
-          executor: `<@${interaction.user.id}> (${interaction.user.id})`,
-          metadata: {
-            channelId: channel.id,
-            category: channel.parent?.name || 'None',
-            moderatorId: interaction.user.id
-          }
+    async execute(interaction, config, client) {
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
+        if (!deferSuccess) {
+            logger.warn('Lock interaction defer failed', {
+                userId: interaction.user.id,
+                guildId: interaction.guildId,
+                commandName: 'lock',
+            });
+            return;
         }
-      });
 
-      await InteractionHelper.safeEditReply(interaction, {
-        content: `🔒 **Salon verrouillé** — ${channel} est maintenant verrouillé. Plus personne ne peut y parler.`,
-      });
-    } catch (error) {
-      logger.error('Lock command error:', error);
-      return await InteractionHelper.sendErrorNotice(interaction, "Une erreur inattendue est survenue en essayant de verrouiller le salon. Vérifie mes permissions (j'ai besoin de « Gérer les salons »).");
-    }
-  }
+        if (!isBotOwner(interaction.user.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+            return InteractionHelper.safeEditReply(interaction, payload(
+                errorEmbed('Tu as besoin de la permission **Gérer les salons** pour verrouiller un salon.'),
+            ));
+        }
+
+        const channel = interaction.channel;
+        const everyoneRole = interaction.guild.roles.everyone;
+
+        try {
+            const currentPermissions = channel.permissionsFor(everyoneRole);
+            if (currentPermissions.has(PermissionFlagsBits.SendMessages) === false) {
+                return InteractionHelper.safeEditReply(interaction, payload(
+                    warningEmbed(`<#${channel.id}> est déjà verrouillé. Aucune modification n’a été faite.`),
+                ));
+            }
+
+            await channel.permissionOverwrites.edit(
+                everyoneRole,
+                { SendMessages: false },
+                { type: 0, reason: `Salon verrouillé par ${interaction.user.tag}` },
+            );
+
+            await logEvent({
+                client,
+                guild: interaction.guild,
+                event: {
+                    action: 'Channel Locked',
+                    target: channel.toString(),
+                    executor: `<@${interaction.user.id}> (${interaction.user.id})`,
+                    metadata: {
+                        channelId: channel.id,
+                        category: channel.parent?.name || 'None',
+                        moderatorId: interaction.user.id,
+                    },
+                },
+            });
+
+            return InteractionHelper.safeEditReply(interaction, payload(
+                successEmbed(`<#${channel.id}> est verrouillé. Les membres ne peuvent plus y écrire.`, '🔒 Salon verrouillé')
+                    .addFields(
+                        { name: 'Salon', value: `<#${channel.id}>`, inline: true },
+                        { name: 'Permission', value: '`Envoyer des messages : refusé`', inline: true },
+                        { name: 'Modérateur', value: `<@${interaction.user.id}>`, inline: false },
+                    ),
+            ));
+        } catch (error) {
+            logger.error('Lock command error:', error);
+            return InteractionHelper.safeEditReply(interaction, payload(
+                errorEmbed('Impossible de verrouiller le salon. Vérifie que je possède « Gérer les salons ».'),
+            ));
+        }
+    },
 };
-
-
-

@@ -1,5 +1,7 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { logger } from '../../utils/logger.js';
+import { errorEmbed, warningEmbed } from '../../utils/embeds.js';
+import { brandFooter } from '../../ui/kit.js';
 
 import { handleCreate } from './modules/serverstats_create.js';
 import { handleList } from './modules/serverstats_list.js';
@@ -8,6 +10,17 @@ import { handleDelete } from './modules/serverstats_delete.js';
 import { handleDebug } from './modules/serverstats_debug.js';
 
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
+const MENTION_OPTIONS = { parse: [] };
+
+async function sendCommandIssue(interaction, embed) {
+    embed.setFooter(brandFooter('Statistiques du serveur'));
+    await InteractionHelper.safeReply(interaction, {
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: MENTION_OPTIONS,
+    });
+}
 export default {
     data: new SlashCommandBuilder()
         .setName("serverstats")
@@ -115,12 +128,17 @@ export default {
                     await handleDebug(interaction, client);
                     break;
                 default:
-                    await InteractionHelper.sendErrorNotice(interaction, "Sous-commande inconnue.");
+                    await sendCommandIssue(interaction, warningEmbed(
+                        'Cette sous-commande est inconnue. Choisis `create`, `list`, `update`, `delete` ou `debug`.',
+                        '⚠️ Sous-commande inconnue',
+                    ));
             }
         } catch (error) {
             logger.error(`Error in serverstats ${subcommand}:`, error);
-            
-            await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue pendant le traitement de ta demande.");
+
+            await sendCommandIssue(interaction, errorEmbed(
+                'Impossible de terminer la commande. Réessaie dans un instant.',
+            ));
         }
     }
 };

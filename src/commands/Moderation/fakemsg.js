@@ -1,67 +1,89 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { logger } from '../../utils/logger.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { brandFooter, formatNumber } from '../../ui/kit.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+
+const NO_MENTIONS = { parse: [], repliedUser: false };
+const CONTEXT = 'Message factice';
+
+function payload(embed) {
+    return {
+        embeds: [embed.setFooter(brandFooter(CONTEXT))],
+        components: [],
+        allowedMentions: NO_MENTIONS,
+    };
+}
 
 export default {
     data: new SlashCommandBuilder()
-        .setName("fakemsg")
-        .setDescription("Publier un message dans un salon, affiché comme venant d'un autre membre")
-        .addUserOption(option =>
+        .setName('fakemsg')
+        .setDescription('Publier un message dans un salon, affiché comme venant d’un autre membre')
+        .addUserOption((option) =>
             option
-                .setName("user")
-                .setDescription("Le membre dont le message doit avoir l'apparence")
-                .setRequired(true)
+                .setName('user')
+                .setDescription('Le membre dont le message doit avoir l’apparence')
+                .setRequired(true),
         )
-        .addStringOption(option =>
+        .addStringOption((option) =>
             option
-                .setName("message")
-                .setDescription("Le contenu du message (2000 caractères max)")
-                .setRequired(false)
+                .setName('message')
+                .setDescription('Le contenu du message (2000 caractères max)')
+                .setRequired(false),
         )
-        .addAttachmentOption(option =>
+        .addAttachmentOption((option) =>
             option
-                .setName("image")
-                .setDescription("Une image à envoyer en pièce jointe")
-                .setRequired(false)
+                .setName('image')
+                .setDescription('Une image à envoyer en pièce jointe')
+                .setRequired(false),
         )
-        .addChannelOption(option =>
+        .addChannelOption((option) =>
             option
-                .setName("channel")
-                .setDescription("Le salon où envoyer (par défaut : le salon actuel)")
+                .setName('channel')
+                .setDescription('Le salon où envoyer (par défaut : le salon actuel)')
                 .addChannelTypes(ChannelType.GuildText, ChannelType.GuildForum)
-                .setRequired(false)
+                .setRequired(false),
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageWebhooks)
         .setDMPermission(false),
-    category: "Moderation",
+    category: 'Moderation',
 
     async execute(interaction, config, client) {
         const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) {
-            logger.warn(`Fakemsg interaction defer failed`, {
+            logger.warn('Fakemsg interaction defer failed', {
                 userId: interaction.user.id,
                 guildId: interaction.guildId,
-                commandName: 'fakemsg'
+                commandName: 'fakemsg',
             });
             return;
         }
 
-        if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageWebhooks)) {
-            return await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission **Gérer les webhooks** pour utiliser cette commande.");
+        if (
+            !isBotOwner(interaction.member.id) &&
+            !interaction.member.permissions.has(PermissionFlagsBits.ManageWebhooks)
+        ) {
+            return InteractionHelper.safeEditReply(interaction, payload(
+                errorEmbed('Tu as besoin de la permission **Gérer les webhooks** pour utiliser cette commande.'),
+            ));
         }
 
-        const targetUser = interaction.options.getUser("user");
-        const message = interaction.options.getString("message");
-        const image = interaction.options.getAttachment("image");
-        const channel = interaction.options.getChannel("channel") || interaction.channel;
+        const targetUser = interaction.options.getUser('user');
+        const message = interaction.options.getString('message');
+        const image = interaction.options.getAttachment('image');
+        const channel = interaction.options.getChannel('channel') || interaction.channel;
 
         if (!message && !image) {
-            return await InteractionHelper.sendErrorNotice(interaction, "Indique un message ou une image à envoyer.");
+            return InteractionHelper.safeEditReply(interaction, payload(
+                errorEmbed('Indique un message ou une image à envoyer.'),
+            ));
         }
 
         if (message && message.length > 2000) {
-            return await InteractionHelper.sendErrorNotice(interaction, "Les messages doivent faire moins de 2000 caractères.");
+            return InteractionHelper.safeEditReply(interaction, payload(
+                errorEmbed('Le message doit faire moins de 2000 caractères.'),
+            ));
         }
 
         let targetChannel = channel;
@@ -76,7 +98,9 @@ export default {
             !targetChannel ||
             (targetChannel.type !== ChannelType.GuildText && targetChannel.type !== ChannelType.GuildForum)
         ) {
-            return await InteractionHelper.sendErrorNotice(interaction, "Choisis un salon textuel.");
+            return InteractionHelper.safeEditReply(interaction, payload(
+                errorEmbed('Choisis un salon textuel.'),
+            ));
         }
 
         try {
@@ -97,7 +121,7 @@ export default {
             const webhook = await targetChannel.createWebhook({
                 name,
                 avatar: avatarBuffer || undefined,
-                reason: `Message factice posté par ${interaction.user.tag}`
+                reason: `Message factice posté par ${interaction.user.tag}`,
             });
 
             try {
@@ -106,21 +130,26 @@ export default {
                     username: name,
                     avatarURL,
                     threadId: threadId || undefined,
-                    files: image ? [image.url] : undefined
+                    files: image ? [image.url] : undefined,
                 });
             } finally {
                 await webhook.delete('Message factice envoyé').catch(() => {});
             }
 
-            try {
-                const confirmation = await interaction.fetchReply().catch(() => null);
-                if (confirmation) await confirmation.delete().catch(() => {});
-            } catch (_) {
-                // reply already gone
-            }
+            return InteractionHelper.safeEditReply(interaction, payload(
+                successEmbed(`Le message a été publié dans <#${targetChannel.id}>.`, '✅ Message publié')
+                    .addFields(
+                        { name: 'Apparence', value: `<@${targetUser.id}>`, inline: true },
+                        { name: 'Salon', value: `<#${targetChannel.id}>`, inline: true },
+                        { name: 'Contenu', value: message ? `\`${formatNumber(message.length)}\` caractères` : 'Image seulement', inline: false },
+                        { name: 'Auteur de la commande', value: `<@${interaction.user.id}>`, inline: false },
+                    ),
+            ));
         } catch (error) {
-            logger.error("Error in fakemsg command:", error);
-            return await InteractionHelper.sendErrorNotice(interaction, "Échec de la publication du message factice. Vérifie la permission **Gérer les webhooks** du bot dans ce salon.");
+            logger.error('Error in fakemsg command:', error);
+            return InteractionHelper.safeEditReply(interaction, payload(
+                errorEmbed('Impossible de publier le message factice. Vérifie la permission **Gérer les webhooks** du bot dans ce salon.'),
+            ));
         }
-    }
+    },
 };

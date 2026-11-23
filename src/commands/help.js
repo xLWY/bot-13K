@@ -1,6 +1,5 @@
 import {
     SlashCommandBuilder,
-    EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
@@ -11,15 +10,28 @@ import {
     PermissionFlagsBits,
     PermissionsBitField,
 } from 'discord.js';
-import { getColor } from '../config/bot.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { logger } from '../utils/logger.js';
 import { isBotOwner } from '../utils/ownerIds.js';
 import { getCategoryLabel } from '../config/commandMeta.js';
+import { createEmbed, errorEmbed, warningEmbed } from '../utils/embeds.js';
+import { brandFooter, buildNavRow, buildPageJumpRow, formatNumber, progressBar } from '../ui/kit.js';
 
 const PER_PAGE = 8;
 const SESSION_MS = 600_000;
+const CONTEXT = 'Aide';
+const PREV_ID = 'help_prev';
+const NEXT_ID = 'help_next';
+const OVERVIEW_ID = 'help_overview';
+const CATEGORY_ID = 'help_category';
+const JUMP_ID = 'help_page_jump';
+const INDICATOR_ID = 'help_page_indicator';
 const activeHelpCollectors = new Map();
+
+function truncate(value, max) {
+    const text = String(value ?? '');
+    return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
 
 function getCommandDefaultPermissions(command) {
     const json = typeof command.data?.toJSON === 'function' ? command.data.toJSON() : command.data;
@@ -97,84 +109,111 @@ function cleanDescription(command) {
 }
 
 function buildOverview(categories, total) {
-    const lines = categories.map(([name, commands]) => {
-        const bullet = '\u{2022}';
-        return `${bullet} **${name}** \u{2014} \`${commands.length}\` commande(s)`;
-    });
+    if (categories.length === 0) {
+        return warningEmbed(
+            'Aucune commande n’est disponible avec tes permissions actuelles.',
+            '⚠️ Aucune commande',
+        ).setFooter(brandFooter(CONTEXT));
+    }
 
-    return new EmbedBuilder()
-        .setTitle('\u{1F4D6} Commandes du bot')
-        .setDescription(
-            `${total} commandes réparties en ${categories.length} catégories.\n` +
-            'Choisis une catégorie ci-dessous, ou navigue avec les flèches.\n\n' +
-            lines.join('\n'),
-        )
-        .setColor(getColor('info'))
-        .setFooter({ text: 'Utilise /help sur un serveur ou en MP (propriétaire).' })
-        .setTimestamp();
+    const lines = categories.map(([name, commands]) =>
+        `• **${name}** — \`${formatNumber(commands.length)}\` commande(s)`,
+    );
+
+    return createEmbed({
+        title: 'Commandes du bot',
+        description: [
+            `**${formatNumber(total)}** commandes dans **${formatNumber(categories.length)}** catégorie(s).`,
+            'Choisis une catégorie dans le menu ci-dessous.',
+        ].join('\n'),
+        color: 'info',
+        fields: [
+            {
+                name: 'Catégories',
+                value: truncate(lines.join('\n'), 1000),
+                inline: false,
+            },
+        ],
+        footer: brandFooter(CONTEXT),
+    });
 }
 
 function buildCategoryPage(categoryName, commands, pageIndex, pageCount) {
     const slice = commands.slice(pageIndex * PER_PAGE, (pageIndex + 1) * PER_PAGE);
-
-    const body = slice.map(command => {
+    const lines = slice.map((command) => {
         const subs = getSubcommandNames(command);
-        const suffix = subs.length ? ` \u{203A} \`${subs.join('`, `')}\`` : '';
-        return `\`/${command.data.name}\`${suffix}\n${cleanDescription(command)}`;
-    }).join('\n\n');
+        const commandLine = `\`/${command.data.name}\` — ${truncate(cleanDescription(command), 140)}`;
+        if (subs.length === 0) return commandLine;
 
-    const embed = new EmbedBuilder()
-        .setTitle(`\u{1F4D6} ${categoryName}`)
-        .setDescription(body)
-        .setColor(getColor('info'))
-        .setFooter({
-            text: `Page ${pageIndex + 1}/${pageCount} \u{2022} ${commands.length} commande(s) \u{2022} ${slice.length} affichée(s)`,
-        })
-        .setTimestamp();
+        const labels = subs.slice(0, 6).map((sub) => `\`${sub}\``).join(', ');
+        return `${commandLine}\n  Sous-commandes : ${labels}${subs.length > 6 ? '…' : ''}`;
+    });
 
-    return embed;
+    return createEmbed({
+        title: categoryName,
+        description: [
+            `Page **${pageIndex + 1}/${pageCount}** ${progressBar(pageIndex + 1, pageCount, 10)}`,
+            'Sélectionne une autre catégorie pour changer de rubrique.',
+        ].join('\n'),
+        color: 'info',
+        fields: [
+            {
+                name: 'Commandes',
+                value: truncate(lines.join('\n\n'), 1000) || 'Aucune commande dans cette catégorie.',
+                inline: false,
+            },
+        ],
+        footer: brandFooter(CONTEXT),
+    });
 }
 
 function buildOverviewRows(categories) {
+    if (categories.length === 0) return [];
+
     const menu = new StringSelectMenuBuilder()
-        .setCustomId('help_category')
-        .setPlaceholder('Aller directement à une catégorie…')
+        .setCustomId(CATEGORY_ID)
+        .setPlaceholder('Aller à une catégorie…')
         .addOptions(
             categories.slice(0, 25).map(([name, commands]) =>
                 new StringSelectMenuOptionBuilder({
                     label: name,
                     value: name,
-                    description: `${commands.length} commande(s)`,
+                    description: `${formatNumber(commands.length)} commande(s)`,
                 }),
             ),
         );
 
-    return [
-        new ActionRowBuilder().addComponents(menu),
-    ];
+    return [new ActionRowBuilder().addComponents(menu)];
 }
 
-function buildNavRows(pageIndex, pageCount, categories, canPrev, canNext) {
-    const menu = new StringSelectMenuBuilder()
-        .setCustomId('help_category')
-        .setPlaceholder('Aller directement à une catégorie…')
-        .addOptions(
-            categories.slice(0, 25).map(([name, commands]) =>
-                new StringSelectMenuOptionBuilder({
-                    label: name,
-                    value: name,
-                    description: `${commands.length} commande(s)`,
-                }),
-            ),
+function buildCategoryNavRows(pageIndex, pageCount, categories) {
+    const [navRow] = buildNavRow({
+        page: pageIndex,
+        pageCount,
+        prevId: PREV_ID,
+        nextId: NEXT_ID,
+        indicatorId: INDICATOR_ID,
+    });
+
+    if (navRow) {
+        navRow.addComponents(
+            new ButtonBuilder()
+                .setCustomId(OVERVIEW_ID)
+                .setLabel('Vue d’ensemble')
+                .setStyle(ButtonStyle.Primary),
         );
+    }
 
-    const buttons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('help_prev').setLabel('◀ Précédent').setStyle(ButtonStyle.Secondary).setDisabled(!canPrev),
-        new ButtonBuilder().setCustomId('help_next').setLabel('Suivant ▶').setStyle(ButtonStyle.Secondary).setDisabled(!canNext),
-        new ButtonBuilder().setCustomId('help_overview').setLabel('📖 Vue d’ensemble').setStyle(ButtonStyle.Primary),
-    );
-
-    return [buttons, new ActionRowBuilder().addComponents(menu)];
+    return [
+        ...(navRow ? [navRow] : []),
+        ...buildPageJumpRow({
+            page: pageIndex,
+            pageCount,
+            customId: JUMP_ID,
+            placeholder: 'Aller à une page…',
+        }),
+        ...buildOverviewRows(categories),
+    ];
 }
 
 async function resolveChannel(interaction) {
@@ -189,23 +228,33 @@ async function resolveChannel(interaction) {
     }
 }
 
-async function renderHelp(interaction, client, state) {
-    const categories = collectCategories(interaction, client);
+function renderHelp(interaction, client, state, categories = collectCategories(interaction, client)) {
     const total = categories.reduce((sum, [, commands]) => sum + commands.length, 0);
+    const overview = () => ({
+        embeds: [buildOverview(categories, total)],
+        components: buildOverviewRows(categories),
+        allowedMentions: { parse: [], repliedUser: false },
+    });
 
-    const payload = state.categoryIndex === null
-        ? { embeds: [buildOverview(categories, total)], components: buildOverviewRows(categories) }
-        : (() => {
-            const [name, commands] = categories[state.categoryIndex];
-            const pageCount = Math.max(1, Math.ceil(commands.length / PER_PAGE));
-            const pageIndex = Math.min(state.page, pageCount - 1);
-            return {
-                embeds: [buildCategoryPage(name, commands, pageIndex, pageCount)],
-                components: buildNavRows(pageIndex, pageCount, categories, pageIndex > 0, pageIndex < pageCount - 1),
-            };
-        })();
+    if (categories.length === 0 || state.categoryIndex === null) return overview();
 
-    return payload;
+    const entry = categories[state.categoryIndex];
+    if (!entry) {
+        state.categoryIndex = null;
+        state.page = 0;
+        return overview();
+    }
+
+    const [name, commands] = entry;
+    const pageCount = Math.max(1, Math.ceil(commands.length / PER_PAGE));
+    const pageIndex = Math.max(0, Math.min(state.page, pageCount - 1));
+    state.page = pageIndex;
+
+    return {
+        embeds: [buildCategoryPage(name, commands, pageIndex, pageCount)],
+        components: buildCategoryNavRows(pageIndex, pageCount, categories),
+        allowedMentions: { parse: [], repliedUser: false },
+    };
 }
 
 async function startCollector(interaction, client) {
@@ -234,22 +283,26 @@ async function startCollector(interaction, client) {
         InteractionHelper.armDashboardSession(i);
         try {
             if (i.isStringSelectMenu()) {
-                const name = i.values[0];
-                const index = collectCategories(i, client).findIndex(([categoryName]) => categoryName === name);
-                state.categoryIndex = index >= 0 ? index : null;
-                state.page = 0;
-            } else if (i.customId === 'help_next') {
+                if (i.customId === JUMP_ID) {
+                    const requested = Number(i.values?.[0]);
+                    if (Number.isInteger(requested)) state.page = requested;
+                } else if (i.customId === CATEGORY_ID) {
+                    const name = i.values[0];
+                    const index = collectCategories(i, client).findIndex(([categoryName]) => categoryName === name);
+                    state.categoryIndex = index >= 0 ? index : null;
+                    state.page = 0;
+                }
+            } else if (i.customId === NEXT_ID) {
                 state.page += 1;
-            } else if (i.customId === 'help_prev') {
+            } else if (i.customId === PREV_ID) {
                 state.page = Math.max(0, state.page - 1);
-            } else if (i.customId === 'help_overview') {
+            } else if (i.customId === OVERVIEW_ID) {
                 state.categoryIndex = null;
                 state.page = 0;
             }
 
             await i.deferUpdate();
-            const payload = await renderHelp(i, client, state);
-            await i.editReply(payload);
+            await i.editReply(renderHelp(i, client, state));
         } catch (error) {
             logger.error('Error in help navigation:', error);
         }
@@ -261,7 +314,7 @@ async function startCollector(interaction, client) {
         try {
             await lastInteraction.editReply({ components: [] });
         } catch {
-            // message already gone or no longer editable
+            // Le message n’existe plus ou n’est plus modifiable.
         }
     });
 }
@@ -276,21 +329,22 @@ export default {
 
     async execute(interaction, config, client) {
         try {
-            await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            if (!(await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral }))) return;
 
             const categories = collectCategories(interaction, client);
-            const total = categories.reduce((sum, [, commands]) => sum + commands.length, 0);
+            const payload = renderHelp(interaction, client, { categoryIndex: null, page: 0 }, categories);
+            if (!(await InteractionHelper.safeEditReply(interaction, payload))) return;
 
-            await InteractionHelper.safeEditReply(interaction, {
-                embeds: [buildOverview(categories, total)],
-                components: buildOverviewRows(categories),
-                flags: MessageFlags.Ephemeral,
-            });
-
-            await startCollector(interaction, client);
+            if (categories.length > 0) await startCollector(interaction, client);
         } catch (error) {
             logger.error('Error in /help:', error);
-            await InteractionHelper.sendErrorNotice(interaction, 'Impossible d’afficher la liste des commandes.').catch(() => {});
+            await InteractionHelper.safeEditReply(interaction, {
+                embeds: [errorEmbed(
+                    'Impossible d’afficher la liste des commandes. Réessaie dans un instant.',
+                ).setFooter(brandFooter(CONTEXT))],
+                components: [],
+                allowedMentions: { parse: [], repliedUser: false },
+            });
         }
     },
 };

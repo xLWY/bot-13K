@@ -1,8 +1,8 @@
-import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags, ComponentType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, ComponentType } from 'discord.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { logger } from '../../utils/logger.js';
+import { createEmbed, errorEmbed } from '../../utils/embeds.js';
 import { getWelcomeConfig } from '../../utils/database.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { getLevelingConfig } from '../../services/leveling.js';
@@ -10,6 +10,7 @@ import { getServerCounters } from '../../services/serverstatsService.js';
 import { getConfiguration as getJtcConfig } from '../../services/joinToCreateService.js';
 import { getAllReactionRoleMessages } from '../../services/reactionRoleService.js';
 import { getAntiSpamConfig, getMissingAntiSpamPermissions } from '../../services/antiSpamService.js';
+import { brandFooter, formatNumber, guildIconUrl, progressBar } from '../../ui/kit.js';
 import greetDashboard from '../Welcome/modules/greet_dashboard.js';
 import ticketDashboard from '../Ticket/modules/ticket_dashboard.js';
 import levelingDashboard from './modules/leveling_dashboard.js';
@@ -20,6 +21,19 @@ import jtcDashboard from './modules/jtc_dashboard.js';
 import antispamDashboard from './modules/antispam_dashboard.js';
 import { openReactionRolesPanel } from '../Reaction_roles/reactroles.js';
 import { openStaff } from '../Moderation/staff.js';
+
+const NO_MENTIONS = { parse: [], repliedUser: false };
+const FOOTER_CONTEXT = 'Panneau de contrôle';
+
+function errorReply(interaction, message) {
+    const embed = errorEmbed(message);
+    embed.setFooter(brandFooter(FOOTER_CONTEXT));
+    return InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed],
+        allowedMentions: NO_MENTIONS,
+        flags: MessageFlags.Ephemeral,
+    });
+}
 
 export function openPanel(interaction, client, guildId) {
     const guild = interaction.guild || client.guilds.cache.get(guildId);
@@ -60,57 +74,69 @@ export function openPanel(interaction, client, guildId) {
         const jtcTriggerList = Array.isArray(jtc?.triggerChannels)
             ? jtc.triggerChannels
             : (jtc?.triggerChannels ? [jtc.triggerChannels] : []);
-        const jtcStatus = (jtc?.enabled === true || jtc?.enabled === 'true') && jtcTriggerList.length
-            ? `✅ ${jtcTriggerList.length} salon(s)`
+        const jtcEnabled = jtc?.enabled === true || jtc?.enabled === 'true';
+        const jtcStatus = jtcEnabled && jtcTriggerList.length
+            ? `✅ ${formatNumber(jtcTriggerList.length)} salon(s)`
             : '❌ Désactivé';
-        const counterStatus = counterList.length ? `✅ ${counterList.length} compteur(s)` : '❌ Aucun';
-        const rrStatus = rrList.length ? `✅ ${rrList.length} message(s)` : '❌ Aucun';
+        const counterStatus = counterList.length ? `✅ ${formatNumber(counterList.length)} compteur(s)` : '❌ Aucun';
+        const rrStatus = rrList.length ? `✅ ${formatNumber(rrList.length)} message(s)` : '❌ Aucun';
         const antiSpamStatus = antiSpam?.enabled ? '✅ Activé' : '❌ Désactivé';
 
         const alerts = [];
         if (welcomeConfig?.channelId && !guild.channels.cache.get(welcomeConfig.channelId)) {
-            alerts.push('⚠️ Le canal de bienvenue n\'existe plus — reconfigure via `/panel` → **Bienvenue**.');
+            alerts.push('⚠️ Le canal de bienvenue n’existe plus — reconfigure via `/panel` → **Bienvenue**.');
         }
         if (welcomeConfig?.pingChannelId && !guild.channels.cache.get(welcomeConfig.pingChannelId)) {
-            alerts.push('⚠️ Le salon de ping de bienvenue n\'existe plus.');
+            alerts.push('⚠️ Le salon de ping de bienvenue n’existe plus.');
         }
         if (welcomeConfig?.goodbyeChannelId && !guild.channels.cache.get(welcomeConfig.goodbyeChannelId)) {
-            alerts.push('⚠️ Le canal d\'au revoir n\'existe plus — reconfigure via `/panel` → **Bienvenue**.');
+            alerts.push('⚠️ Le canal d’au revoir n’existe plus — reconfigure via `/panel` → **Bienvenue**.');
         }
         if (welcomeConfig?.goodbyeEnabled && !welcomeConfig?.goodbyeChannelId) {
-            alerts.push('⚠️ L\'au revoir est activé mais aucun canal n\'est défini — configure-le via `/panel` → **Bienvenue**.');
+            alerts.push('⚠️ L’au revoir est activé mais aucun canal n’est défini — configure-le via `/panel` → **Bienvenue**.');
         }
         if (guildConfig?.ticketPanelChannelId && !guild.channels.cache.get(guildConfig.ticketPanelChannelId)) {
-            alerts.push('⚠️ Le salon du panneau de tickets n\'existe plus.');
+            alerts.push('⚠️ Le salon du panneau de tickets n’existe plus.');
         }
         if (antiSpam?.enabled) {
             const missingAntiSpamPermissions = getMissingAntiSpamPermissions(guild.members.me, antiSpam);
             if (missingAntiSpamPermissions.length > 0) {
-                alerts.push(`⚠️ L'anti-spam est activé, mais le bot n'a pas : ${missingAntiSpamPermissions.join(', ')}.`);
+                alerts.push(`⚠️ L’anti-spam est activé, mais le bot n’a pas : ${missingAntiSpamPermissions.join(', ')}.`);
             }
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle(`⚙️ Panneau de contrôle — ${guild.name}`)
-            .setDescription(
-                alerts.length
-                    ? `Voici l\'état global du serveur. **Alerte(s)** :\n${alerts.join('\n')}\n\nUtilise les boutons ci-dessous pour ouvrir chaque module.`
-                    : 'Tout est bien configuré. Utilise les boutons ci-dessous pour ouvrir et modifier chaque module.',
-            )
-            .setColor(alerts.length ? getColor('warning') : getColor('success'))
-            .addFields(
-                { name: '\u{1F44B} Bienvenue / Au revoir', value: welcomeStatus, inline: true },
-                { name: '\u{1F3AB} Tickets', value: ticketStatus, inline: true },
-                { name: '\u{1F4C8} Leveling / XP', value: levelingStatus, inline: true },
-                { name: '\u{1F6E1}\uFE0F Anti-spam', value: antiSpamStatus, inline: true },
-                { name: '\u{1F3A4} Salon vocal', value: jtcStatus, inline: true },
-                { name: '\u{1F4CA} Compteurs', value: counterStatus, inline: true },
-                { name: '\u{1F3AD} Rôles réaction', value: rrStatus, inline: true },
-                { name: '\u{1F381} Giveaways', value: '`Via le dashboard`', inline: true },
-                { name: '\u{1F6D2} Boutique', value: '`Via le dashboard`', inline: true },
-            )
-            .setFooter({ text: 'Réservé aux administrateurs • /panel' })
-            .setTimestamp();
+        const readyCount = [
+            welcomeConfig?.enabled,
+            guildConfig?.ticketPanelChannelId,
+            leveling?.enabled,
+            antiSpam?.enabled,
+            jtcEnabled,
+            counterList.length,
+            rrList.length,
+        ].filter(Boolean).length;
+
+        const description = [
+            alerts.length
+                ? `**${formatNumber(alerts.length)} alerte(s) à corriger :**\n${alerts.slice(0, 6).join('\n')}${alerts.length > 6 ? '\n…' : ''}`
+                : 'Tout est bien configuré. Ouvre un module pour le consulter ou le modifier.',
+            `Modules actifs : \`${formatNumber(readyCount)}/7\` ${progressBar(readyCount, 7, 10)}`,
+        ].join('\n\n');
+
+        const embed = createEmbed({
+            title: `⚙️ Panneau de contrôle · ${guild.name}`,
+            description,
+            color: alerts.length ? 'warning' : 'success',
+            thumbnail: guildIconUrl(guild, 128),
+            fields: [
+                { name: '👋 Bienvenue / Au revoir', value: welcomeStatus, inline: true },
+                { name: '🎫 Tickets', value: ticketStatus, inline: true },
+                { name: '📈 Leveling / 🛡️ Anti-spam', value: `${levelingStatus}\n${antiSpamStatus}`, inline: true },
+                { name: '🎤 Salon vocal / 📊 Compteurs', value: `${jtcStatus}\n${counterStatus}`, inline: true },
+                { name: '🎭 Rôles réaction', value: rrStatus, inline: true },
+                { name: '🎁 Giveaways / 🛒 Boutique', value: '`Via le dashboard`', inline: true },
+            ],
+            footer: brandFooter(FOOTER_CONTEXT),
+        });
 
         const modules = [
             { id: 'panel_welcome', label: 'Bienvenue', emoji: '\u{1F44B}' },
@@ -142,6 +168,7 @@ export function openPanel(interaction, client, guildId) {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [embed],
             components: rows,
+            allowedMentions: NO_MENTIONS,
             flags: MessageFlags.Ephemeral,
         });
 
@@ -152,7 +179,7 @@ export function openPanel(interaction, client, guildId) {
             filter: i =>
                 i.user.id === interaction.user.id &&
                 ['panel_welcome', 'panel_ticket', 'panel_leveling', 'panel_antispam', 'panel_jtc', 'panel_serverstats', 'panel_giveaway', 'panel_shop', 'panel_reactionroles', 'panel_staff'].includes(i.customId),
-                time: 300_000,
+            time: 300_000,
         });
 
         const onBack = (backInteraction) => openPanel(backInteraction, client, guildId);
@@ -181,14 +208,14 @@ export function openPanel(interaction, client, guildId) {
                         return await openReactionRolesPanel(btnInteraction, onBack);
                     case 'panel_staff':
                         if (!isBotOwner(btnInteraction.user.id)) {
-                            return await InteractionHelper.sendErrorNotice(btnInteraction, 'Ce panneau est réservé au propriétaire du bot.');
+                            return await errorReply(btnInteraction, 'Ce panneau est réservé au propriétaire du bot.');
                         }
                         return await openStaff(btnInteraction, client);
                 }
             } catch (error) {
                 logger.debug(`Panel module open failed (${btnInteraction.customId}):`, error.message);
-                const message = error?.userMessage || 'Impossible d\'ouvrir ce module. Vérifie qu\'il est configuré, puis réessaie.';
-                await InteractionHelper.sendErrorNotice(btnInteraction, message).catch(() => {});
+                const message = error?.userMessage || 'Impossible d’ouvrir ce module. Vérifie qu’il est configuré, puis réessaie.';
+                await errorReply(btnInteraction, message).catch(() => {});
             }
         });
 
@@ -208,22 +235,18 @@ export default {
             const { guild, client } = interaction;
 
             if (interaction.isPrefixCommand?.()) {
-                return await InteractionHelper.sendErrorNotice(interaction, 'Utilise `/panel` : la version préfixe est désactivée pour éviter un panneau public.');
+                return errorReply(interaction, 'Utilise `/panel` : la version préfixe est désactivée pour éviter un panneau public.');
             }
 
             if (!isBotOwner(interaction.user.id) && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-                return await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/panel`.');
-            }
-
-            if (interaction.isPrefixCommand && interaction.isPrefixCommand()) {
-                logger.info('Opening /panel dashboard via prefix command');
+                return errorReply(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour utiliser `/panel`.');
             }
 
             await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
             await openPanel(interaction, client, guild.id);
         } catch (error) {
             logger.error('Error in /panel:', error);
-            return await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de l\'ouverture du panneau.');
+            return errorReply(interaction, 'Une erreur est survenue lors de l’ouverture du panneau.');
         }
     },
 };

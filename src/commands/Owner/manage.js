@@ -14,11 +14,21 @@ import { createEmbed, errorEmbed, successEmbed, warningEmbed } from '../../utils
 import { logger } from '../../utils/logger.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { buildBotInviteUrl } from '../../utils/inviteUrl.js';
+import {
+    brandFooter,
+    buildNavRow,
+    buildPageJumpRow,
+    discordTimestamp,
+    formatNumber,
+    guildIconUrl,
+    progressBar,
+} from '../../ui/kit.js';
 
 const LIST_PAGE_SIZE = 8;
 const COLLECTOR_MS = 180_000;
 const LIST_PREV = 'manage_list_prev';
 const LIST_NEXT = 'manage_list_next';
+const LIST_JUMP = 'manage_list_jump';
 const LEAVE_YES = 'manage_leave_yes';
 const LEAVE_NO = 'manage_leave_no';
 
@@ -71,11 +81,6 @@ function cleanName(name) {
     return String(name ?? 'Serveur sans nom').replace(/[`@]/g, '').slice(0, 80);
 }
 
-function timestamp(value, format = 'R') {
-    if (!value) return 'inconnu';
-    return `<t:${Math.floor(new Date(value).getTime() / 1000)}:${format}>`;
-}
-
 async function fetchAllGuilds(client) {
     let guilds = [...(client.guilds?.cache?.values?.() ?? [])];
 
@@ -108,49 +113,59 @@ async function resolveGuild(client, input) {
     return { guild: matches[0] ?? null, matches, guilds };
 }
 
-function buildListPayload(guilds, page) {
+function buildListPayload(guilds, page, client) {
     const pageCount = Math.max(1, Math.ceil(guilds.length / LIST_PAGE_SIZE));
     const currentPage = Math.min(Math.max(0, page), pageCount - 1);
     const slice = guilds.slice(currentPage * LIST_PAGE_SIZE, (currentPage + 1) * LIST_PAGE_SIZE);
+    const totalMembers = guilds.reduce((sum, guild) => sum + (guild.memberCount ?? 0), 0);
 
-    const lines = slice.map((guild, index) => {
-        const position = currentPage * LIST_PAGE_SIZE + index + 1;
-        return [
-            `**${position}. ${cleanName(guild.name)}**`,
-            `ID : \`${guild.id}\` • 👥 \`${guild.memberCount ?? '?'}\` • 👑 <@${guild.ownerId}> • ${timestamp(guild.joinedAt)}`,
-        ].join('\n');
+    const fields = slice.map((guild, index) => {
+        const position = String(currentPage * LIST_PAGE_SIZE + index + 1).padStart(2, '0');
+        const icon = guildIconUrl(guild, 64);
+        const label = cleanName(guild.name);
+
+        return {
+            name: `${position} · ${icon ? `${icon} ` : ''}${label}`.slice(0, 256),
+            value: [
+                `ID : \`${guild.id}\``,
+                `Membres : \`${formatNumber(guild.memberCount ?? 0)}\` • Propriétaire : <@${guild.ownerId}> • Arrivé ${discordTimestamp(guild.joinedAt)}`,
+            ].join('\n'),
+            inline: false,
+        };
     });
 
-    const embed = createEmbed({
-        title: '🛠️ Serveurs où je suis présent',
-        description: [
-            `**${guilds.length}** serveur(s) • page **${currentPage + 1}/${pageCount}**`,
-            '',
-            lines.join('\n\n') || 'Aucun serveur pour le moment.',
-        ].join('\n'),
-        color: 'info',
-        footer: { text: 'Utilise /manage info <serveur> pour les détails • /manage leave <serveur> pour quitter' },
-    });
-
-    const components = [];
-    if (pageCount > 1) {
-        components.push(
-            new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId(LIST_PREV)
-                    .setLabel('◀ Précédent')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(currentPage <= 0),
-                new ButtonBuilder()
-                    .setCustomId(LIST_NEXT)
-                    .setLabel('Suivant ▶')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(currentPage >= pageCount - 1),
-            )
-        );
+    if (fields.length === 0) {
+        fields.push({
+            name: 'Aucun serveur',
+            value: 'Le bot n’est dans aucun serveur. Utilise `/manage invite` pour l’ajouter.',
+        });
     }
 
-    return { embeds: [embed], components };
+    const embed = createEmbed({
+        title: 'Serveurs où je suis présent',
+        description: [
+            `**${formatNumber(guilds.length)}** serveur(s) • **${formatNumber(totalMembers)}** membres au total`,
+            `Page **${currentPage + 1}/${pageCount}** ${progressBar(currentPage + 1, pageCount, 10)}`,
+        ].join('\n'),
+        color: 'info',
+        thumbnail: guildIconUrl(guilds[0], 128) ?? client?.user?.displayAvatarURL?.({ size: 128 }) ?? null,
+        fields,
+        footer: brandFooter('Gestion des serveurs'),
+    });
+
+    return {
+        embeds: [embed],
+        components: [
+            ...buildNavRow({
+                page: currentPage,
+                pageCount,
+                prevId: LIST_PREV,
+                nextId: LIST_NEXT,
+                indicatorId: `${LIST_JUMP}_indicator`,
+            }),
+            ...buildPageJumpRow({ page: currentPage, pageCount, customId: LIST_JUMP }),
+        ],
+    };
 }
 
 async function buildInfoPayload(guild, client) {
@@ -193,9 +208,10 @@ async function buildInfoPayload(guild, client) {
     );
 
     const embed = createEmbed({
-        title: `ℹ️ ${cleanName(guild.name)}`,
+        title: `Fiche serveur · ${cleanName(guild.name)}`,
         description: `ID : \`${guild.id}\``,
         color: 'info',
+        thumbnail: guildIconUrl(guild, 128),
         fields: [
             {
                 name: '👑 Propriétaire',
@@ -205,7 +221,7 @@ async function buildInfoPayload(guild, client) {
             {
                 name: '📊 Activité',
                 value: [
-                    `Membres : \`${guild.memberCount ?? '?'}\``,
+                    `Membres : \`${formatNumber(guild.memberCount ?? 0)}\``,
                     `Salons : \`${channels}\` (${textChannels} texte, ${voiceChannels} vocal, ${categories} catégories)`,
                     `Rôles : \`${Math.max(0, (guild.roles?.cache?.size ?? 1) - 1)}\``,
                 ].join('\n'),
@@ -214,8 +230,9 @@ async function buildInfoPayload(guild, client) {
             {
                 name: '🤖 Bot',
                 value: [
-                    `Arrivé : ${timestamp(guild.joinedAt)}`,
-                    `Permissions clés : ${keyPermissions.length ? keyPermissions.map((p) => `\`${p}\``).join(', ') : 'aucune'}`,
+                    `Arrivé : ${discordTimestamp(guild.joinedAt)}`,
+                    `Permissions clés (${keyPermissions.length}/${KEY_PERMISSIONS.length}) : \`${progressBar(keyPermissions.length, KEY_PERMISSIONS.length, 10)}\``,
+                    keyPermissions.length ? keyPermissions.map((p) => `\`${p}\``).join(', ') : 'aucune permission clé',
                 ].join('\n'),
                 inline: false,
             },
@@ -235,7 +252,7 @@ async function buildInfoPayload(guild, client) {
                 inline: false,
             },
         ],
-        footer: { text: 'Géré via /manage • propriétaire du bot' },
+        footer: brandFooter('Fiche détaillée'),
     });
 
     return { embeds: [embed], components: [] };
@@ -245,7 +262,7 @@ function buildLeavePayload(guild, isMainGuild) {
     const embed = warningEmbed(
         [
             `Tu es sur le point de faire quitter **${cleanName(guild.name)}** (\`${guild.id}\`) au bot.`,
-            `Membres : \`${guild.memberCount ?? '?'}\` • 👑 Propriétaire : <@${guild.ownerId}>`,
+            `Membres : \`${formatNumber(guild.memberCount ?? 0)}\` • 👑 Propriétaire : <@${guild.ownerId}>`,
             '',
             isMainGuild
                 ? '⚠️ C\'est le serveur principal (`GUILD_ID`) : les commandes de serveur ne seront plus enregistrées.'
@@ -253,8 +270,11 @@ function buildLeavePayload(guild, isMainGuild) {
             '',
             'Confirme avec le bouton ci-dessous.',
         ].join('\n'),
-        '⚠️ Confirmation de départ'
+        'Confirmation de départ'
     );
+    const icon = guildIconUrl(guild, 128);
+    if (icon) embed.setThumbnail(icon);
+    embed.setFooter(brandFooter('Action sensible'));
 
     return {
         embeds: [embed],
@@ -355,6 +375,7 @@ function buildInvitePayload(url, mode) {
                 'Ouvre le lien ci-dessous, choisis le serveur voulu et valide les permissions.',
                 'Le bot et ses commandes slash seront ajoutés en une seule étape.',
             ].join('\n'),
+            color: 'info',
             fields: [
                 { name: 'Permissions', value: label, inline: true },
                 { name: 'Portée', value: 'Bot + commandes slash', inline: true },
@@ -363,6 +384,7 @@ function buildInvitePayload(url, mode) {
                     value: `\`${url}\``,
                 },
             ],
+            footer: brandFooter('Invitation'),
         })],
         components: [new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -433,7 +455,7 @@ export default {
 
             if (subcommand === 'list') {
                 const guilds = await fetchAllGuilds(discordClient);
-                const payload = buildListPayload(guilds, 0);
+                const payload = buildListPayload(guilds, 0, discordClient);
                 if (!(await InteractionHelper.safeEditReply(interaction, payload))) return;
 
                 const reply = await interaction.fetchReply?.().catch(() => null);
@@ -447,16 +469,20 @@ export default {
                         page = Math.max(0, page - 1);
                     } else if (componentInteraction.customId === LIST_NEXT) {
                         page = Math.min(pageCount - 1, page + 1);
+                    } else if (componentInteraction.customId === LIST_JUMP) {
+                        const requested = Number(componentInteraction.values?.[0]);
+                        if (!Number.isInteger(requested)) return;
+                        page = Math.min(pageCount - 1, Math.max(0, requested));
                     } else {
                         return;
                     }
 
                     await safeComponentReply(
                         componentInteraction,
-                        buildListPayload(guilds, page),
+                        buildListPayload(guilds, page, discordClient),
                         interaction.user.id,
                     );
-                }, [LIST_PREV, LIST_NEXT]);
+                }, [LIST_PREV, LIST_NEXT, LIST_JUMP]);
                 return;
             }
 

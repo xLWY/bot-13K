@@ -3,37 +3,141 @@ import { PermissionFlagsBits } from 'discord.js';
 import { createEmbed } from '../../../utils/embeds.js';
 import { getServerCounters, getCounterEmoji as getCounterTypeEmoji, getCounterTypeLabel, getGuildCounterStats, resolveCounterChannel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
-
-
-
-
-
-
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { isBotOwner } from '../../../utils/ownerIds.js';
+import { brandFooter, buildNavRow, buildPageJumpRow, discordTimestamp, formatNumber } from '../../../ui/kit.js';
+
+const PAGE_SIZE = 4;
+const NAV_PREV = 'serverstats_list_prev';
+const NAV_NEXT = 'serverstats_list_next';
+const NAV_JUMP = 'serverstats_list_jump';
+const REFRESH_MS = 6 * 60 * 1000;
+
+function getCounterTypeDisplay(type) {
+    return `${getCounterTypeEmoji(type)} ${getCounterTypeLabel(type)}`;
+}
+
+function getCurrentCount(stats, type) {
+    switch (type) {
+        case 'members': return stats.totalCount;
+        case 'bots': return stats.botCount;
+        case 'members_only': return stats.humanCount;
+        case 'online': return stats.onlineCount;
+        case 'voice': return stats.voiceCount;
+        default: return 0;
+    }
+}
+
+function isActive(counter, channelById) {
+    return Boolean(channelById.get(counter.channelId)?.name.includes(':'));
+}
+
+function buildListPayload(counters, channelById, stats, missingChannelCounters, page) {
+    const pageCount = Math.max(1, Math.ceil(counters.length / PAGE_SIZE));
+    const currentPage = Math.min(Math.max(0, page), pageCount - 1);
+    const slice = counters.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+    const activeCount = counters.filter((counter) => isActive(counter, channelById)).length;
+
+    const fields = slice.map((counter, index) => {
+        const channel = channelById.get(counter.channelId);
+        const position = String(currentPage * PAGE_SIZE + index + 1).padStart(2, '0');
+
+        return {
+            name: `${position} · ${getCounterTypeDisplay(counter.type)} · ${channel?.name ?? 'salon introuvable'}`.slice(0, 256),
+            value: [
+                `ID : \`${counter.id}\` • Valeur : \`${formatNumber(getCurrentCount(stats, counter.type))}\``,
+                `Salon : ${channel ?? 'introuvable'} • Statut : ${isActive(counter, channelById) ? '✅ Actif' : '⚠️ Non actualisé'}`,
+                `Créé ${discordTimestamp(counter.createdAt, 'R')}`,
+            ].join('\n'),
+            inline: false,
+        };
+    });
+
+    fields.push({
+        name: 'Résumé',
+        value: [
+            `Total : \`${formatNumber(counters.length)}\` • Actifs : \`${formatNumber(activeCount)}\``,
+            missingChannelCounters.length
+                ? `⚠️ \`${formatNumber(missingChannelCounters.length)}\` compteur(s) vers un salon introuvable. La configuration est conservée.`
+                : '✅ Aucune anomalie détectée.',
+            `Prochaine actualisation ${discordTimestamp(Date.now() + REFRESH_MS, 'R')}`,
+        ].join('\n'),
+        inline: false,
+    });
+
+    const embed = createEmbed({
+        title: 'Compteurs du serveur',
+        description: [
+            `**${formatNumber(counters.length)}** compteur(s) actif(s).`,
+            `Page **${currentPage + 1}/${pageCount}**.`,
+        ].join('\n'),
+        color: getColor('info'),
+        fields,
+        footer: brandFooter('Compteurs'),
+    });
+
+    return {
+        embeds: [embed],
+        components: [
+            ...buildNavRow({
+                page: currentPage,
+                pageCount,
+                prevId: NAV_PREV,
+                nextId: NAV_NEXT,
+                indicatorId: `${NAV_JUMP}_indicator`,
+            }),
+            ...buildPageJumpRow({ page: currentPage, pageCount, customId: NAV_JUMP }),
+        ],
+        allowedMentions: { parse: [] },
+    };
+}
+
+function buildEmptyPayload() {
+    const embed = createEmbed({
+        title: 'Compteurs du serveur',
+        description: [
+            'Aucun compteur n’est configuré pour ce serveur.',
+            'Crée ton premier compteur avec `/serverstats create`.',
+        ].join('\n'),
+        color: getColor('warning'),
+        footer: brandFooter('Compteurs'),
+    });
+
+    embed.addFields({
+        name: 'Types disponibles',
+        value: [
+            '👥 Membres + bots',
+            '👤 Membres uniquement',
+            '🤖 Bots uniquement',
+            '🌐 Membres en ligne',
+            '🔊 Membres en vocal',
+        ].join('\n'),
+        inline: false,
+    });
+
+    return { embeds: [embed], allowedMentions: { parse: [] } };
+}
+
 export async function handleList(interaction, client) {
     const guild = interaction.guild;
-    
-    // Defer reply immediately to ensure interaction is acknowledged
+
     try {
         await InteractionHelper.safeDefer(interaction);
     } catch (error) {
-        logger.error("Failed to defer reply:", error);
+        logger.error('Failed to defer reply:', error);
         return;
     }
-    
-    // Check permissions after deferring
-    if (!isBotOwner(interaction.user.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        await InteractionHelper.sendErrorNotice(interaction, "Tu as besoin de la permission **Gérer les salons** pour voir les compteurs.").catch(logger.error);
+
+    if (!isBotOwner(interaction.user.id) && !interaction.member?.permissions?.has(PermissionFlagsBits.ManageChannels)) {
+        await InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer les salons** pour voir les compteurs.').catch(logger.error);
         return;
     }
 
     try {
         const counters = await getServerCounters(client, guild.id);
         const stats = await getGuildCounterStats(guild);
-
-        const validCounters = [];
         const channelById = new Map();
+        const validCounters = [];
         const missingChannelCounters = [];
 
         for (const counter of counters) {
@@ -50,134 +154,57 @@ export async function handleList(interaction, client) {
         }
 
         if (validCounters.length === 0) {
-            const embed = createEmbed({
-                title: "📋 Compteurs du serveur",
-                description: "Aucun compteur n'a été configuré pour ce serveur pour le moment.\n\nUtilise `/serverstats create` pour configurer ton premier compteur !",
-                color: getColor('warning')
-            });
-
-            embed.addFields({
-                name: "🔧 **Types de compteurs disponibles**",
-                value: "👥 **Membres + Bots** - Total des membres du serveur\n👤 **Membres uniquement** - Membres humains uniquement\n🤖 **Bots uniquement** - Membres robots uniquement\n🌐 **Membres en ligne** - Membres actuellement en ligne\n🔊 **En vocal** - Membres actuellement dans un salon vocal",
-                inline: false
-            });
-
-            embed.addFields({
-                name: "📝 **Exemples d'utilisation**",
-                value: "`/serverstats create type:members channel_type:voice category:Stats`\n`/serverstats create type:bots channel_type:text category:Server Info`\n`/serverstats list`",
-                inline: false
-            });
-
-            embed.setFooter({ 
-                text: "Système de compteurs • Actualisation automatique toutes les 6 minutes"
-            });
-
-            await InteractionHelper.safeEditReply(interaction, { embeds: [embed] }).catch(logger.error);
+            await InteractionHelper.safeEditReply(interaction, buildEmptyPayload()).catch(logger.error);
             return;
         }
 
-        const embed = createEmbed({
-            title: `📋 Compteurs du serveur (${validCounters.length})`,
-            description: "Voici tous les compteurs actifs de ce serveur.\n\nLes compteurs sont actualisés automatiquement toutes les 6 minutes.",
-            color: getColor('info')
+        const pageCount = Math.ceil(validCounters.length / PAGE_SIZE);
+        let page = 0;
+        await InteractionHelper.safeEditReply(
+            interaction,
+            buildListPayload(validCounters, channelById, stats, missingChannelCounters, page),
+        ).catch(logger.error);
+
+        if (pageCount <= 1) return;
+
+        const reply = await interaction.fetchReply?.().catch(() => null);
+        if (!reply?.createMessageComponentCollector) return;
+
+        const collector = reply.createMessageComponentCollector({
+            filter: (component) => component.user.id === interaction.user.id
+                && [NAV_PREV, NAV_NEXT, NAV_JUMP].includes(component.customId),
+            time: 5 * 60 * 1000,
         });
 
-        for (let i = 0; i < validCounters.length; i++) {
-            const counter = validCounters[i];
-            const channel = channelById.get(counter.channelId);
-            
-            if (!channel) {
-                // This should not happen since we filtered above, but keep as safety check
-                logger.warn(`Counter ${counter.id} still has missing channel after cleanup`);
-                continue;
+        collector.on('collect', async (component) => {
+            try {
+                if (component.customId === NAV_JUMP) {
+                    const requested = Number(component.values?.[0]);
+                    if (!Number.isInteger(requested)) return;
+                    page = Math.min(pageCount - 1, Math.max(0, requested));
+                } else {
+                    page = component.customId === NAV_PREV
+                        ? Math.max(0, page - 1)
+                        : Math.min(pageCount - 1, page + 1);
+                }
+
+                await component.update(
+                    buildListPayload(validCounters, channelById, stats, missingChannelCounters, page),
+                );
+            } catch (error) {
+                logger.debug('Counter pagination update failed:', error.message);
             }
-
-            const currentCount = getCurrentCount(stats, counter.type);
-            const status = channel.name.includes(':') ? '✅ Actif' : '⚠️ Non actualisé';
-            
-            embed.addFields({
-                name: `${getCounterTypeEmoji(counter.type)} Compteur n°${i + 1} - ${channel.name}`,
-                value: `**ID :** \`${counter.id}\`\n**Type :** ${getCounterTypeDisplay(counter.type)}\n**Salon :** ${channel}\n**Valeur actuelle :** ${currentCount}\n**Statut :** ${status}\n**Créé le :** ${new Date(counter.createdAt).toLocaleDateString()}`,
-                inline: false
-            });
-        }
-
-        embed.addFields({
-            name: "⚠️ **Alertes**",
-            value: missingChannelCounters.length
-                ? `${missingChannelCounters.length} compteur(s) pointent vers un salon introuvable. Leur configuration a été **conservée** : supprime-les avec \`/serverstats delete\` ou recrée le salon.`
-                : 'Aucune anomalie détectée.',
-            inline: false
         });
 
-        embed.addFields({
-            name: "📊 **Statistiques**",
-            value: `**Total de compteurs :** ${validCounters.length}\n**Compteurs actifs :** ${validCounters.filter(c => {
-                const channel = channelById.get(c.channelId);
-                return channel && channel.name.includes(':');
-            }).length}\n**Prochaine actualisation :** <t:${Math.floor(Date.now() / 1000) + 900}:R>`,
-            inline: false
+        collector.on('end', async () => {
+            try {
+                await interaction.editReply({ components: [] });
+            } catch {
+                // Le message a pu etre supprime entre-temps.
+            }
         });
-
-        embed.addFields({
-            name: "🔧 **Commandes de gestion**",
-            value: "`/serverstats create` - Créer un nouveau compteur\n`/serverstats update` - Mettre à jour un compteur existant\n`/serverstats delete` - Supprimer un compteur",
-            inline: false
-        });
-
-        embed.setFooter({ 
-            text: "Système de compteurs • Actualisation automatique toutes les 6 minutes"
-        });
-        embed.setTimestamp();
-
-        await InteractionHelper.safeEditReply(interaction, { embeds: [embed] }).catch(logger.error);
-
     } catch (error) {
-        logger.error("Error displaying counters:", error);
-        await InteractionHelper.sendErrorNotice(interaction, "Une erreur est survenue pendant la récupération des compteurs. Réessaie.").catch(logger.error);
+        logger.error('Error displaying counters:', error);
+        await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue pendant la récupération des compteurs. Réessaie.').catch(logger.error);
     }
 }
-
-
-
-
-
-
-function getCounterTypeDisplay(type) {
-    return `${getCounterTypeEmoji(type)} ${getCounterTypeLabel(type)}`;
-}
-
-
-
-
-
-
-function getCounterEmoji(type) {
-    return getCounterTypeEmoji(type);
-}
-
-
-
-
-
-
-
-function getCurrentCount(stats, type) {
-    switch (type) {
-        case "members":
-            return stats.totalCount;
-        case "bots":
-            return stats.botCount;
-        case "members_only":
-            return stats.humanCount;
-        case "online":
-            return stats.onlineCount;
-        case "voice":
-            return stats.voiceCount;
-        default:
-            return 0;
-    }
-}
-
-
-

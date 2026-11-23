@@ -12,15 +12,40 @@ import {
     MAX_LEVEL
 } from '../../services/leveling.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
-import { infoEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
+import { brandFooter, formatNumber, guildIconUrl, progressBar } from '../../ui/kit.js';
+
+const NO_MENTIONS = { parse: [], repliedUser: false };
+const FOOTER_CONTEXT = 'Configuration des niveaux';
+
+function errorReply(interaction, message) {
+    const embed = errorEmbed(message);
+    embed.setFooter(brandFooter(FOOTER_CONTEXT));
+    return InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed],
+        allowedMentions: NO_MENTIONS,
+        flags: MessageFlags.Ephemeral,
+    });
+}
+
+function successReply(interaction, title, description, fields = []) {
+    const embed = successEmbed(description, `✅ ${title}`);
+    if (fields.length) embed.addFields(fields.slice(0, 6));
+    embed.setFooter(brandFooter(FOOTER_CONTEXT));
+    return InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed],
+        allowedMentions: NO_MENTIONS,
+        flags: MessageFlags.Ephemeral,
+    });
+}
 
 export default {
     data: new SlashCommandBuilder()
         .setName('leveling')
-        .setDescription('Gérer le système de leveling, l\'XP, les niveaux et les notifications de montée de niveau')
+        .setDescription("Gérer le système de leveling, l’XP, les niveaux et les notifications de montée de niveau")
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
         .addSubcommand(sub =>
             sub.setName('status')
@@ -48,7 +73,7 @@ export default {
                         .setRequired(true)))
         .addSubcommand(sub =>
             sub.setName('xprange')
-                .setDescription('Définir l\'XP gagnée par message (min/max)')
+                .setDescription("Définir l’XP gagnée par message (min/max)")
                 .addIntegerOption(option =>
                     option.setName('min')
                         .setDescription('XP minimum par message')
@@ -63,7 +88,7 @@ export default {
                         .setMaxValue(100)))
         .addSubcommand(sub =>
             sub.setName('cooldown')
-                .setDescription('Définir le délai entre deux gains d\'XP (en secondes)')
+                .setDescription("Définir le délai entre deux gains d’XP (en secondes)")
                 .addIntegerOption(option =>
                     option.setName('seconds')
                         .setDescription('Délai en secondes (0-3600)')
@@ -72,34 +97,34 @@ export default {
                         .setMaxValue(3600)))
         .addSubcommand(sub =>
             sub.setName('add')
-                .setDescription('Ajouter de l\'XP à un utilisateur')
+                .setDescription("Ajouter de l’XP à un utilisateur")
                 .addUserOption(option =>
                     option.setName('user')
-                        .setDescription('L\'utilisateur')
+                        .setDescription('L’utilisateur')
                         .setRequired(true))
                 .addIntegerOption(option =>
                     option.setName('xp')
-                        .setDescription('Quantité d\'XP à ajouter')
+                        .setDescription('Quantité d’XP à ajouter')
                         .setRequired(true)
                         .setMinValue(1)))
         .addSubcommand(sub =>
             sub.setName('remove')
-                .setDescription('Retirer de l\'XP à un utilisateur')
+                .setDescription("Retirer de l’XP à un utilisateur")
                 .addUserOption(option =>
                     option.setName('user')
-                        .setDescription('L\'utilisateur')
+                        .setDescription('L’utilisateur')
                         .setRequired(true))
                 .addIntegerOption(option =>
                     option.setName('xp')
-                        .setDescription('Quantité d\'XP à retirer')
+                        .setDescription('Quantité d’XP à retirer')
                         .setRequired(true)
                         .setMinValue(1)))
         .addSubcommand(sub =>
             sub.setName('setlevel')
-                .setDescription('Définir le niveau d\'un utilisateur')
+                .setDescription("Définir le niveau d’un utilisateur")
                 .addUserOption(option =>
                     option.setName('user')
-                        .setDescription('L\'utilisateur')
+                        .setDescription('L’utilisateur')
                         .setRequired(true))
                 .addIntegerOption(option =>
                     option.setName('level')
@@ -112,7 +137,7 @@ export default {
                 .setDescription('Ajouter des niveaux à un utilisateur')
                 .addUserOption(option =>
                     option.setName('user')
-                        .setDescription('L\'utilisateur')
+                        .setDescription('L’utilisateur')
                         .setRequired(true))
                 .addIntegerOption(option =>
                     option.setName('levels')
@@ -125,7 +150,7 @@ export default {
                 .setDescription('Retirer des niveaux à un utilisateur')
                 .addUserOption(option =>
                     option.setName('user')
-                        .setDescription('L\'utilisateur')
+                        .setDescription('L’utilisateur')
                         .setRequired(true))
                 .addIntegerOption(option =>
                     option.setName('levels')
@@ -148,7 +173,7 @@ export default {
         }
 
         if (!isBotOwner(interaction.user.id) && !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-            return InteractionHelper.sendErrorNotice(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour gérer le leveling.');
+            return errorReply(interaction, 'Tu as besoin de la permission **Gérer le serveur** pour gérer le leveling.');
         }
 
         const guildId = interaction.guild.id;
@@ -177,29 +202,36 @@ export default {
                             { name: 'Par', value: `${interaction.user}`, inline: true }
                         ]
                     });
-                    return InteractionHelper.safeEditReply(interaction, {
-                        content: `Les notifications de montée de niveau seront désormais envoyées dans ${channel}.`,
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return successReply(
+                        interaction,
+                        'Canal de montée de niveau',
+                        `Les annonces iront désormais dans ${channel}.`,
+                        [
+                            { name: 'Ancien canal', value: oldChannelId ? `<#${oldChannelId}>` : 'Aucun', inline: true },
+                            { name: 'Nouveau canal', value: `${channel}`, inline: true },
+                        ],
+                    );
                 }
 
                 case 'enable':
                 case 'disable': {
+                    const enabled = subcommand === 'enable';
                     const leveling = await getLevelingConfig(client, guildId);
-                    leveling.enabled = subcommand === 'enable';
+                    leveling.enabled = enabled;
                     await saveLevelingConfig(client, guildId, leveling);
 
                     await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_CONFIG_UPDATE, {
                         userId: interaction.user.id,
-                        title: subcommand === 'enable' ? '📈 Leveling Activé' : '📈 Leveling Désactivé',
-                        description: `Le système de leveling est désormais **${subcommand === 'enable' ? 'activé' : 'désactivé'}** pour ce serveur.`,
+                        title: enabled ? '📈 Leveling Activé' : '📈 Leveling Désactivé',
+                        description: `Le système de leveling est désormais **${enabled ? 'activé' : 'désactivé'}** pour ce serveur.`,
                         fields: [{ name: 'Par', value: `${interaction.user}`, inline: true }]
                     });
 
-                    return InteractionHelper.safeEditReply(interaction, {
-                        content: subcommand === 'enable' ? 'Le système de leveling est désormais **activé**.' : 'Le système de leveling est désormais **désactivé**.',
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return successReply(
+                        interaction,
+                        enabled ? 'Leveling activé' : 'Leveling désactivé',
+                        `Le système de leveling est désormais **${enabled ? 'activé' : 'désactivé'}**.`,
+                    );
                 }
 
                 case 'announce': {
@@ -215,17 +247,18 @@ export default {
                         fields: [{ name: 'Par', value: `${interaction.user}`, inline: true }]
                     });
 
-                    return InteractionHelper.safeEditReply(interaction, {
-                        content: enabled ? 'Les notifications de montée de niveau sont **activées**.' : 'Les notifications de montée de niveau sont **désactivées**.',
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return successReply(
+                        interaction,
+                        enabled ? 'Notifications activées' : 'Notifications désactivées',
+                        `Les annonces de montée de niveau sont désormais **${enabled ? 'activées' : 'désactivées'}**.`,
+                    );
                 }
 
                 case 'xprange': {
                     const min = interaction.options.getInteger('min');
                     const max = interaction.options.getInteger('max');
                     if (min > max) {
-                        return InteractionHelper.sendErrorNotice(interaction, 'L\'XP minimum doit être inférieur ou égal à l\'XP maximum.');
+                        return errorReply(interaction, 'L’XP minimum doit être inférieur ou égal à l’XP maximum.');
                     }
 
                     const leveling = await getLevelingConfig(client, guildId);
@@ -234,7 +267,7 @@ export default {
 
                     await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_CONFIG_UPDATE, {
                         userId: interaction.user.id,
-                        title: '⚙️ Plage d\'XP Mise à Jour',
+                        title: '⚙️ Plage d’XP Mise à Jour',
                         description: `Chaque message valide accorde désormais entre **${min}** et **${max}** XP.`,
                         fields: [
                             { name: 'XP Min', value: `${min}`, inline: true },
@@ -243,10 +276,15 @@ export default {
                         ]
                     });
 
-                    return InteractionHelper.safeEditReply(interaction, {
-                        content: `Chaque message valide accorde désormais entre **${min}** et **${max}** XP.`,
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return successReply(
+                        interaction,
+                        'Plage d’XP mise à jour',
+                        `Chaque message valide accorde désormais entre **${min}** et **${max}** XP.`,
+                        [
+                            { name: 'Minimum', value: `\`${formatNumber(min)}\``, inline: true },
+                            { name: 'Maximum', value: `\`${formatNumber(max)}\``, inline: true },
+                        ],
+                    );
                 }
 
                 case 'cooldown': {
@@ -257,22 +295,24 @@ export default {
 
                     await logLvlChange(client, guildId, EVENT_TYPES.LEVELING_CONFIG_UPDATE, {
                         userId: interaction.user.id,
-                        title: '⚙️ Délai d\'XP Mis à Jour',
+                        title: '⚙️ Délai d’XP Mis à Jour',
                         description: `Un utilisateur peut désormais gagner de l'XP toutes les **${seconds}** seconde(s).`,
                         fields: [{ name: 'Par', value: `${interaction.user}`, inline: true }]
                     });
 
-                    return InteractionHelper.safeEditReply(interaction, {
-                        content: `Un utilisateur peut désormais gagner de l'XP toutes les **${seconds}** seconde(s).`,
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return successReply(
+                        interaction,
+                        'Délai d’XP mis à jour',
+                        `Un utilisateur peut désormais gagner de l’XP toutes les **${seconds}** seconde(s).`,
+                        [{ name: 'Délai', value: `\`${formatNumber(seconds)} s\``, inline: true }],
+                    );
                 }
 
                 case 'add':
                 case 'remove': {
                     const target = interaction.options.getUser('user');
                     if (target.bot) {
-                        return InteractionHelper.sendErrorNotice(interaction, 'Tu ne peux pas modifier l\'XP des bots.');
+                        return errorReply(interaction, 'Tu ne peux pas modifier l’XP des bots.');
                     }
 
                     const amount = interaction.options.getInteger('xp');
@@ -299,16 +339,26 @@ export default {
                         ]
                     });
 
-                    return InteractionHelper.safeEditReply(interaction, {
-                        content: `${subcommand === 'add' ? 'Ajout' : 'Retir'} **${amount} XP** ${subcommand === 'add' ? 'à' : 'à'} ${target}.\nMaintenant : niveau **${data.level}**, **${data.totalXp} XP au total** (${data.xp}/${xpNeeded} XP pour le prochain niveau).`,
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return successReply(
+                        interaction,
+                        subcommand === 'add' ? 'XP ajoutée' : 'XP retirée',
+                        `**${formatNumber(amount)} XP** ${subcommand === 'add' ? 'ajoutés à' : 'retirés à'} ${target}.`,
+                        [
+                            { name: 'Utilisateur', value: `${target}`, inline: true },
+                            { name: 'Niveau', value: `\`${data.level}\``, inline: true },
+                            { name: 'XP total', value: `\`${formatNumber(data.totalXp)}\``, inline: true },
+                            {
+                                name: 'Vers le niveau suivant',
+                                value: `\`${formatNumber(data.xp)} / ${formatNumber(xpNeeded)}\` ${progressBar(data.xp, xpNeeded, 10)}`,
+                            },
+                        ],
+                    );
                 }
 
                 case 'setlevel': {
                     const target = interaction.options.getUser('user');
                     if (target.bot) {
-                        return InteractionHelper.sendErrorNotice(interaction, 'Tu ne peux pas modifier les niveaux des bots.');
+                        return errorReply(interaction, 'Tu ne peux pas modifier les niveaux des bots.');
                     }
 
                     const newLevel = interaction.options.getInteger('level');
@@ -326,17 +376,23 @@ export default {
                         ]
                     });
 
-                    return InteractionHelper.safeEditReply(interaction, {
-                        content: `${target} est désormais au niveau **${data.level}** (**${data.totalXp} XP au total**).`,
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return successReply(
+                        interaction,
+                        'Niveau défini',
+                        `${target} est désormais au niveau **${data.level}**.`,
+                        [
+                            { name: 'Utilisateur', value: `${target}`, inline: true },
+                            { name: 'Niveau', value: `\`${data.level}\``, inline: true },
+                            { name: 'XP total', value: `\`${formatNumber(data.totalXp)}\``, inline: true },
+                        ],
+                    );
                 }
 
                 case 'addlevel':
                 case 'removelevel': {
                     const target = interaction.options.getUser('user');
                     if (target.bot) {
-                        return InteractionHelper.sendErrorNotice(interaction, 'Tu ne peux pas modifier les niveaux des bots.');
+                        return errorReply(interaction, 'Tu ne peux pas modifier les niveaux des bots.');
                     }
 
                     const levels = interaction.options.getInteger('levels');
@@ -357,18 +413,27 @@ export default {
                         ]
                     });
 
-                    return InteractionHelper.safeEditReply(interaction, {
-                        content: `${subcommand === 'addlevel' ? 'Ajout' : 'Retir'} **${levels} niveau(x)** ${subcommand === 'addlevel' ? 'à' : 'à'} ${target}.\nMaintenant : niveau **${data.level}** (**${data.totalXp} XP au total**).`,
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return successReply(
+                        interaction,
+                        subcommand === 'addlevel' ? 'Niveaux ajoutés' : 'Niveaux retirés',
+                        `${subcommand === 'addlevel' ? 'Ajout' : 'Retir'} de **${levels} niveau(x)** ${subcommand === 'addlevel' ? 'à' : 'à'} ${target}.`,
+                        [
+                            { name: 'Utilisateur', value: `${target}`, inline: true },
+                            { name: 'Niveau', value: `\`${data.level}\``, inline: true },
+                            { name: 'XP total', value: `\`${formatNumber(data.totalXp)}\``, inline: true },
+                        ],
+                    );
                 }
 
                 default:
-                    return InteractionHelper.sendErrorNotice(interaction, 'Action de leveling inconnue.');
+                    return errorReply(interaction, 'Action de leveling inconnue.');
             }
         } catch (error) {
             logger.error(`[Leveling] Command error for guild ${guildId}:`, error);
-            await InteractionHelper.sendErrorNotice(interaction, error.userMessage || 'Une erreur est survenue lors de la gestion du leveling. Veuillez réessayer.');
+            await errorReply(
+                interaction,
+                error.userMessage || 'Une erreur est survenue lors de la gestion du leveling. Veuillez réessayer.',
+            );
         }
     }
 };
@@ -378,23 +443,52 @@ async function showStatus(interaction, client, guildId) {
 
     const channelMention = leveling.levelUpChannel
         ? (interaction.guild.channels.cache.get(leveling.levelUpChannel)?.toString() || `\`${leveling.levelUpChannel}\``)
-        : (interaction.guild.systemChannel?.toString() || 'Aucun canal configuré (utilise le canal système du serveur)');
+        : (interaction.guild.systemChannel?.toString() || 'Aucun canal configuré (canal système du serveur)');
 
-    const xpRange = leveling.xpRange || leveling.xpPerMessage || { min: 15, max: 25 };
+    const rawRange = leveling.xpRange || leveling.xpPerMessage || { min: 15, max: 25 };
+    const min = rawRange.min ?? 15;
+    const max = rawRange.max ?? 25;
+    const rewardIds = Object.keys(leveling.roleRewards ?? {});
+    const configured = [
+        leveling.enabled,
+        leveling.announceLevelUp,
+        leveling.levelUpChannel,
+        leveling.xpRange,
+        leveling.xpCooldown,
+    ].filter(Boolean).length;
 
-    const description = [
-        `**Activé :** ${leveling.enabled ? '✅ Oui' : '❌ Non'}`,
-        `**XP par message :** ${xpRange.min} - ${xpRange.max}`,
-        `**Délai :** ${leveling.xpCooldown ?? 20} secondes`,
-        `**Notifications de montée de niveau :** ${leveling.announceLevelUp ? '✅ Activées' : '❌ Désactivées'}`,
-        `**Canal de notification :** ${channelMention}`,
-        `**Multiplicateur d'XP :** ${leveling.xpMultiplier ?? 1}`,
-        `**Récompenses de rôle :** ${leveling.roleRewards && Object.keys(leveling.roleRewards).length > 0 ? Object.keys(leveling.roleRewards).join(', ') : 'Aucune'}`
-    ].join('\n');
+    const rewards = rewardIds.length
+        ? `${rewardIds.slice(0, 8).map((id) => `\`${id}\``).join(', ')}${rewardIds.length > 8 ? ' …' : ''}`
+        : 'Aucune';
+
+    const embed = createEmbed({
+        title: '📈 Statut du leveling',
+        description: 'Voici la configuration actuelle. Utilise une sous-commande `/leveling` pour la modifier.',
+        color: leveling.enabled ? 'success' : 'warning',
+        thumbnail: guildIconUrl(interaction.guild, 128),
+        fields: [
+            {
+                name: 'État',
+                value: `${leveling.enabled ? '🟢 Activé' : '🔴 Désactivé'} • Annonces ${leveling.announceLevelUp ? '✅' : '❌'}`,
+            },
+            {
+                name: 'Gain d’XP',
+                value: `Par message : \`${formatNumber(min)} – ${formatNumber(max)}\` • Délai : \`${formatNumber(leveling.xpCooldown ?? 20)} s\` • Multiplicateur : \`${leveling.xpMultiplier ?? 1}\``,
+            },
+            { name: 'Canal de notification', value: channelMention },
+            { name: 'Récompenses de rôle', value: rewards },
+            {
+                name: 'Configuration renseignée',
+                value: `${progressBar(configured, 5, 10)} \`${configured}/5\``,
+            },
+        ],
+        footer: brandFooter(FOOTER_CONTEXT),
+    });
 
     return InteractionHelper.safeEditReply(interaction, {
-        embeds: [infoEmbed(description, '📈 Statut du Leveling')],
-        flags: MessageFlags.Ephemeral
+        embeds: [embed],
+        allowedMentions: NO_MENTIONS,
+        flags: MessageFlags.Ephemeral,
     });
 }
 

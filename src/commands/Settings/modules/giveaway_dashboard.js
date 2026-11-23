@@ -1,4 +1,3 @@
-import { getColor } from '../../../config/bot.js';
 import {
     ActionRowBuilder,
     ButtonBuilder,
@@ -12,8 +11,14 @@ import {
     ChannelType,
     MessageFlags,
     ComponentType,
-    EmbedBuilder,
 } from 'discord.js';
+import { createEmbed } from '../../../utils/embeds.js';
+import {
+    brandFooter,
+    discordTimestamp,
+    formatNumber,
+    progressBar,
+} from '../../../ui/kit.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError } from '../../../utils/errorHandler.js';
@@ -37,22 +42,25 @@ function buildDashboardEmbed(giveaways, guild) {
     const ended = giveaways.filter(g => isGiveawayEnded(g));
 
     const activeList = active.length
-        ? active.slice(0, 10).map(g => `🎁 **${g.prize || 'Concours'}** — <t:${Math.floor((g.endsAt || g.endTime) / 1000)}:R>`).join('\n')
-        : '`Aucun concours actif`';
+        ? active.slice(0, 10).map(g => `🎁 **${g.prize || 'Concours'}** — ${discordTimestamp(g.endsAt || g.endTime)}`).join('\n')
+        : '`Aucun concours en cours`';
 
-    return new EmbedBuilder()
-        .setTitle('🎁 Tableau de bord des Giveaways')
-        .setDescription(
-            `Gère les concours de **${guild.name}**.\nUtilise les boutons ci-dessous pour créer, terminer ou supprimer un concours.`,
-        )
-        .setColor(getColor('info'))
-        .addFields(
-            { name: '🎉 Actifs', value: `\`${active.length}\``, inline: true },
-            { name: '🏁 Terminés', value: `\`${ended.length}\``, inline: true },
-            { name: '🕐 Actuellement en cours', value: activeList, inline: false },
-        )
-        .setFooter({ text: 'Le tableau de bord se ferme après 5 minutes d\'inactivité' })
-        .setTimestamp();
+    return createEmbed({
+        title: 'Tableau de bord des concours',
+        description: `Gère les concours de **${guild.name}**.\nUtilise les boutons ci-dessous pour créer, terminer ou supprimer un concours.`,
+        color: 'info',
+        fields: [
+            {
+                name: 'Statut',
+                value: `🎁 ${formatNumber(active.length)} en cours • ${formatNumber(ended.length)} terminé(s) ${progressBar(active.length, giveaways.length, 8)}`,
+                inline: false,
+            },
+            { name: 'Actifs', value: `\`${formatNumber(active.length)}\``, inline: true },
+            { name: 'Terminés', value: `\`${formatNumber(ended.length)}\``, inline: true },
+            { name: 'En cours', value: activeList, inline: false },
+        ],
+        footer: brandFooter('Concours • fermeture après 5 minutes d’inactivité'),
+    });
 }
 
 function buildButtonRows() {
@@ -85,14 +93,14 @@ function buildButtonRows() {
 
 function buildGiveawaySelect(giveaways, label) {
     const options = giveaways.slice(0, 25).map(g => {
-        const title = `${g.prize || 'Concours'} (${isGiveawayEnded(g) ? 'terminé' : 'actif'})`;
+        const title = `${g.prize || 'Concours'} (${isGiveawayEnded(g) ? 'terminé' : 'en cours'})`;
         return new StringSelectMenuOptionBuilder()
             .setLabel(title.length > 100 ? title.slice(0, 97) + '…' : title)
             .setValue(g.messageId);
     }).slice(0, 25);
     return new StringSelectMenuBuilder()
         .setCustomId(label.startsWith('end') ? 'gw_cfg_end_select' : 'gw_cfg_delete_select')
-        .setPlaceholder('Sélectionne un concours...')
+        .setPlaceholder('Sélectionne un concours…')
         .addOptions(options);
 }
 
@@ -108,6 +116,7 @@ export default {
                 embeds: [buildDashboardEmbed(giveaways, interaction.guild)],
                 components: buildButtonRows(),
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
 
             InteractionHelper.armDashboardSession(interaction);
@@ -149,7 +158,7 @@ export default {
 
         } catch (error) {
             logger.error('Giveaway dashboard failed to open:', error);
-            await InteractionHelper.sendErrorNotice(interaction, 'Impossible d\'ouvrir le tableau de bord des giveaways.').catch(() => {});
+            await InteractionHelper.sendErrorNotice(interaction, 'Impossible d’ouvrir le tableau de bord des concours.').catch(() => {});
         }
     },
 };
@@ -160,6 +169,7 @@ async function refreshDashboard(rootInteraction, client, guildId) {
         embeds: [buildDashboardEmbed(giveaways, rootInteraction.guild)],
         components: buildButtonRows(),
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 }
 
@@ -177,14 +187,16 @@ async function handleCreate(btnInteraction, rootInteraction, client, guildId) {
         .setMaxValues(1);
 
     await btnInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('✨ Créer un concours')
-                .setDescription('Étape 1/2 : choisis le salon où le concours sera posté.')
-                .setColor(getColor('info')),
-        ],
+        embeds: [createEmbed({
+            title: 'Créer un concours',
+            description: 'Étape 1/2 : choisis le salon où le concours sera posté.',
+            color: 'info',
+            fields: [{ name: 'Statut', value: '✨ Création en cours', inline: false }],
+            footer: brandFooter('Création de concours'),
+        })],
         components: [new ActionRowBuilder().addComponents(channelSelect)],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 
     const chanCollector = rootInteraction.channel.createMessageComponentCollector({
@@ -291,14 +303,16 @@ async function openCreateModal(selectInteraction, rootInteraction, client, guild
         await saveGiveaway(client, guildId, initialData);
 
         await submitted.reply({
-            content: `🎁 Concours créé — Le concours **${prize}** a été lancé dans <#${channelId}> !`,
+            content: `✅ Concours créé — Le concours **${prize}** a été lancé dans <#${channelId}> !`,
             flags: MessageFlags.Ephemeral,
+            allowedMentions: { parse: [] },
         });
     } catch (error) {
         logger.debug('Giveaway creation validation error:', error.message);
         await submitted.reply({
-            content: `⚠️ Impossible de créer — ${error instanceof XlwyBotError ? (error.userMessage || 'Données de concours invalides.') : 'Erreur lors de la création du concours.'}`,
+            content: `❌ Impossible de créer — ${error instanceof XlwyBotError ? (error.userMessage || 'Données de concours invalides.') : 'Erreur lors de la création du concours.'}`,
             flags: MessageFlags.Ephemeral,
+            allowedMentions: { parse: [] },
         });
         return;
     }
@@ -327,14 +341,16 @@ async function handleEnd(btnInteraction, rootInteraction, client, guildId) {
 
     const select = buildGiveawaySelect(active, 'end');
     await btnInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('🏁 Terminer un concours')
-                .setDescription('Sélectionne le concours que tu veux terminer immédiatement.')
-                .setColor(getColor('info')),
-        ],
+        embeds: [createEmbed({
+            title: 'Terminer un concours',
+            description: 'Sélectionne le concours que tu veux terminer immédiatement.',
+            color: 'info',
+            fields: [{ name: 'Statut', value: '🏁 Clôture en cours', inline: false }],
+            footer: brandFooter('Gestion des concours'),
+        })],
         components: [new ActionRowBuilder().addComponents(select)],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 
     const selCollector = rootInteraction.channel.createMessageComponentCollector({
@@ -350,7 +366,7 @@ async function handleEnd(btnInteraction, rootInteraction, client, guildId) {
             const messageId = selInteraction.values[0];
             const giveaway = giveaways.find(g => g.messageId === messageId);
             if (!giveaway) {
-                await InteractionHelper.sendErrorNotice(selInteraction, 'Ce concours n\'a pas été trouvé.');
+                await InteractionHelper.sendErrorNotice(selInteraction, 'Ce concours n’a pas été trouvé.');
                 return;
             }
 
@@ -372,13 +388,18 @@ async function handleEnd(btnInteraction, rootInteraction, client, guildId) {
                     });
                 }
                 if (result.winners.length > 0) {
-                    await channel.send(`🎉 Félicitations ${result.winners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné **${giveaway.prize}** !`);
+                    await channel.send({
+                        content: `Félicitations ${result.winners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné **${giveaway.prize}** !`,
+                        // Seuls les gagnants doivent être mentionnés dans ce message public.
+                        allowedMentions: { parse: ['users'], users: result.winners },
+                    });
                 }
             }
 
             await selInteraction.followUp({
-                content: `🏁 Concours terminé — Le concours **${giveaway.prize}** est terminé.`,
+                content: `✅ Concours terminé — Le concours **${giveaway.prize}** est terminé.`,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
         } catch (error) {
             logger.debug('Giveaway end error:', error.message);
@@ -403,14 +424,16 @@ async function handleDelete(btnInteraction, rootInteraction, client, guildId) {
 
     const select = buildGiveawaySelect(giveaways, 'delete');
     await btnInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('🗑️ Supprimer un concours')
-                .setDescription('Sélectionne le concours à supprimer. Le message Discord associé sera aussi supprimé.')
-                .setColor(getColor('warning')),
-        ],
+        embeds: [createEmbed({
+            title: 'Supprimer un concours',
+            description: 'Sélectionne le concours à supprimer. Le message Discord associé sera aussi supprimé.',
+            color: 'warning',
+            fields: [{ name: 'Statut', value: '🗑️ Suppression en cours', inline: false }],
+            footer: brandFooter('Action sensible • suppression définitive'),
+        })],
         components: [new ActionRowBuilder().addComponents(select)],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 
     const selCollector = rootInteraction.channel.createMessageComponentCollector({
@@ -436,8 +459,9 @@ async function handleDelete(btnInteraction, rootInteraction, client, guildId) {
             }
 
             await selInteraction.followUp({
-                content: `🗑️ Concours supprimé — Le concours **${giveaway?.prize || ''}** a été supprimé.`,
+                content: `✅ Concours supprimé — Le concours **${giveaway?.prize || ''}** a été supprimé.`,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
         } catch (error) {
             logger.debug('Giveaway delete error:', error.message);

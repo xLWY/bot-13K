@@ -1,34 +1,42 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getConfirmationButtons } from '../../utils/components.js';
+import { createEmbed, errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
-
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { brandFooter } from '../../ui/kit.js';
+
+const NO_MENTIONS = { parse: [], repliedUser: false };
+
 export default {
     data: new SlashCommandBuilder()
         .setName('wipedata')
-        .setDescription('* Supprimer toutes vos données personnelles du bot (irréversible)'),
+        .setDescription('Supprimer toutes tes données personnelles du bot (irréversible)'),
 
     async execute(interaction, guildConfig, client) {
         try {
-            const warningMessage = 
-                `⚠️ **CETTE ACTION EST IRRÉVERSIBLE !** ⚠️\n\n` +
-                `Cela supprimera définitivement **TOUTES** tes données de ce serveur, notamment :\n` +
-                `• 💰 Le solde d'économie (portefeuille & banque)\n` +
-                `• 📊 Les niveaux et l'XP\n` +
-                `• 🎒 Les objets de l'inventaire\n` +
-                `• 🛍️ Les achats dans la boutique\n` +
-                `• 🎂 Les informations d'anniversaire\n` +
-                `• 🔢 Les données de compteur\n` +
-                `• 📋 Toutes les autres données personnelles\n\n` +
-                `**Cette action ne peut pas être annulée. Es-tu vraiment sûr ?**`;
-
-            const confirmButtons = getConfirmationButtons('wipedata');
+            const embed = createEmbed({
+                title: 'Données concernées',
+                description: 'La suppression efface définitivement les enregistrements ci-dessous, sans possibilité de récupération.',
+                color: 'warning',
+                fields: [
+                    { name: 'Économie', value: 'Portefeuille, banque, achats et objets', inline: false },
+                    { name: 'Progression', value: 'Niveaux, XP et compteurs', inline: false },
+                    { name: 'Profil', value: 'Anniversaire et données enregistrées', inline: false },
+                    {
+                        name: 'Portée',
+                        value: 'Toutes les données liées à ton identifiant sur ce serveur',
+                        inline: false,
+                    },
+                ],
+                footer: brandFooter('Confirmation sensible'),
+            });
 
             await InteractionHelper.safeReply(interaction, {
-                content: `🗑️ Effacer Toutes les Données\n\n${warningMessage}`,
-                components: [confirmButtons],
-                flags: MessageFlags.Ephemeral
+                content: '**Action irréversible** — confirme avec les boutons ci-dessous pour supprimer tes données sur ce serveur.',
+                embeds: [embed],
+                components: [getConfirmationButtons('wipedata')],
+                flags: MessageFlags.Ephemeral,
+                allowedMentions: NO_MENTIONS,
             });
 
             logger.info(`Wipedata command executed - confirmation prompt shown`, {
@@ -43,14 +51,11 @@ export default {
                 guildId: interaction.guildId,
                 commandName: 'wipedata'
             });
-            await handleInteractionError(interaction, error, {
-                commandName: 'wipedata',
-                source: 'wipedata_command'
+            await InteractionHelper.safeReply(interaction, {
+                embeds: [errorEmbed('Impossible d’ouvrir la confirmation. Réessaie dans un instant.')],
+                flags: MessageFlags.Ephemeral,
+                allowedMentions: NO_MENTIONS,
             });
         }
-    }
+    },
 };
-
-
-
-

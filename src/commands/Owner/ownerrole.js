@@ -3,21 +3,34 @@ import {
     PermissionFlagsBits,
     MessageFlags,
     ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { infoEmbed } from '../../utils/embeds.js';
+import { errorEmbed, infoEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
+import { brandFooter, buildNavRow, formatNumber, progressBar } from '../../ui/kit.js';
 
 const SELECT_ID = 'ownerrole_select';
 const PREV_ID = 'ownerrole_prev';
 const NEXT_ID = 'ownerrole_next';
+const INDICATOR_ID = 'ownerrole_indicator';
 const COLLECTOR_MS = 300_000;
 const PAGE_SIZE = 25;
+const CONTEXT = 'Rôles propriétaire';
+
+function errorPage(message, title = '❌ Erreur') {
+    return errorEmbed(message).setTitle(title).setFooter(brandFooter(CONTEXT));
+}
+
+function successPage(message, title) {
+    return successEmbed(message, title).setFooter(brandFooter(CONTEXT));
+}
+
+function warningPage(message, title) {
+    return warningEmbed(message, title).setFooter(brandFooter(CONTEXT));
+}
 
 function permissionScore(role) {
     if (role.permissions.has(PermissionFlagsBits.Administrator)) return 1000;
@@ -48,7 +61,7 @@ function buildMenu(roles, page) {
 
     const menu = new StringSelectMenuBuilder()
         .setCustomId(SELECT_ID)
-        .setPlaceholder('Choisis le rôle à te donner')
+        .setPlaceholder('Choisis le rôle à t’attribuer')
         .addOptions(
             pageRoles.map(role =>
                 new StringSelectMenuOptionBuilder()
@@ -61,31 +74,19 @@ function buildMenu(roles, page) {
     return new ActionRowBuilder().addComponents(menu);
 }
 
-function buildPager(page, pageCount) {
-    const prev = new ButtonBuilder()
-        .setCustomId(PREV_ID)
-        .setLabel('◀ Précédent')
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(page <= 0);
-
-    const next = new ButtonBuilder()
-        .setCustomId(NEXT_ID)
-        .setLabel('Suivant ▶')
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(page >= pageCount - 1);
-
-    return new ActionRowBuilder().addComponents(prev, next);
-}
-
 function buildComponents(roles, page) {
     const pageCount = Math.max(1, Math.ceil(roles.length / PAGE_SIZE));
-    const components = [buildMenu(roles, page)];
 
-    if (pageCount > 1) {
-        components.push(buildPager(page, pageCount));
-    }
-
-    return components;
+    return [
+        buildMenu(roles, page),
+        ...buildNavRow({
+            page,
+            pageCount,
+            prevId: PREV_ID,
+            nextId: NEXT_ID,
+            indicatorId: INDICATOR_ID,
+        }),
+    ];
 }
 
 function buildEmbed(roles, page) {
@@ -94,32 +95,55 @@ function buildEmbed(roles, page) {
     const end = Math.min(roles.length, (page + 1) * PAGE_SIZE);
 
     return infoEmbed(
-        [
-            `J'ai trouvé **${roles.length}** rôle(s) que je peux te donner.`,
-            `Page **${page + 1}/${pageCount}** — rôles **${start}** à **${end}**.`,
-            'Choisis-en un dans le menu ci-dessous.',
-            'Seuls les rôles placés sous mon rôle le plus haut sont proposés.',
-            'Ils sont classés par nombre de permissions.',
-        ].join('\n'),
-        '🎭 Rôles disponibles'
-    );
+        'Choisis le rôle à t’attribuer dans le menu ci-dessous.',
+        'Rôles disponibles',
+    )
+        .addFields(
+            { name: 'Rôles proposables', value: `\`${formatNumber(roles.length)}\``, inline: true },
+            {
+                name: 'Page',
+                value: `**${page + 1}/${pageCount}** \`${progressBar(page + 1, pageCount, 8)}\``,
+                inline: true,
+            },
+            { name: 'Affichés', value: `\`${formatNumber(start)}–${formatNumber(end)}\``, inline: true },
+            {
+                name: 'Critères',
+                value: 'Rôles non gérés, placés sous mon rôle le plus haut, classés par permissions.',
+                inline: false,
+            },
+        )
+        .setFooter(brandFooter(CONTEXT));
 }
 
 async function sendError(interaction, text) {
+    const payload = {
+        embeds: [errorPage(text)],
+        components: [],
+        allowedMentions: { parse: [], repliedUser: false },
+    };
+
     if (interaction.isPrefixCommand?.() === true) {
         if (!interaction.guild) {
-            await InteractionHelper.safeReply(interaction, { content: text, components: [] }).catch(() => {});
+            await InteractionHelper.safeReply(interaction, payload).catch(() => {});
             return;
         }
 
-        const sent = await interaction.user.send({ content: text }).catch(() => null);
+        const sent = await interaction.user.send(payload).catch(() => null);
         if (!sent) {
-            await InteractionHelper.safeReply(interaction, { content: text }).catch(() => {});
+            await InteractionHelper.safeReply(interaction, payload).catch(() => {});
         }
         return;
     }
 
-    await InteractionHelper.sendErrorNotice(interaction, text);
+    if (!interaction.deferred && !interaction.replied) {
+        await InteractionHelper.safeReply(interaction, {
+            ...payload,
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    await InteractionHelper.safeEditReply(interaction, payload);
 }
 
 function startCollector(interaction, guild, reply, roles) {
@@ -141,15 +165,14 @@ function startCollector(interaction, guild, reply, roles) {
         }
 
         if (i.customId === PREV_ID || i.customId === NEXT_ID) {
-            if (i.customId === PREV_ID) {
-                page = Math.max(0, page - 1);
-            } else {
-                page = Math.min(pageCount - 1, page + 1);
-            }
+            page = i.customId === PREV_ID
+                ? Math.max(0, page - 1)
+                : Math.min(pageCount - 1, page + 1);
 
             await i.editReply({
                 embeds: [buildEmbed(roles, page)],
                 components: buildComponents(roles, page),
+                allowedMentions: { parse: [], repliedUser: false },
             }).catch(() => {});
             return;
         }
@@ -160,8 +183,9 @@ function startCollector(interaction, guild, reply, roles) {
 
             if (!role) {
                 await i.editReply({
-                    content: 'Ce rôle n\'existe plus.',
+                    embeds: [errorPage('Ce rôle n’existe plus.', '❌ Rôle introuvable')],
                     components: [],
+                    allowedMentions: { parse: [], repliedUser: false },
                 });
                 collector.stop('missing_role');
                 return;
@@ -173,8 +197,12 @@ function startCollector(interaction, guild, reply, roles) {
 
             if (role.id === guild.id || role.managed || role.position >= botHighest.position) {
                 await i.editReply({
-                    content: 'Je ne peux plus attribuer ce rôle. Vérifie la position de mon rôle.',
+                    embeds: [errorPage(
+                        'Je ne peux plus attribuer ce rôle. Vérifie la position de mon rôle.',
+                        '❌ Attribution impossible',
+                    )],
                     components: [],
+                    allowedMentions: { parse: [], repliedUser: false },
                 });
                 collector.stop('not_assignable');
                 return;
@@ -182,8 +210,12 @@ function startCollector(interaction, guild, reply, roles) {
 
             if (ownerMember.roles.cache.has(role.id)) {
                 await i.editReply({
-                    content: `Tu as déjà le rôle ${role}.`,
+                    embeds: [warningPage(
+                        `Tu as déjà le rôle \`${role.name}\` (\`${role.id}\`).`,
+                        '⚠️ Déjà attribué',
+                    )],
                     components: [],
+                    allowedMentions: { parse: [], repliedUser: false },
                 });
                 collector.stop('already_owned');
                 return;
@@ -196,15 +228,25 @@ function startCollector(interaction, guild, reply, roles) {
             );
 
             await i.editReply({
-                content: `Je t'ai donné le rôle ${role}.\nPosition : \`${role.position}\` — ${permissionSummary(role)}`,
+                embeds: [successPage(
+                    [
+                        `Je t’ai donné le rôle \`${role.name}\` (\`${role.id}\`).`,
+                        `Position : \`${role.position}\` • ${permissionSummary(role)}`,
+                    ].join('\n'),
+                    '✅ Rôle attribué',
+                )],
                 components: [],
+                allowedMentions: { parse: [], repliedUser: false },
             });
             collector.stop('assigned');
         } catch (error) {
             logger.error('Error in /ownerrole select:', error);
             await i.editReply({
-                content: 'Impossible de te donner ce rôle. Vérifie mes permissions et la position de mon rôle.',
+                embeds: [errorPage(
+                    'Impossible de te donner ce rôle. Vérifie mes permissions et la position de mon rôle.',
+                )],
                 components: [],
+                allowedMentions: { parse: [], repliedUser: false },
             }).catch(() => {});
             collector.stop('error');
         }
@@ -212,7 +254,14 @@ function startCollector(interaction, guild, reply, roles) {
 
     collector.on('end', async (_, reason) => {
         if (reason !== 'time') return;
-        await interaction.editReply({ components: [] }).catch(() => {});
+        await interaction.editReply({
+            embeds: [warningPage(
+                'Ce menu a expiré. Relance `/ownerrole` pour choisir un rôle.',
+                '⚠️ Menu expiré',
+            )],
+            components: [],
+            allowedMentions: { parse: [], repliedUser: false },
+        }).catch(() => {});
     });
 }
 
@@ -231,7 +280,7 @@ export default {
         const isPrefix = interaction.isPrefixCommand?.() === true;
 
         if (!isBotOwner(interaction.user.id)) {
-            return sendError(interaction, 'Cette commande est réservée au owner du bot.');
+            return sendError(interaction, 'Cette commande est réservée au propriétaire du bot.');
         }
 
         // En préfixe dans un serveur, on renvoie vers la version slash.
@@ -291,7 +340,7 @@ export default {
             const botMember = guild.members.me ?? await guild.members.fetchMe();
 
             if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
-                return sendError(interaction, 'Je n\'ai pas la permission **Gérer les rôles**.');
+                return sendError(interaction, 'Je n’ai pas la permission **Gérer les rôles**.');
             }
 
             const ownerMember = interaction.guild
@@ -301,7 +350,7 @@ export default {
             if (!ownerMember) {
                 return sendError(
                     interaction,
-                    'Je n\'arrive pas à te trouver dans le serveur cible. Vérifie que tu es bien membre du serveur.'
+                    'Je n’arrive pas à te trouver dans le serveur cible. Vérifie que tu es bien membre du serveur.'
                 );
             }
 
@@ -310,13 +359,14 @@ export default {
             if (roles.length === 0) {
                 return sendError(
                     interaction,
-                    'Je n\'ai aucun rôle que je peux te donner. Vérifie que mon rôle est au-dessus des rôles et que tu n\'as pas déjà tous ces rôles.'
+                    'Je n’ai aucun rôle que je peux te donner. Vérifie que mon rôle est au-dessus des rôles et que tu n’as pas déjà tous ces rôles.'
                 );
             }
 
             const edited = await InteractionHelper.safeEditReply(interaction, {
                 embeds: [buildEmbed(roles, 0)],
                 components: buildComponents(roles, 0),
+                allowedMentions: { parse: [], repliedUser: false },
             });
             if (!edited) return;
 

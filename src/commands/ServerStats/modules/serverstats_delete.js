@@ -1,6 +1,6 @@
-import { getColor } from '../../../config/bot.js';
 import { PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { createEmbed } from '../../../utils/embeds.js';
+import { warningEmbed } from '../../../utils/embeds.js';
+import { brandFooter } from '../../../ui/kit.js';
 import { getServerCounters, saveServerCounters, getCounterEmoji, getCounterTypeLabel, resolveCounterChannel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
@@ -45,11 +45,17 @@ export async function handleDelete(interaction, client) {
 
         const channel = await resolveCounterChannel(guild, counterToDelete.channelId);
 
-        const embed = createEmbed({
-            title: "⚠️ Supprimer le compteur et le salon",
-            description: `Es-tu sûr de vouloir supprimer ce compteur et son salon ?\n\n**ID :** \`${counterToDelete.id}\`\n**Type :** ${getCounterTypeDisplay(counterToDelete.type)}\n**Salon :** ${channel || 'Salon supprimé'}\n\n⚠️ **Le salon sera définitivement supprimé !**`,
-            color: getColor('error')
-        });
+        const embed = warningEmbed(
+            [
+                `Tu es sur le point de supprimer le compteur **${getCounterTypeDisplay(counterToDelete.type)}** et son salon.`,
+                '',
+                `ID : \`${counterToDelete.id}\` • Salon : ${channel ?? 'déjà supprimé'}`,
+                '',
+                'Cette action est définitive : le salon sera supprimé avec le compteur.',
+            ].join('\n'),
+            'Confirmation de suppression',
+        );
+        embed.setFooter(brandFooter('Compteurs'));
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()

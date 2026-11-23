@@ -1,17 +1,72 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { logger } from '../../utils/logger.js';
-import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes, getUserMessage } from '../../utils/errorHandler.js';
 import { saveGiveaway } from '../../utils/giveaways.js';
-import { 
-    parseDuration, 
-    validatePrize, 
+import {
+    parseDuration,
+    validatePrize,
     validateWinnerCount,
-    createGiveawayEmbed, 
-    createGiveawayButtons 
+    createGiveawayEmbed,
+    createGiveawayButtons
 } from '../../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { createEmbed, errorEmbed } from '../../utils/embeds.js';
+import { brandFooter, discordTimestamp, formatNumber, guildIconUrl } from '../../ui/kit.js';
+
+const FOOTER_CONTEXT = 'Création de concours';
+const NO_MENTIONS = { parse: [], repliedUser: false };
+
+/** Les réponses de gestion sont privées en serveur et ne mentionnent personne. */
+function privatePayload(interaction, payload) {
+    return {
+        ...payload,
+        allowedMentions: NO_MENTIONS,
+        ...(interaction.inGuild() ? { flags: MessageFlags.Ephemeral } : {}),
+    };
+}
+
+function errorPayload(text) {
+    const embed = errorEmbed(text);
+    embed.setFooter(brandFooter(FOOTER_CONTEXT));
+    return { embeds: [embed], components: [] };
+}
+
+async function replyError(interaction, error) {
+    logger.error('[GCreate] command failed:', error);
+    await InteractionHelper.safeReply(
+        interaction,
+        privatePayload(interaction, errorPayload(getUserMessage(error))),
+    );
+}
+
+function buildSuccessPayload(interaction, targetChannel, giveaway, durationString) {
+    const deadline = giveaway.endTime;
+    const embed = createEmbed({
+        title: '✅ Concours lancé',
+        description: `Le concours **${giveaway.prize}** est actif dans ${targetChannel}. Les participants peuvent réagir jusqu’à la clôture.`,
+        color: 'success',
+        thumbnail: guildIconUrl(interaction.guild, 96),
+        fields: [
+            {
+                name: '⏰ Clôture',
+                value: `${discordTimestamp(deadline, 'F')}\n${discordTimestamp(deadline, 'R')}`,
+                inline: false,
+            },
+            { name: '⏱️ Durée', value: `\`${durationString}\``, inline: true },
+            { name: '🏆 Gagnants', value: formatNumber(giveaway.winnerCount), inline: true },
+            {
+                name: '📩 Message',
+                value: `\`${giveaway.messageId}\` · [Ouvrir le concours](https://discord.com/channels/${interaction.guildId}/${targetChannel.id}/${giveaway.messageId})`,
+                inline: false,
+            },
+        ],
+        footer: brandFooter(FOOTER_CONTEXT),
+    });
+
+    return { embeds: [embed], components: [] };
+}
 
 export default {
     data: new SlashCommandBuilder()
@@ -48,9 +103,11 @@ export default {
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
+    deferEphemeral: true,
+
     async execute(interaction) {
         try {
-            
+
             if (!interaction.inGuild()) {
                 throw new XlwyBotError(
                     'Giveaway command used outside guild',
@@ -60,30 +117,30 @@ export default {
                 );
             }
 
-            
+
             if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new XlwyBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "Vous devez avoir la permission `Gérer le serveur` pour lancer un concours.",
+                    'Tu dois avoir la permission `Gérer le serveur` pour lancer un concours.',
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
 
             logger.info(`Giveaway creation started by ${interaction.user.tag} in guild ${interaction.guildId}`);
 
-            
+
             const durationString = interaction.options.getString("duration");
             const winnerCount = interaction.options.getInteger("winners");
             const prize = interaction.options.getString("prize");
             const targetChannel = interaction.options.getChannel("channel") || interaction.channel;
 
-            
+
             const durationMs = parseDuration(durationString);
             validateWinnerCount(winnerCount);
             const prizeName = validatePrize(prize);
 
-            
+
             if (!targetChannel.isTextBased()) {
                 throw new XlwyBotError(
                     'Target channel is not text-based',
@@ -95,7 +152,7 @@ export default {
 
             const endTime = Date.now() + durationMs;
 
-            
+
             const initialGiveawayData = {
                 messageId: "placeholder",
                 channelId: targetChannel.id,
@@ -111,17 +168,17 @@ export default {
                 createdAt: new Date().toISOString()
             };
 
-            
+
             const embed = createGiveawayEmbed(initialGiveawayData, "active");
             const row = createGiveawayButtons(false);
-            
-            
+
+
             const giveawayMessage = await targetChannel.send({
                 embeds: [embed],
                 components: [row],
             });
 
-            
+
             initialGiveawayData.messageId = giveawayMessage.id;
             const saved = await saveGiveaway(
                 interaction.client,
@@ -134,14 +191,16 @@ export default {
                 // le message et on le dit clairement au lieu de prétendre un succès.
                 logger.error(`Failed to save giveaway to database: ${giveawayMessage.id}`);
                 await giveawayMessage.delete().catch(() => {});
-                await InteractionHelper.sendErrorNotice(
+                await InteractionHelper.safeReply(
                     interaction,
-                    'Impossible d’enregistrer le concours pour le moment. Réessaie dans un instant.'
+                    privatePayload(interaction, errorPayload(
+                        'Impossible d’enregistrer le concours pour le moment. Réessaie dans un instant.',
+                    )),
                 );
                 return;
             }
 
-            
+
             try {
                 await logEvent({
                     client: interaction.client,
@@ -181,21 +240,17 @@ export default {
 
             logger.info(`Giveaway created successfully: ${giveawayMessage.id} in ${targetChannel.name}`);
 
-            
-            await InteractionHelper.safeReply(interaction, {
-                content: `Concours lancé ! 🎉 — Un nouveau concours pour **${prizeName}** a été lancé dans ${targetChannel} et se termine dans **${durationString}**.`,
-                flags: MessageFlags.Ephemeral,
-            });
+
+            await InteractionHelper.safeReply(
+                interaction,
+                privatePayload(
+                    interaction,
+                    buildSuccessPayload(interaction, targetChannel, initialGiveawayData, durationString),
+                ),
+            );
 
         } catch (error) {
-            await handleInteractionError(interaction, error, {
-                type: 'command',
-                commandName: 'gcreate',
-                context: 'giveaway_creation'
-            });
+            await replyError(interaction, error);
         }
     },
 };
-
-
-

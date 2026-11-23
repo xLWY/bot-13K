@@ -28,6 +28,7 @@ import {
     validateChannelNameTemplate,
     validateUserLimit,
 } from '../../../services/joinToCreateService.js';
+import { brandFooter, formatNumber } from '../../../ui/kit.js';
 
 const TRIGGER_CHANNEL_NAME = '➕ Créer votre salon';
 const PICKER_TIME = 300_000;
@@ -83,11 +84,13 @@ async function sendNotice(interaction, text) {
             await interaction.followUp({
                 content: `<@${interaction.user.id}> ${text}`,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
         } else {
             await interaction.reply({
                 content: text,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
         }
     } catch (error) {
@@ -142,11 +145,11 @@ async function buildDashboardEmbed(cfg, guild) {
     const temporaryCount = Object.keys(cfg?.temporaryChannels || {}).length;
 
     return new EmbedBuilder()
-        .setTitle('🔊 Tableau de bord des salons vocaux temporaires')
+        .setTitle('Tableau de bord des salons vocaux temporaires')
         .setDescription(
             triggerId
-                ? `Quand un membre rejoint **<#${triggerId}>**, le bot lui crée un salon vocal personnel qu\'il peut renommer, verrouiller ou supprimer.`
-                : 'Aucun salon déclencheur pour l\'instant. Crée-le pour activer la création automatique de salons vocaux personnels.',
+                ? `Quand un membre rejoint **<#${triggerId}>**, le bot lui crée un salon vocal personnel qu’il peut renommer, verrouiller ou supprimer.`
+                : 'Aucun salon déclencheur pour l’instant. Crée-le pour activer la création automatique de salons vocaux personnels.',
         )
         .setColor(triggerId ? getColor('info') : getColor('warning'))
         .addFields(
@@ -160,16 +163,16 @@ async function buildDashboardEmbed(cfg, guild) {
             },
             { name: '📁 Catégorie', value: category, inline: true },
             { name: '✏️ Nom des salons', value: `\`${options.nameTemplate}\``, inline: true },
-            { name: '👥 Limite', value: options.userLimit > 0 ? `${options.userLimit} membre(s)` : 'Illimitée', inline: true },
-            { name: '🎙️ Débit', value: `${Math.round(options.bitrate / 1000)} kbps`, inline: true },
+            { name: '👥 Limite', value: options.userLimit > 0 ? `${formatNumber(options.userLimit)} membre(s)` : 'Illimitée', inline: true },
+            { name: '🎙️ Débit', value: `${formatNumber(Math.round(options.bitrate / 1000))} kbps`, inline: true },
             { name: '🛡️ Rôle modérateur', value: options.moderatorRoleId ? `<@&${options.moderatorRoleId}>` : '`Aucun`', inline: true },
             {
                 name: '📊 Salons en cours',
-                value: temporaryCount > 0 ? `${temporaryCount} salon(s) temporaire(s)` : '`Aucun`',
+                value: temporaryCount > 0 ? `${formatNumber(temporaryCount)} salon(s) temporaire(s)` : '`Aucun`',
                 inline: true,
             },
         )
-        .setFooter({ text: 'Le tableau de bord se ferme après 5 minutes d\'inactivité' })
+        .setFooter(brandFooter('Salons vocaux temporaires • fermeture après 5 minutes d’inactivité'))
         .setTimestamp();
 }
 
@@ -204,7 +207,7 @@ function buildButtonRows(cfg) {
         stateRow.addComponents(
             new ButtonBuilder()
                 .setCustomId('jtc_dash_create')
-                .setLabel('Créer le salon')
+                .setLabel('Créer le salon déclencheur')
                 .setEmoji('➕')
                 .setStyle(ButtonStyle.Success),
         );
@@ -275,7 +278,7 @@ function buildButtonRows(cfg) {
     actionRow.addComponents(
         new ButtonBuilder()
             .setCustomId('jtc_dash_back')
-            .setLabel('Retour au panel')
+            .setLabel('Retour au tableau de bord')
             .setEmoji('⬅️')
             .setStyle(ButtonStyle.Danger),
     );
@@ -349,11 +352,12 @@ async function openCategoryPicker(btnInteraction, rootInteraction, client, guild
             btnInteraction.editReply({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle('📁 Catégorie du salon déclencheur')
+                        .setTitle('Catégorie du salon déclencheur')
                         .setDescription(
                             'Les salons vocaux temporaires seront créés dans la même catégorie que ce salon. Laisse vide pour le placer à la racine du serveur.',
                         )
-                        .setColor(getColor('info')),
+                        .setColor(getColor('info'))
+                        .setFooter(brandFooter('Création du salon déclencheur')),
                 ],
                 components: [
                     new ActionRowBuilder().addComponents(categorySelect),
@@ -370,7 +374,7 @@ async function openCategoryPicker(btnInteraction, rootInteraction, client, guild
     if (!shown) {
         await sendNotice(
             btnInteraction,
-            'Impossible d\'afficher le sélecteur de catégorie. Réessaie dans un instant.',
+            'Impossible d’afficher le sélecteur de catégorie. Réessaie dans un instant.',
         ).catch(() => {});
         return;
     }
@@ -408,7 +412,7 @@ async function openCategoryPicker(btnInteraction, rootInteraction, client, guild
             if (getTriggerId(cfg)) {
                 await sendNotice(
                     selectInteraction,
-                    'Un salon déclencheur existe déjà. Supprime-le avant d\'en créer un nouveau.',
+                    'Un salon déclencheur existe déjà. Supprime-le avant d’en créer un nouveau.',
                 ).catch(() => {});
                 await refreshDashboard(rootInteraction, client, guildId);
                 return;
@@ -445,7 +449,7 @@ async function openCategoryPicker(btnInteraction, rootInteraction, client, guild
                 logger.error('Failed to create JTC trigger channel:', error);
                 await sendNotice(
                     selectInteraction,
-                    'Impossible de créer le salon vocal. Vérifie que j\'ai la permission **Gérer les salons** dans cette catégorie.',
+                    'Impossible de créer le salon vocal. Vérifie que j’ai la permission **Gérer les salons** dans cette catégorie.',
                 ).catch(() => {});
                 return;
             }
@@ -476,7 +480,7 @@ async function openCategoryPicker(btnInteraction, rootInteraction, client, guild
             logger.error('Unexpected error while creating JTC trigger:', error);
             await sendNotice(
                 selectInteraction,
-                'Une erreur inattendue est survenue. Rien n\'a été créé.',
+                'Une erreur inattendue est survenue. Rien n’a été créé.',
             ).catch(() => {});
         }
     });
@@ -484,7 +488,7 @@ async function openCategoryPicker(btnInteraction, rootInteraction, client, guild
     selectCollector.on('end', (collected, reason) => {
         cancelCollector.stop(reason);
         if (reason === 'time' && collected.size === 0) {
-            sendNotice(btnInteraction, 'Aucune catégorie sélectionnée. Rien n\'a été créé.')
+            sendNotice(btnInteraction, 'Aucune catégorie sélectionnée. Rien n’a été créé.')
                 .catch(() => {});
         }
     });
@@ -495,7 +499,7 @@ async function handleCreate(btnInteraction, rootInteraction, client, guildId) {
     if (getTriggerId(cfg)) {
         return await sendNotice(
             btnInteraction,
-            'Un salon déclencheur existe déjà. Utilise « Supprimer le déclencheur » avant d\'en créer un nouveau.',
+            'Un salon déclencheur existe déjà. Utilise « Supprimer le déclencheur » avant d’en créer un nouveau.',
         ).catch(() => {});
     }
     await openCategoryPicker(btnInteraction, rootInteraction, client, guildId);
@@ -507,7 +511,7 @@ async function handleToggle(btnInteraction, client, guildId) {
         throw new XlwyBotError(
             'No Join to Create trigger configured',
             ErrorTypes.VALIDATION,
-            'Crée d\'abord un salon déclencheur.',
+            'Crée d’abord un salon déclencheur.',
         );
     }
 
@@ -516,7 +520,7 @@ async function handleToggle(btnInteraction, client, guildId) {
 
     await sendNotice(
         btnInteraction,
-        `Les salons vocaux temporaires sont **${isEnabled ? 'désactivés' : 'activés'}**.`,
+        `${isEnabled ? '❌' : '✅'} Les salons vocaux temporaires sont **${isEnabled ? 'désactivés' : 'activés'}**.`,
     ).catch(() => {});
 }
 
@@ -555,11 +559,12 @@ async function handleMove(btnInteraction, rootInteraction, client, guildId) {
             btnInteraction.editReply({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle('📁 Déplacer le salon déclencheur')
+                        .setTitle('Déplacer le salon déclencheur')
                         .setDescription(
                             `**Actuel :** ${triggerChannel.parentId ? `<#${triggerChannel.parentId}>` : '`Aucune`'}\n\nLes salons temporaires suivront la catégorie du salon déclencheur.`,
                         )
-                        .setColor(getColor('info')),
+                        .setColor(getColor('info'))
+                        .setFooter(brandFooter('Déplacement du déclencheur')),
                 ],
                 components: [
                     new ActionRowBuilder().addComponents(categorySelect),
@@ -576,7 +581,7 @@ async function handleMove(btnInteraction, rootInteraction, client, guildId) {
     if (!shown) {
         await sendNotice(
             btnInteraction,
-            'Impossible d\'afficher le sélecteur de catégorie. Réessaie dans un instant.',
+            'Impossible d’afficher le sélecteur de catégorie. Réessaie dans un instant.',
         ).catch(() => {});
         return;
     }
@@ -641,7 +646,7 @@ async function handleMove(btnInteraction, rootInteraction, client, guildId) {
     selectCollector.on('end', (collected, reason) => {
         cancelCollector.stop(reason);
         if (reason === 'time' && collected.size === 0) {
-            sendNotice(btnInteraction, 'Aucun salon sélectionné. Le paramètre n\'a pas été modifié.')
+            sendNotice(btnInteraction, 'Aucun salon sélectionné. Le paramètre n’a pas été modifié.')
                 .catch(() => {});
         }
     });
@@ -673,11 +678,12 @@ async function handleRole(btnInteraction, rootInteraction, client, guildId) {
             btnInteraction.editReply({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle('🛡️ Rôle modérateur')
+                        .setTitle('Rôle modérateur')
                         .setDescription(
-                            `**Actuel :** ${currentRoleId ? `<@&${currentRoleId}>` : '`Aucun`'}\n\nCe rôle pourra gérer les salons temporaires en plus du propriétaire.`,
+                            `**Actuel :** ${currentRoleId ? `<@&${currentRoleId}>` : '`Aucun`'}\n\nCe rôle pourra gérer les salons temporaires en plus du propriétaire du serveur.`,
                         )
-                        .setColor(getColor('info')),
+                        .setColor(getColor('info'))
+                        .setFooter(brandFooter('Rôle modérateur')),
                 ],
                 components: [
                     new ActionRowBuilder().addComponents(roleSelect),
@@ -694,7 +700,7 @@ async function handleRole(btnInteraction, rootInteraction, client, guildId) {
     if (!shown) {
         await sendNotice(
             btnInteraction,
-            'Impossible d\'afficher le sélecteur de rôle. Réessaie dans un instant.',
+            'Impossible d’afficher le sélecteur de rôle. Réessaie dans un instant.',
         ).catch(() => {});
         return;
     }
@@ -737,7 +743,7 @@ async function handleRole(btnInteraction, rootInteraction, client, guildId) {
             logger.error('Failed to update JTC moderator role:', error);
             await sendNotice(
                 selectInteraction,
-                'Impossible d\'enregistrer le rôle modérateur. Réessaie dans un instant.',
+                'Impossible d’enregistrer le rôle modérateur. Réessaie dans un instant.',
             ).catch(() => {});
             return;
         }
@@ -753,7 +759,7 @@ async function handleRole(btnInteraction, rootInteraction, client, guildId) {
     selectCollector.on('end', (collected, reason) => {
         cancelCollector.stop(reason);
         if (reason === 'time' && collected.size === 0) {
-            sendNotice(btnInteraction, 'Aucun rôle sélectionné. Le paramètre n\'a pas été modifié.')
+            sendNotice(btnInteraction, 'Aucun rôle sélectionné. Le paramètre n’a pas été modifié.')
                 .catch(() => {});
         }
     });
@@ -833,7 +839,7 @@ async function handleLimit(btnInteraction, rootInteraction, client, guildId, sco
     }
 
     await answer.interaction.reply({
-        content: `✅ Limite mise à jour — ${value > 0 ? `${value} membre(s) maximum par salon.` : 'Aucune limite de membres.'}`,
+        content: `✅ Limite mise à jour — ${value > 0 ? `${formatNumber(value)} membre(s) maximum par salon.` : 'Aucune limite de membres.'}`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -875,7 +881,7 @@ async function handleBitrate(btnInteraction, rootInteraction, client, guildId, s
     }
 
     await answer.interaction.reply({
-        content: `✅ Débit mis à jour — Les nouveaux salons utiliseront ${kbps} kbps.`,
+        content: `✅ Débit mis à jour — Les nouveaux salons utiliseront ${formatNumber(kbps)} kbps.`,
         flags: MessageFlags.Ephemeral,
     });
 
@@ -907,11 +913,12 @@ async function handleDelete(btnInteraction, rootInteraction, client, guildId) {
             btnInteraction.editReply({
                 embeds: [
                     new EmbedBuilder()
-                        .setTitle('🗑️ Supprimer le salon déclencheur ?')
+                        .setTitle('Supprimer le salon déclencheur ?')
                         .setDescription(
-                            `Le salon **${triggerChannel ? `<#${triggerChannel.id}>` : `\`${triggerId}\``}** ne créera plus de salon vocal.\n\nLe salon lui-même **n'est pas supprimé**, seul le lien avec le bot est coupé.`,
+                            `Le salon **${triggerChannel ? `<#${triggerChannel.id}>` : `\`${triggerId}\``}** ne créera plus de salon vocal.\n\nLe salon lui-même **n’est pas supprimé**, seul le lien avec le bot est coupé.`,
                         )
-                        .setColor(getColor('warning')),
+                        .setColor(getColor('warning'))
+                        .setFooter(brandFooter('Action sensible')),
                 ],
                 components: [new ActionRowBuilder().addComponents(confirmButton, cancelButton)],
             }),
@@ -925,7 +932,7 @@ async function handleDelete(btnInteraction, rootInteraction, client, guildId) {
     if (!shown) {
         await sendNotice(
             btnInteraction,
-            'Impossible d\'afficher la confirmation. Réessaie dans un instant.',
+            'Impossible d’afficher la confirmation. Réessaie dans un instant.',
         ).catch(() => {});
         return;
     }
@@ -970,7 +977,7 @@ async function handleDelete(btnInteraction, rootInteraction, client, guildId) {
 
         await sendNotice(
             confirmInteraction,
-            'Salon déclencheur supprimé. La création automatique de salons vocaux est désactivée.',
+            '✅ Salon déclencheur supprimé. La création automatique de salons vocaux est désactivée.',
         ).catch(() => {});
 
         await refreshDashboard(rootInteraction, client, guildId);
@@ -1090,7 +1097,7 @@ export default {
             throw new XlwyBotError(
                 `JTC dashboard failed: ${error.message}`,
                 ErrorTypes.UNKNOWN,
-                'Impossible d\'ouvrir le tableau de bord des salons vocaux.',
+                'Impossible d’ouvrir le tableau de bord des salons vocaux.',
             );
         }
     },

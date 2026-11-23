@@ -1,8 +1,9 @@
-import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, LabelBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, LabelBuilder } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { createEmbed, errorEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
+import { brandFooter, formatNumber, guildIconUrl } from '../../ui/kit.js';
 import {
     initializeJoinToCreate,
     getChannelConfiguration,
@@ -12,6 +13,43 @@ import {
     logConfigurationChange,
     getConfiguration
 } from '../../services/joinToCreateService.js';
+
+const MENTION_OPTIONS = { parse: [] };
+const UI_CONTEXT = 'Join to Create';
+
+function noticeEmbed(kind, message, context = UI_CONTEXT, title = null) {
+    const embed = kind === 'success'
+        ? successEmbed(message, title ?? '✅ Succès')
+        : kind === 'warning'
+            ? warningEmbed(message, title ?? '⚠️ Avertissement')
+            : errorEmbed(message);
+    if (title) embed.setTitle(title);
+    embed.setFooter(brandFooter(context));
+    return embed;
+}
+
+function noticePayload(kind, message, context = UI_CONTEXT, title = null) {
+    return {
+        embeds: [noticeEmbed(kind, message, context, title)],
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: MENTION_OPTIONS,
+    };
+}
+
+function limitLabel(value) {
+    const limit = Number(value) || 0;
+    return limit === 0 ? 'Illimitée' : `${formatNumber(limit)} membres`;
+}
+
+async function notifyModalExpiry(interaction) {
+    logger.debug('[JTC] modal expired before submission');
+    await InteractionHelper.safeReply(interaction, noticePayload(
+        'warning',
+        'Session de saisie expirée. Relance la commande pour réessayer.',
+        UI_CONTEXT,
+        '⚠️ Session expirée',
+    ));
+}
 
 
 export default {
@@ -84,7 +122,7 @@ export default {
                 throw new XlwyBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "Tu dois avoir la permission **Gérer le serveur** pour utiliser cette commande."
+                    'Tu dois avoir la permission **Gérer le serveur** pour utiliser cette commande.'
                 );
             }
 
@@ -103,17 +141,19 @@ export default {
 
         } catch (error) {
             try {
-                let errorMessage = "Une erreur est survenue pendant l'exécution de la commande.";
-                
+                let errorMessage = 'Impossible de terminer la configuration. Réessaie dans un instant.';
+
                 if (error instanceof XlwyBotError) {
-                    errorMessage = error.userMessage || "Une erreur est survenue. Veuillez réessayer.";
+                    errorMessage = error.userMessage || 'Une erreur est survenue. Réessaie dans un instant.';
                     logger.debug(`XlwyBotError [${error.type}]: ${error.message}`, error.context || {});
                 } else {
                     logger.error('Unexpected error in jointocreate command:', error);
-                    errorMessage = "Une erreur inattendue est survenue. Veuillez réessayer ou contacter le support.";
                 }
 
-                return await InteractionHelper.sendErrorNotice(interaction, errorMessage);
+                return await InteractionHelper.safeReply(
+                    interaction,
+                    noticePayload('error', errorMessage, UI_CONTEXT, '❌ Commande impossible'),
+                );
             } catch (replyError) {
                 logger.error('Failed to send error message:', replyError);
             }
@@ -157,7 +197,7 @@ async function handleSetupSubcommand(interaction, client) {
 
             if (activeTriggerChannels.length > 0) {
                 const primaryTrigger = activeTriggerChannels[0];
-                const errorMessage = `Ce serveur possède déjà un salon Join to Create : ${primaryTrigger}\n\nUtilise \`/jointocreate dashboard\` pour le modifier, ou supprime-le d'abord avant d'en créer un nouveau.`;
+                const errorMessage = `Ce serveur possède déjà un salon Join to Create : ${primaryTrigger}.\n\nUtilise \`/jointocreate dashboard\` pour le modifier, ou supprime-le d’abord avant d’en créer un nouveau.`;
 
                 throw new XlwyBotError(
                     'Guild already has a Join to Create channel',
@@ -210,16 +250,30 @@ async function handleSetupSubcommand(interaction, client) {
 
         logger.info(`Successfully created Join to Create system in guild ${guildId}`);
 
-        const responseContent =
-            `✅ Configuration terminée\nCanal Join to Create créé : ${triggerChannel}\n\n` +
-            `**Paramètres :**\n` +
-            `• Modèle : \`${nameTemplate}\`\n` +
-            `• Limite de membres : ${userLimit === 0 ? 'Illimitée' : userLimit + ' membres'}\n` +
-            `• Débit binaire : ${bitrate} kbps\n` +
-            `${category ? `• Catégorie : ${category.name}` : '• Catégorie : Racine'}` +
-            `${moderatorRole ? `\n• Rôle modérateur : ${moderatorRole}` : ''}`;
+        const setupEmbed = createEmbed({
+            title: '✅ Salon Join to Create créé',
+            description: [
+                `Canal déclencheur : ${triggerChannel}`,
+                'Rejoins ce salon vocal pour créer automatiquement ton salon temporaire.',
+            ].join('\n'),
+            color: 'success',
+            thumbnail: guildIconUrl(interaction.guild, 128),
+            fields: [
+                { name: '📝 Modèle de nom', value: `\`${nameTemplate}\``, inline: false },
+                { name: '👥 Limite de membres', value: limitLabel(userLimit), inline: true },
+                { name: '🎵 Débit binaire', value: `${formatNumber(bitrate)} kbps`, inline: true },
+                { name: '📁 Catégorie', value: category ? `\`${category.name}\`` : 'Racine du serveur', inline: true },
+                ...(moderatorRole
+                    ? [{ name: '🛡️ Rôle modérateur', value: `${moderatorRole}`, inline: true }]
+                    : []),
+            ],
+            footer: brandFooter('Configuration · Join to Create'),
+        });
 
-        return await InteractionHelper.safeEditReply(interaction, { content: responseContent });
+        return await InteractionHelper.safeEditReply(interaction, {
+            embeds: [setupEmbed],
+            allowedMentions: MENTION_OPTIONS,
+        });
 
     } catch (error) {
         logger.error('Error in handleSetupSubcommand:', error);
@@ -229,7 +283,7 @@ async function handleSetupSubcommand(interaction, client) {
         throw new XlwyBotError(
             `Setup failed: ${error.message}`,
             ErrorTypes.DISCORD_API,
-            "Échec de la configuration du système Join to Create. Vérifie les permissions du robot."
+            'Échec de la configuration du système Join to Create. Vérifie mes permissions sur le serveur.'
         );
     }
 }
@@ -243,30 +297,25 @@ async function handleConfigSubcommand(interaction, client) {
         const currentConfig = await getChannelConfiguration(client, guildId, triggerChannel.id);
         const channelConfig = currentConfig.channelConfig || {};
 
-        
-        const configEmbed = new EmbedBuilder()
-            .setTitle('⚙️ Configuration Join to Create')
-            .setDescription(`Configuration de ${triggerChannel}`)
-            .setColor(getColor('info'))
-            .addFields(
-                {
-                    name: '📝 Modèle de nom',
-                    value: `\`${channelConfig.nameTemplate || currentConfig.channelNameTemplate || "{username} · Salon"}\``,
-                    inline: false
-                },
-                {
-                    name: '👥 Limite de membres',
-                    value: `${(channelConfig.userLimit ?? currentConfig.userLimit ?? 0) === 0 ? 'Illimitée' : (channelConfig.userLimit ?? currentConfig.userLimit ?? 0) + ' membres'}`,
-                    inline: true
-                },
-                {
-                    name: '🎵 Débit binaire',
-                    value: `${(channelConfig.bitrate ?? currentConfig.bitrate ?? 64000) / 1000} kbps`,
-                    inline: true
-                }
-            )
-            .setFooter({ text: 'Utilise les boutons ci-dessous pour modifier les réglages • Un seul canal déclencheur par serveur' })
-            .setTimestamp();
+        const nameTemplate = channelConfig.nameTemplate || currentConfig.channelNameTemplate || '{username} · Salon';
+        const userLimit = channelConfig.userLimit ?? currentConfig.userLimit ?? 0;
+        const bitrateKbps = (channelConfig.bitrate ?? currentConfig.bitrate ?? 64000) / 1000;
+
+        const configEmbed = createEmbed({
+            title: '⚙️ Configuration · Join to Create',
+            description: [
+                `Salon déclencheur : ${triggerChannel}`,
+                'Utilise les boutons ci-dessous pour modifier un réglage.',
+            ].join('\n'),
+            color: 'info',
+            thumbnail: guildIconUrl(interaction.guild, 128),
+            fields: [
+                { name: '📝 Modèle de nom', value: `\`${nameTemplate}\``, inline: false },
+                { name: '👥 Limite de membres', value: limitLabel(userLimit), inline: true },
+                { name: '🎵 Débit binaire', value: `${formatNumber(bitrateKbps)} kbps`, inline: true },
+            ],
+            footer: brandFooter('Tableau de bord · Join to Create'),
+        });
 
         
         const nameButton = new ButtonBuilder()
@@ -293,7 +342,8 @@ async function handleConfigSubcommand(interaction, client) {
 
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [configEmbed],
-            components: [row]
+            components: [row],
+            allowedMentions: MENTION_OPTIONS,
         });
 
         const message = await interaction.fetchReply();
@@ -316,10 +366,12 @@ async function handleConfigSubcommand(interaction, client) {
             try {
                 
                 if (!hasManageGuildPermission(buttonInteraction.member)) {
-                    await buttonInteraction.reply({
-                        content: "❌ Tu dois avoir la permission **Gérer le serveur** pour utiliser ces contrôles.",
-                        flags: MessageFlags.Ephemeral
-                    });
+                    await buttonInteraction.reply(noticePayload(
+                        'error',
+                        'Tu dois avoir la permission **Gérer le serveur** pour utiliser ces contrôles.',
+                        UI_CONTEXT,
+                        '❌ Permission manquante',
+                    ));
                     return;
                 }
 
@@ -336,8 +388,8 @@ async function handleConfigSubcommand(interaction, client) {
                 }
             } catch (error) {
                 const userMessage = error instanceof XlwyBotError
-                    ? error.userMessage || "Une erreur est survenue."
-                    : "Une erreur est survenue pendant le traitement de ta demande.";
+                    ? error.userMessage || 'Une erreur est survenue. Réessaie dans un instant.'
+                    : 'Une erreur est survenue pendant le traitement de ta demande. Réessaie dans un instant.';
 
                 if (error instanceof XlwyBotError) {
                     logger.debug(`Button interaction validation error: ${error.message}`, error.context || {});
@@ -345,10 +397,7 @@ async function handleConfigSubcommand(interaction, client) {
                     logger.error('Unexpected error in config button interaction:', error);
                 }
 
-                await buttonInteraction.reply({
-                    content: `❌ ${userMessage}`,
-                    flags: MessageFlags.Ephemeral
-                }).catch(() => {});
+                await buttonInteraction.reply(noticePayload('error', userMessage)).catch(() => {});
             }
         });
 
@@ -360,9 +409,14 @@ async function handleConfigSubcommand(interaction, client) {
                 deleteButton.setDisabled(true)
             );
 
+            configEmbed
+                .setDescription('Session de configuration expirée. Relance `/jointocreate dashboard` pour modifier les réglages.')
+                .setFooter(brandFooter('Session expirée · Join to Create'));
+
             message.edit({
                 components: [disabledRow],
-                embeds: [configEmbed.setFooter({ text: 'Session de configuration expirée. Relance la commande pour modifier les réglages.' })]
+                embeds: [configEmbed],
+                allowedMentions: MENTION_OPTIONS,
             }).catch(() => {});
         });
 
@@ -426,10 +480,12 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
 
         // Recheck permissions
         if (!hasManageGuildPermission(modalSubmission.member)) {
-            await modalSubmission.reply({
-                content: "❌ Tu dois avoir la permission **Gérer le serveur** pour modifier ces réglages.",
-                flags: MessageFlags.Ephemeral
-            });
+            await modalSubmission.reply(noticePayload(
+                'error',
+                'Tu dois avoir la permission **Gérer le serveur** pour modifier ces réglages.',
+                UI_CONTEXT,
+                '❌ Permission manquante',
+            ));
             return;
         }
 
@@ -444,13 +500,16 @@ async function handleNameTemplateModal(interaction, triggerChannel, currentConfi
             newTemplate
         });
 
-        await modalSubmission.reply({
-            content: `✅ Modèle de nom mis à jour : \`${newTemplate}\``,
-            flags: MessageFlags.Ephemeral
-        });
+        await modalSubmission.reply(noticePayload(
+            'success',
+            `Nouveau modèle : \`${newTemplate}\``,
+            UI_CONTEXT,
+            '✅ Modèle de nom mis à jour',
+        ));
 
     } catch (error) {
         if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
+            await notifyModalExpiry(interaction);
             return;
         }
         if (error instanceof XlwyBotError) {
@@ -495,10 +554,12 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig, 
 
         // Recheck permissions
         if (!hasManageGuildPermission(modalSubmission.member)) {
-            await modalSubmission.reply({
-                content: "❌ Tu dois avoir la permission **Gérer le serveur** pour modifier ces réglages.",
-                flags: MessageFlags.Ephemeral
-            });
+            await modalSubmission.reply(noticePayload(
+                'error',
+                'Tu dois avoir la permission **Gérer le serveur** pour modifier ces réglages.',
+                UI_CONTEXT,
+                '❌ Permission manquante',
+            ));
             return;
         }
 
@@ -513,13 +574,16 @@ async function handleUserLimitModal(interaction, triggerChannel, currentConfig, 
             userLimit: parseInt(userInput)
         });
 
-        await modalSubmission.reply({
-            content: `✅ Limite mise à jour : ${parseInt(userInput) === 0 ? 'illimitée' : parseInt(userInput) + ' membres'}`,
-            flags: MessageFlags.Ephemeral
-        });
+        await modalSubmission.reply(noticePayload(
+            'success',
+            `Nouvelle valeur : ${limitLabel(parseInt(userInput))}.`,
+            UI_CONTEXT,
+            '✅ Limite de membres mise à jour',
+        ));
 
     } catch (error) {
         if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
+            await notifyModalExpiry(interaction);
             return;
         }
         if (error instanceof XlwyBotError) {
@@ -564,10 +628,12 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig, cl
 
         // Recheck permissions
         if (!hasManageGuildPermission(modalSubmission.member)) {
-            await modalSubmission.reply({
-                content: "❌ Tu dois avoir la permission **Gérer le serveur** pour modifier ces réglages.",
-                flags: MessageFlags.Ephemeral
-            });
+            await modalSubmission.reply(noticePayload(
+                'error',
+                'Tu dois avoir la permission **Gérer le serveur** pour modifier ces réglages.',
+                UI_CONTEXT,
+                '❌ Permission manquante',
+            ));
             return;
         }
 
@@ -582,13 +648,16 @@ async function handleBitrateModal(interaction, triggerChannel, currentConfig, cl
             bitrate: parseInt(userInput)
         });
 
-        await modalSubmission.reply({
-            content: `✅ Débit binaire mis à jour : ${parseInt(userInput)} kbps`,
-            flags: MessageFlags.Ephemeral
-        });
+        await modalSubmission.reply(noticePayload(
+            'success',
+            `Nouvelle valeur : \`${formatNumber(parseInt(userInput))} kbps\`.`,
+            UI_CONTEXT,
+            '✅ Débit binaire mis à jour',
+        ));
 
     } catch (error) {
         if (error.code === 'INTERACTION_COLLECTOR_ERROR') {
+            await notifyModalExpiry(interaction);
             return;
         }
         if (error instanceof XlwyBotError) {
@@ -617,10 +686,22 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
                 .setStyle(ButtonStyle.Secondary)
         );
 
+        const confirmEmbed = noticeEmbed(
+            'warning',
+            'Confirme avec le bouton ci-dessous pour retirer ce salon du système.',
+            'Action sensible · Join to Create',
+            '⚠️ Confirmation de suppression',
+        );
+        confirmEmbed.addFields(
+            { name: '📍 Salon', value: `\`${triggerChannel.name}\``, inline: true },
+            { name: '⚠️ Effet', value: 'Le canal sera supprimé s’il est vide. Cette action est irréversible.', inline: false },
+        );
+
         await InteractionHelper.safeReply(interaction, {
-            content: `⚠️ Confirmation — Es-tu sûr de vouloir retirer **${triggerChannel.name}** du système Join to Create ?\n\nCette action est irréversible.`,
+            embeds: [confirmEmbed],
             components: [confirmRow],
-            flags: MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral,
+            allowedMentions: MENTION_OPTIONS,
         });
 
         const message = await interaction.fetchReply();
@@ -637,10 +718,12 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
             try {
                 // Recheck permissions
                 if (!hasManageGuildPermission(buttonInteraction.member)) {
-                    await buttonInteraction.reply({
-                        content: "❌ Tu dois avoir la permission **Gérer le serveur** pour supprimer des canaux.",
-                        flags: MessageFlags.Ephemeral
-                    });
+                    await buttonInteraction.reply(noticePayload(
+                        'error',
+                        'Tu dois avoir la permission **Gérer le serveur** pour supprimer des canaux.',
+                        UI_CONTEXT,
+                        '❌ Permission manquante',
+                    ));
                     return;
                 }
 
@@ -665,28 +748,49 @@ async function handleChannelDeletion(interaction, triggerChannel, currentConfig,
                     }
 
                     await buttonInteraction.update({
-                        content: `✅ Supprimé — **${triggerChannel.name}** a été retiré du système Join to Create.`,
-                        components: []
+                        embeds: [noticeEmbed(
+                            'success',
+                            `**${triggerChannel.name}** a été retiré du système.`,
+                            UI_CONTEXT,
+                            '✅ Canal supprimé',
+                        )],
+                        components: [],
+                        allowedMentions: MENTION_OPTIONS,
                     });
 
                 } else {
                     await buttonInteraction.update({
-                        content: '✅ Annulé — La suppression du canal a été annulée.',
-                        components: []
+                        embeds: [noticeEmbed(
+                            'success',
+                            'La suppression du canal a été annulée.',
+                            UI_CONTEXT,
+                            '✅ Suppression annulée',
+                        )],
+                        components: [],
+                        allowedMentions: MENTION_OPTIONS,
                     });
                 }
             } catch (collectError) {
                 logger.error('Error handling delete confirmation:', collectError);
-                await buttonInteraction.reply({
-                    content: "❌ Une erreur est survenue pendant le traitement de ta demande.",
-                    flags: MessageFlags.Ephemeral
-                }).catch(() => {});
+                await buttonInteraction.reply(noticePayload(
+                    'error',
+                    'Une erreur est survenue pendant le traitement de ta demande. Réessaie dans un instant.',
+                )).catch(() => {});
             }
         });
 
         deleteCollector.on('end', (collected, reason) => {
             if (reason === 'time' && collected.size === 0) {
-                message.edit({ components: [] }).catch(() => {});
+                message.edit({
+                    components: [],
+                    embeds: [noticeEmbed(
+                        'warning',
+                        'Aucune réponse reçue. Le canal n’a pas été modifié.',
+                        'Session expirée · Join to Create',
+                        '⚠️ Confirmation expirée',
+                    )],
+                    allowedMentions: MENTION_OPTIONS,
+                }).catch(() => {});
             }
         });
 

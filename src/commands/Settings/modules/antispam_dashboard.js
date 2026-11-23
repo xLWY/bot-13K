@@ -24,6 +24,7 @@ import {
     getMissingAntiSpamPermissions,
     saveAntiSpamConfig,
 } from '../../../services/antiSpamService.js';
+import { brandFooter, formatNumber } from '../../../ui/kit.js';
 
 const DASHBOARD_TIME = 300_000;
 const FLOW_TIME = 120_000;
@@ -39,7 +40,7 @@ function formatIgnoredChannels(cfg, guild) {
     );
     const remaining = cfg.ignoredChannels.length - shown.length;
 
-    return shown.join('\n') + (remaining > 0 ? `\n… et **${remaining}** autre(s)` : '');
+    return shown.join('\n') + (remaining > 0 ? `\n… et **${formatNumber(remaining)}** autre(s)` : '');
 }
 
 function formatIgnoredRoles(cfg, guild) {
@@ -52,7 +53,7 @@ function formatIgnoredRoles(cfg, guild) {
     );
     const remaining = cfg.ignoredRoles.length - shown.length;
 
-    return shown.join('\n') + (remaining > 0 ? `\n… et **${remaining}** autre(s)` : '');
+    return shown.join('\n') + (remaining > 0 ? `\n… et **${formatNumber(remaining)}** autre(s)` : '');
 }
 
 function formatAllowedDomains(cfg) {
@@ -66,7 +67,7 @@ function formatAllowedDomains(cfg) {
     }
 
     const remaining = cfg.allowedDomains.length - shown.length;
-    return shown.join(', ') + (remaining > 0 ? ` … +${remaining}` : '');
+    return shown.join(', ') + (remaining > 0 ? ` … +${formatNumber(remaining)}` : '');
 }
 
 function buildDashboardEmbed(cfg, guild, missingPermissions = []) {
@@ -78,17 +79,17 @@ function buildDashboardEmbed(cfg, guild, missingPermissions = []) {
         },
         {
             name: '💬 Messages',
-            value: `${cfg.messagesPerWindow} max / ${cfg.windowSeconds} s`,
+            value: `${formatNumber(cfg.messagesPerWindow)} max / ${formatNumber(cfg.windowSeconds)} s`,
             inline: true,
         },
         {
             name: '🔁 Doublons',
-            value: `${cfg.duplicateThreshold} max / ${cfg.duplicateWindowSeconds} s`,
+            value: `${formatNumber(cfg.duplicateThreshold)} max / ${formatNumber(cfg.duplicateWindowSeconds)} s`,
             inline: true,
         },
         {
             name: '📣 Mentions',
-            value: `${cfg.mentionLimit} max`,
+            value: `${formatNumber(cfg.mentionLimit)} max`,
             inline: true,
         },
         {
@@ -127,7 +128,7 @@ function buildDashboardEmbed(cfg, guild, missingPermissions = []) {
             inline: true,
         },
         {
-            name: '✅ Domaines autorisés',
+            name: 'Domaines autorisés',
             value: formatAllowedDomains(cfg),
             inline: false,
         },
@@ -152,7 +153,7 @@ function buildDashboardEmbed(cfg, guild, missingPermissions = []) {
     }
 
     return new EmbedBuilder()
-        .setTitle('🛡️ Tableau de bord Anti-spam')
+        .setTitle('Tableau de bord anti-spam')
         .setDescription(
             `Protège **${guild.name}** contre le flood, les doublons, les mentions abusives, ` +
             'les invitations Discord et les liens publicitaires.\n' +
@@ -164,7 +165,7 @@ function buildDashboardEmbed(cfg, guild, missingPermissions = []) {
                 : getColor(cfg.enabled ? 'success' : 'info'),
         )
         .addFields(...fields)
-        .setFooter({ text: 'Fermeture après 5 minutes d’inactivité' })
+        .setFooter(brandFooter('Anti-spam • fermeture après 5 minutes d’inactivité'))
         .setTimestamp();
 }
 
@@ -220,7 +221,7 @@ function buildButtonRows(cfg) {
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
             .setCustomId('asp_back')
-            .setLabel('Retour')
+            .setLabel('Retour au tableau de bord')
             .setEmoji('↩️')
             .setStyle(ButtonStyle.Danger),
     );
@@ -233,7 +234,7 @@ function buildButtonRows(cfg) {
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
             .setCustomId('asp_owninvites')
-            .setLabel('Invites serveur')
+            .setLabel('Invitations du serveur')
             .setEmoji('🏠')
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
@@ -243,12 +244,12 @@ function buildButtonRows(cfg) {
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
             .setCustomId('asp_shorteners')
-            .setLabel('Raccourcis')
+            .setLabel('Raccourcisseurs')
             .setEmoji('✂️')
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
             .setCustomId('asp_domains')
-            .setLabel('Domaines')
+            .setLabel('Domaines autorisés')
             .setEmoji('✅')
             .setStyle(ButtonStyle.Secondary),
     );
@@ -264,19 +265,21 @@ function buildButtonRows(cfg) {
     return [mainRow, optionsRow, linkRow, roleRow];
 }
 
-async function sendNotice(interaction, text, { title = '🛡️ Anti-spam' } = {}) {
-    const content = `${title} — ${text}`;
+async function sendNotice(interaction, text, { title = 'Anti-spam', success = false } = {}) {
+    const content = `${success ? '✅ ' : ''}${title} — ${text}`;
 
     try {
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({
                 content,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
         } else {
             await interaction.reply({
                 content,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
         }
     } catch (error) {
@@ -344,45 +347,45 @@ async function handleToggle(btnInteraction, client, guildId, setting) {
     const labels = {
         enabled: {
             value: !cfg.enabled,
-            on: 'La protection anti-spam est maintenant **activée**.',
-            off: 'La protection anti-spam est maintenant **désactivée**.',
-            title: '🛡️ Anti-spam',
+            on: '✅ La protection anti-spam est maintenant **activée**.',
+            off: '❌ La protection anti-spam est maintenant **désactivée**.',
+            title: 'Anti-spam',
         },
         deleteMessages: {
             value: !cfg.deleteMessages,
-            on: 'Les messages détectés seront désormais **supprimés**.',
-            off: 'Les messages détectés ne seront plus supprimés.',
-            title: '🗑️ Suppression',
+            on: '✅ Les messages détectés seront désormais **supprimés**.',
+            off: '❌ Les messages détectés ne seront plus supprimés.',
+            title: 'Suppression',
         },
         notify: {
             value: !cfg.notify,
-            on: 'Le bot **préviendra** le salon lorsqu’un spam est détecté.',
-            off: 'Le bot ne préviendra plus le salon lors d’une détection.',
-            title: '🔔 Notification',
+            on: '✅ Le bot **préviendra** le salon lorsqu’un spam est détecté.',
+            off: '❌ Le bot ne préviendra plus le salon lors d’une détection.',
+            title: 'Notification',
         },
         blockInvites: {
             value: !cfg.blockInvites,
-            on: 'Les invitations vers d’autres serveurs Discord sont maintenant **bloquées**.',
-            off: 'Les invitations vers d’autres serveurs Discord sont maintenant **autorisées**.',
-            title: '🔗 Invitations Discord',
+            on: '✅ Les invitations vers d’autres serveurs Discord sont maintenant **bloquées**.',
+            off: '❌ Les invitations vers d’autres serveurs Discord sont maintenant **autorisées**.',
+            title: 'Invitations Discord',
         },
         allowOwnInvites: {
             value: !cfg.allowOwnInvites,
-            on: 'Les invitations de **ce serveur** sont maintenant **autorisées**.',
-            off: 'Les invitations de **ce serveur** sont maintenant **bloquées**.',
-            title: '🏠 Invites du serveur',
+            on: '✅ Les invitations de **ce serveur** sont maintenant **autorisées**.',
+            off: '❌ Les invitations de **ce serveur** sont maintenant **bloquées**.',
+            title: 'Invitations du serveur',
         },
         blockLinks: {
             value: !cfg.blockLinks,
-            on: 'Tous les liens externes sont maintenant **bloqués**, sauf les domaines autorisés.',
-            off: 'Les liens externes sont maintenant **autorisés**.',
-            title: '🌐 Liens externes',
+            on: '✅ Tous les liens externes sont maintenant **bloqués**, sauf les domaines autorisés.',
+            off: '❌ Les liens externes sont maintenant **autorisés**.',
+            title: 'Liens externes',
         },
         blockShorteners: {
             value: !cfg.blockShorteners,
-            on: 'Les liens raccourcis sont maintenant **bloqués**.',
-            off: 'Les liens raccourcis sont maintenant **autorisés**.',
-            title: '✂️ Raccourcisseurs',
+            on: '✅ Les liens raccourcis sont maintenant **bloqués**.',
+            off: '❌ Les liens raccourcis sont maintenant **autorisés**.',
+            title: 'Raccourcisseurs',
         },
     };
 
@@ -396,7 +399,7 @@ async function handleToggle(btnInteraction, client, guildId, setting) {
     await sendNotice(
         btnInteraction,
         settingInfo.value ? settingInfo.on : settingInfo.off,
-        { title: settingInfo.title, success: true },
+        { title: settingInfo.title },
     );
 }
 
@@ -449,8 +452,8 @@ async function handleMessages(btnInteraction, rootInteraction, client, guildId) 
         client,
         guildId,
         { messagesPerWindow: messages, windowSeconds: window },
-        `Le seuil est maintenant de **${messages} messages** en **${window} secondes**.`,
-        '💬 Limite de messages',
+        `Le seuil est maintenant de **${formatNumber(messages)} messages** en **${formatNumber(window)} secondes**.`,
+        'Limite de messages',
     );
 
     if (saved) await refreshDashboard(rootInteraction, client, guildId);
@@ -505,8 +508,8 @@ async function handleDuplicates(btnInteraction, rootInteraction, client, guildId
         client,
         guildId,
         { duplicateThreshold: duplicates, duplicateWindowSeconds: window },
-        `Le seuil est maintenant de **${duplicates} messages identiques** en **${window} secondes**.`,
-        '🔁 Détection des doublons',
+        `Le seuil est maintenant de **${formatNumber(duplicates)} messages identiques** en **${formatNumber(window)} secondes**.`,
+        'Détection des doublons',
     );
 
     if (saved) await refreshDashboard(rootInteraction, client, guildId);
@@ -549,8 +552,8 @@ async function handleMentions(btnInteraction, rootInteraction, client, guildId) 
         client,
         guildId,
         { mentionLimit: mentions },
-        `Un message est désormais signalé à partir de **${mentions} mentions**.`,
-        '📣 Limite de mentions',
+        `Un message est désormais signalé à partir de **${formatNumber(mentions)} mentions**.`,
+        'Limite de mentions',
     );
 
     if (saved) await refreshDashboard(rootInteraction, client, guildId);
@@ -594,7 +597,7 @@ async function handleTimeout(btnInteraction, rootInteraction, client, guildId) {
         guildId,
         { timeoutSeconds: minutes * 60 },
         `Un membre détecté sera réduit au silence pendant **${formatDuration(minutes * 60)}**.`,
-        '⏱️ Durée du silence',
+        'Durée du silence',
     );
 
     if (saved) await refreshDashboard(rootInteraction, client, guildId);
@@ -639,7 +642,7 @@ async function handleAllowedDomains(btnInteraction, rootInteraction, client, gui
     const list = domains.length === 0
         ? 'Aucun domaine n’est autorisé.'
         : `Domaines autorisés :\n${domains.slice(0, 10).map(domain => `• \`${domain}\``).join('\n')}` +
-          (domains.length > 10 ? `\n… +${domains.length - 10}` : '');
+          (domains.length > 10 ? `\n… +${formatNumber(domains.length - 10)}` : '');
 
     const saved = await saveAndConfirm(
         submitted,
@@ -647,7 +650,7 @@ async function handleAllowedDomains(btnInteraction, rootInteraction, client, gui
         guildId,
         { allowedDomains: domains },
         list,
-        '✅ Domaines autorisés',
+        'Domaines autorisés',
     );
 
     if (saved) await refreshDashboard(rootInteraction, client, guildId);
@@ -705,7 +708,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
         .followUp({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle('🚫 Salons ignorés')
+                    .setTitle('Salons ignorés')
                     .setDescription(
                         `L’anti-spam ne s’applique pas aux salons ci-dessous.\n\n${formatIgnoredChannels(cfg, rootInteraction.guild)}` +
                         (cfg.ignoredChannels.length > 25
@@ -713,7 +716,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
                             : ''),
                     )
                     .setColor(getColor('info'))
-                    .setFooter({ text: 'Sélectionne un salon à ajouter ou à retirer.' }),
+                    .setFooter(brandFooter('Salons ignorés')),
             ],
             components,
             flags: MessageFlags.Ephemeral,
@@ -734,7 +737,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
 
     if (!selected) {
         await prompt.edit({
-            content: '⏱️ Délai dépassé — Le menu a expiré. Relance **Salons ignorés** depuis le tableau de bord.',
+            content: '❌ Délai dépassé — Le menu a expiré. Relance **Salons ignorés** depuis le tableau de bord.',
             components: [],
         }).catch(() => {});
         return;
@@ -753,6 +756,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
                 await selected.editReply({
                     content: '⚠️ Aucun changement — Aucun salon sélectionné.',
                     components: [],
+                    allowedMentions: { parse: [] },
                 });
                 return;
             }
@@ -761,6 +765,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
                 await selected.editReply({
                     content: `⚠️ Aucun changement — <#${channel.id}> est déjà ignoré par l’anti-spam.`,
                     components: [],
+                    allowedMentions: { parse: [] },
                 });
                 return;
             }
@@ -773,6 +778,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
                 await selected.editReply({
                     content: '⚠️ Aucun changement — Aucun salon sélectionné.',
                     components: [],
+                    allowedMentions: { parse: [] },
                 });
                 return;
             }
@@ -788,6 +794,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
         await selected.editReply({
             content: `🚫 Salons ignorés — ${message}`,
             components: [],
+            allowedMentions: { parse: [] },
         });
 
         await refreshDashboard(rootInteraction, client, guildId);
@@ -796,6 +803,7 @@ async function handleIgnoredChannels(btnInteraction, rootInteraction, client, gu
         await selected.editReply({
             content: '⚠️ Erreur — Impossible d’enregistrer ce changement. Réessaie dans un instant.',
             components: [],
+            allowedMentions: { parse: [] },
         }).catch(() => {});
     }
 }
@@ -847,7 +855,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
         .followUp({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle('👥 Rôles ignorés')
+                    .setTitle('Rôles ignorés')
                     .setDescription(
                         `L’anti-spam ne s’applique pas aux membres ayant l’un de ces rôles.\n\n${formatIgnoredRoles(cfg, rootInteraction.guild)}` +
                         (cfg.ignoredRoles.length > 25
@@ -855,7 +863,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
                             : ''),
                     )
                     .setColor(getColor('info'))
-                    .setFooter({ text: 'Sélectionne un rôle à ajouter ou à retirer.' }),
+                    .setFooter(brandFooter('Rôles ignorés')),
             ],
             components,
             flags: MessageFlags.Ephemeral,
@@ -876,7 +884,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
 
     if (!selected) {
         await prompt.edit({
-            content: '⏱️ Délai dépassé — Le menu a expiré. Relance **Rôles ignorés** depuis le tableau de bord.',
+            content: '❌ Délai dépassé — Le menu a expiré. Relance **Rôles ignorés** depuis le tableau de bord.',
             components: [],
         }).catch(() => {});
         return;
@@ -895,6 +903,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
                 await selected.editReply({
                     content: '⚠️ Aucun changement — Aucun rôle sélectionné.',
                     components: [],
+                    allowedMentions: { parse: [] },
                 });
                 return;
             }
@@ -903,6 +912,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
                 await selected.editReply({
                     content: '⚠️ Rôle invalide — Le rôle **@everyone** ne peut pas être ignoré. Choisis un rôle spécifique.',
                     components: [],
+                    allowedMentions: { parse: [] },
                 });
                 return;
             }
@@ -911,6 +921,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
                 await selected.editReply({
                     content: `⚠️ Aucun changement — Le rôle <@&${role.id}> est déjà ignoré par l’anti-spam.`,
                     components: [],
+                    allowedMentions: { parse: [] },
                 });
                 return;
             }
@@ -923,6 +934,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
                 await selected.editReply({
                     content: '⚠️ Aucun changement — Aucun rôle sélectionné.',
                     components: [],
+                    allowedMentions: { parse: [] },
                 });
                 return;
             }
@@ -938,6 +950,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
         await selected.editReply({
             content: `👥 Rôles ignorés — ${message}`,
             components: [],
+            allowedMentions: { parse: [] },
         });
 
         await refreshDashboard(rootInteraction, client, guildId);
@@ -946,6 +959,7 @@ async function handleIgnoredRoles(btnInteraction, rootInteraction, client, guild
         await selected.editReply({
             content: '⚠️ Erreur — Impossible d’enregistrer ce changement. Réessaie dans un instant.',
             components: [],
+            allowedMentions: { parse: [] },
         }).catch(() => {});
     }
 }

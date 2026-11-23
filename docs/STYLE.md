@@ -23,14 +23,15 @@ Fixed semantic set only:
 | Info | ℹ️ |
 | Status | 🔴 / 🟢 |
 
-Emoji belongs in an embed title or a dedicated status field, not sprinkled through prose. Pagination labels are `◀ Précédent` / `Suivant ▶`; do not add a separate `setEmoji` when the label already carries the arrow.
+Emoji belongs in an embed title or a dedicated status field, not sprinkled through prose. The standard paginator uses `◀`, a disabled `1 / N` indicator and `▶`, plus an optional select menu to jump to a page. Use `buildNavRow()` and `buildPageJumpRow()` from `src/ui/kit.js` instead of rebuilding buttons in each command.
 
 ## Embeds and colors
 
 - Build embeds with `createEmbed`, `errorEmbed`, `successEmbed`, `infoEmbed` or `warningEmbed` from `src/utils/embeds.js`.
 - Colors come from `getColor()` in `src/config/bot.js` (single source of truth). Never inline a hex literal.
-- Use `timestamp: true`. Reserve the footer for a short hint or context, never for the time.
+- Use `timestamp: true`. The footer is `brandFooter(context)` from `src/ui/kit.js` : `13K Bot • /help pour explorer les commandes`, preceded by a short context label.
 - Truncate once with a `…` marker before slicing field arrays.
+- Shared UI helpers live in `src/ui/kit.js` : `formatNumber`, `discordTimestamp`, `guildIconUrl`, `progressBar`, `buildNavRow`, `buildPageJumpRow`. Reuse them rather than duplicating formatting logic in commands.
 
 ## Errors
 

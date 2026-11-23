@@ -1,15 +1,74 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { logger } from '../../utils/logger.js';
-import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes, getUserMessage } from '../../utils/errorHandler.js';
 import { getGuildGiveaways, saveGiveaway } from '../../utils/giveaways.js';
-import { 
+import {
     endGiveaway as endGiveawayService,
-    createGiveawayEmbed, 
-    createGiveawayButtons 
+    createGiveawayEmbed,
+    createGiveawayButtons
 } from '../../services/giveawayService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { createEmbed, errorEmbed } from '../../utils/embeds.js';
+import { brandFooter, formatNumber, guildIconUrl } from '../../ui/kit.js';
+
+const FOOTER_CONTEXT = 'Fin de concours';
+const NO_MENTIONS = { parse: [], repliedUser: false };
+
+/** Les réponses de gestion sont privées en serveur et ne mentionnent personne. */
+function privatePayload(interaction, payload) {
+    return {
+        ...payload,
+        allowedMentions: NO_MENTIONS,
+        ...(interaction.inGuild() ? { flags: MessageFlags.Ephemeral } : {}),
+    };
+}
+
+function errorPayload(text) {
+    const embed = errorEmbed(text);
+    embed.setFooter(brandFooter(FOOTER_CONTEXT));
+    return { embeds: [embed], components: [] };
+}
+
+async function replyError(interaction, error) {
+    logger.error('[GEnd] command failed:', error);
+    await InteractionHelper.safeReply(
+        interaction,
+        privatePayload(interaction, errorPayload(getUserMessage(error))),
+    );
+}
+
+function cleanText(value) {
+    return String(value ?? 'Concours mystère').replace(/[`@]/g, '').slice(0, 80);
+}
+
+function buildSuccessPayload(interaction, giveaway, channel, messageId, winners, participantCount) {
+    const prize = cleanText(giveaway.prize);
+    const hasWinners = winners.length > 0;
+    const embed = createEmbed({
+        title: '✅ Concours terminé',
+        description: hasWinners
+            ? `Le concours **${prize}** est terminé dans ${channel}.`
+            : `Le concours **${prize}** est terminé dans ${channel}, sans participation valide.`,
+        color: 'success',
+        thumbnail: guildIconUrl(interaction.guild, 96),
+        fields: [
+            {
+                name: '🏆 Gagnants',
+                value: hasWinners
+                    ? winners.map((id) => `<@${id}>`).join(', ')
+                    : 'Aucun gagnant',
+                inline: false,
+            },
+            { name: '👥 Participants', value: formatNumber(participantCount), inline: true },
+            { name: '🆔 Message', value: `\`${messageId}\``, inline: true },
+        ],
+        footer: brandFooter(FOOTER_CONTEXT),
+    });
+
+    return { embeds: [embed], components: [] };
+}
 
 export default {
     data: new SlashCommandBuilder()
@@ -25,9 +84,11 @@ export default {
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
+    deferEphemeral: true,
+
     async execute(interaction) {
         try {
-            
+
             if (!interaction.inGuild()) {
                 throw new XlwyBotError(
                     'Giveaway command used outside guild',
@@ -37,12 +98,12 @@ export default {
                 );
             }
 
-            
+
             if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new XlwyBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "Vous devez avoir la permission `Gérer le serveur` pour terminer un concours.",
+                    'Tu dois avoir la permission `Gérer le serveur` pour terminer un concours.',
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -51,12 +112,12 @@ export default {
 
             const messageId = interaction.options.getString("messageid");
 
-            
+
             if (!messageId || !/^\d+$/.test(messageId)) {
                 throw new XlwyBotError(
                     'Invalid message ID format',
                     ErrorTypes.VALIDATION,
-                    'Veuillez fournir un identifiant de message valide.',
+                    'Fournis un identifiant de message valide.',
                     { providedId: messageId }
                 );
             }
@@ -68,12 +129,12 @@ export default {
                 throw new XlwyBotError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "Aucun concours n'a été trouvé avec cet identifiant de message dans la base de données.",
+                    'Aucun concours n’a été trouvé avec cet identifiant de message dans la base de données. Vérifie l’ID et réessaie.',
                     { messageId, guildId: interaction.guildId }
                 );
             }
 
-            
+
             const endResult = await endGiveawayService(
                 interaction.client,
                 giveaway,
@@ -84,7 +145,7 @@ export default {
             const updatedGiveaway = endResult.giveaway;
             const winners = endResult.winners;
 
-            
+
             const channel = await interaction.client.channels.fetch(
                 updatedGiveaway.channelId,
             ).catch(err => {
@@ -96,7 +157,7 @@ export default {
                 throw new XlwyBotError(
                     `Channel not found: ${updatedGiveaway.channelId}`,
                     ErrorTypes.VALIDATION,
-                    "Impossible de trouver le salon où le concours était hébergé. L'état du concours a été mis à jour.",
+                    'Impossible de trouver le salon où le concours était hébergé. L’état du concours a été mis à jour.',
                     { channelId: updatedGiveaway.channelId, messageId }
                 );
             }
@@ -112,19 +173,19 @@ export default {
                 throw new XlwyBotError(
                     `Message not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "Impossible de trouver le message du concours. L'état du concours a été mis à jour.",
+                    'Impossible de trouver le message du concours. L’état du concours a été mis à jour.',
                     { messageId, channelId: updatedGiveaway.channelId }
                 );
             }
 
-            
+
             await saveGiveaway(
                 interaction.client,
                 interaction.guildId,
                 updatedGiveaway,
             );
 
-            
+
             const newEmbed = createGiveawayEmbed(updatedGiveaway, "ended", winners);
             const newRow = createGiveawayButtons(true);
 
@@ -134,7 +195,7 @@ export default {
                 components: [newRow],
             });
 
-            
+
             if (winners.length > 0) {
                 const winnerMentions = winners
                     .map((id) => `<@${id}>`)
@@ -147,7 +208,7 @@ export default {
 
                 logger.info(`Giveaway ended with ${winners.length} winner(s): ${messageId}`);
 
-                
+
                 try {
                     await logEvent({
                         client: interaction.client,
@@ -188,20 +249,23 @@ export default {
 
             logger.info(`Giveaway successfully ended by ${interaction.user.tag}: ${messageId}`);
 
-            return InteractionHelper.safeReply(interaction, {
-                content: `Concours terminé ✅ — Le concours **${updatedGiveaway.prize || 'Concours mystère'}** est terminé dans ${channel}. ${winners.length} gagnant(s) sélectionné(s) parmi ${endResult.participantCount} participant(s).`,
-                flags: MessageFlags.Ephemeral,
-            });
+            return InteractionHelper.safeReply(
+                interaction,
+                privatePayload(
+                    interaction,
+                    buildSuccessPayload(
+                        interaction,
+                        updatedGiveaway,
+                        channel,
+                        messageId,
+                        winners,
+                        endResult.participantCount,
+                    ),
+                ),
+            );
 
         } catch (error) {
-            await handleInteractionError(interaction, error, {
-                type: 'command',
-                commandName: 'gend',
-                context: 'giveaway_end'
-            });
+            await replyError(interaction, error);
         }
     },
 };
-
-
-

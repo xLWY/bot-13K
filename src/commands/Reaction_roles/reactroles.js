@@ -1,10 +1,61 @@
-import { getColor } from '../../config/bot.js';
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, ChannelSelectMenuBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, RoleSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, MessageFlags, ComponentType, EmbedBuilder, LabelBuilder, CheckboxBuilder, TextDisplayBuilder } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, ChannelSelectMenuBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, RoleSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, MessageFlags, ComponentType, LabelBuilder, CheckboxBuilder, TextDisplayBuilder } from 'discord.js';
 import { logger } from '../../utils/logger.js';
 import { handleInteractionError, createError, XlwyBotError, ErrorTypes } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { createEmbed, errorEmbed, infoEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
+import {
+    brandFooter,
+    buildNavRow,
+    buildPageJumpRow,
+    formatNumber,
+    guildIconUrl,
+    progressBar,
+} from '../../ui/kit.js';
 import { createReactionRoleMessage, hasDangerousPermissions, getAllReactionRoleMessages, deleteReactionRoleMessage } from '../../services/reactionRoleService.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
+
+const MENTION_OPTIONS = { parse: [] };
+const PANEL_LIST_PAGE_SIZE = 5;
+const RR_LIST_PREV = 'rr_list_prev';
+const RR_LIST_NEXT = 'rr_list_next';
+const RR_LIST_JUMP = 'rr_list_jump';
+const UI_CONTEXT = 'Rôles par réaction';
+
+function noticeEmbed(kind, message, context = UI_CONTEXT, title = null) {
+    const embed = kind === 'success'
+        ? successEmbed(message, title ?? '✅ Succès')
+        : kind === 'warning'
+            ? warningEmbed(message, title ?? '⚠️ Avertissement')
+            : kind === 'error'
+                ? errorEmbed(message)
+                : infoEmbed(message, title ?? 'ℹ️ Informations');
+    if (title) embed.setTitle(title);
+    embed.setFooter(brandFooter(context));
+    return embed;
+}
+
+function stepEmbed(step, description) {
+    return createEmbed({
+        title: `Nouveau panneau · étape ${step}/3`,
+        description: `\`${progressBar(step, 3, 3)}\` ${description}`,
+        color: 'info',
+        footer: brandFooter('Création de panneau'),
+    });
+}
+
+function shortRoleList(roleIds, guild, max = 6) {
+    const names = (Array.isArray(roleIds) ? roleIds : [])
+        .map((id) => guild.roles.cache.get(id)?.name)
+        .filter(Boolean);
+    if (names.length === 0) return '`Aucun`';
+    const shown = names.slice(0, max).map((name) => `\`${String(name).slice(0, 40)}\``).join(', ');
+    const extra = names.length - max;
+    return extra > 0 ? `${shown} • +${formatNumber(extra)} autre(s)` : shown;
+}
+
+function panelUrl(guild, panel) {
+    return `https://discord.com/channels/${guild.id}/${panel.channelId}/${panel.messageId}`;
+}
 
 export default {
     data: new SlashCommandBuilder()
@@ -145,7 +196,7 @@ export default {
                         if (!msg) return null;
                         
                         const title = panel.title || msg?.embeds?.[0]?.title || 'Panneau sans titre';
-                        const channelName = channel?.name ?? 'unknown';
+                        const channelName = channel?.name ?? 'inconnu';
                         
                         return {
                             name: `${title} (${channelName})`.substring(0, 100),
@@ -189,7 +240,7 @@ function buildReactionRoleSelect(roleObjects) {
     return new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
             .setCustomId('reaction_roles')
-            .setPlaceholder('Sélectionnez vos rôles')
+            .setPlaceholder('Sélectionne tes rôles')
             .setMinValues(0)
             .setMaxValues(Math.min(roleObjects.length, 25))
             .addOptions(
@@ -218,7 +269,7 @@ async function handleSetup(interaction) {
         throw createError(
             `Invalid channel type: ${channel.type}`,
             ErrorTypes.VALIDATION,
-            'Veuillez sélectionner un salon textuel ou une annonce de canal.',
+            'Sélectionne un salon textuel ou un salon d’annonces.',
             { channelType: channel.type }
         );
     }
@@ -228,7 +279,7 @@ async function handleSetup(interaction) {
         throw createError(
             'Bot missing ManageRoles permission',
             ErrorTypes.PERMISSION,
-            'J\'ai besoin de la permission `Gérer les rôles` pour configurer des rôles par réaction.',
+            'J’ai besoin de la permission `Gérer les rôles` pour configurer des rôles par réaction.',
             { permission: 'ManageRoles' }
         );
     }
@@ -237,7 +288,7 @@ async function handleSetup(interaction) {
         throw createError(
             `Bot cannot send messages in ${channel.name}`,
             ErrorTypes.PERMISSION,
-            `Je n'ai pas la permission d'envoyer des messages dans ${channel}.`,
+            `Je n’ai pas la permission d’envoyer des messages dans ${channel}.`,
             { channelId: channel.id }
         );
     }
@@ -250,22 +301,22 @@ async function handleSetup(interaction) {
         const role = interaction.options.getRole(`role${i}`);
         if (role) {
             if (role.position >= interaction.guild.members.me.roles.highest.position) {
-                roleValidationErrors.push(`**${role.name}** - Le rôle de mon bot est positionné plus bas que ce rôle dans la hiérarchie de votre serveur et ne peut pas l'attribuer`);
+                roleValidationErrors.push(`**${role.name}** — mon rôle est placé plus bas dans la hiérarchie : je ne peux pas l’attribuer.`);
                 continue;
             }
-            
+
             if (hasDangerousPermissions(role)) {
-                roleValidationErrors.push(`**${role.name}** - Ce rôle possède des permissions sensibles (Administrateur, Gérer le serveur, etc.)`);
+                roleValidationErrors.push(`**${role.name}** — ce rôle possède des permissions sensibles (Administrateur, Gérer le serveur, etc.).`);
                 continue;
             }
-            
+
             if (role.managed) {
-                roleValidationErrors.push(`**${role.name}** - Ce rôle est géré (rôle d'intégration ou de bot)`);
+                roleValidationErrors.push(`**${role.name}** — ce rôle est géré (intégration ou bot).`);
                 continue;
             }
-            
+
             if (role.id === interaction.guild.id) {
-                roleValidationErrors.push(`**${role.name}** - Impossible d'utiliser le rôle @everyone`);
+                roleValidationErrors.push(`**${role.name}** — impossible d’utiliser le rôle @everyone.`);
                 continue;
             }
             
@@ -275,7 +326,7 @@ async function handleSetup(interaction) {
     
     if (roleValidationErrors.length > 0) {
         const errorMsg = `Les rôles suivants ne peuvent pas être ajoutés :\n${roleValidationErrors.join('\n')}`;
-        
+
         if (roles.length === 0) {
             throw createError(
                 'No valid roles provided',
@@ -284,10 +335,11 @@ async function handleSetup(interaction) {
                 { errors: roleValidationErrors }
             );
         }
-        
+
         await interaction.followUp({
-            content: `⚠️ Avertissement de validation des rôles\n${errorMsg}`,
-            ephemeral: true
+            embeds: [noticeEmbed('warning', errorMsg, 'Validation des rôles', '⚠️ Rôles ignorés')],
+            flags: MessageFlags.Ephemeral,
+            allowedMentions: MENTION_OPTIONS,
         });
     }
 
@@ -295,7 +347,7 @@ async function handleSetup(interaction) {
         throw createError(
             'No roles provided',
             ErrorTypes.VALIDATION,
-            'Vous devez fournir au moins un rôle valide.',
+            'Tu dois fournir au moins un rôle valide.',
             {}
         );
     }
@@ -305,7 +357,8 @@ async function handleSetup(interaction) {
 
     const message = await channel.send({
         content: buildPanelContent(title, description, roles),
-        components: [row]
+        components: [row],
+        allowedMentions: MENTION_OPTIONS,
     });
 
     const roleIds = roles.map(role => role.id);
@@ -362,6 +415,22 @@ async function handleSetup(interaction) {
     } catch (logError) {
         logger.warn('Failed to log reaction role creation:', logError);
     }
+
+    const panelEmbed = noticeEmbed(
+        'success',
+        `Panneau publié dans ${channel} avec ${formatNumber(roles.length)} rôle(s).`,
+        'Création de panneau',
+        '✅ Panneau créé',
+    );
+    panelEmbed.addFields({
+        name: '🔗 Lien du panneau',
+        value: `[Ouvrir le message](${message.url})`,
+        inline: false,
+    });
+    await InteractionHelper.safeEditReply(interaction, {
+        embeds: [panelEmbed],
+        allowedMentions: MENTION_OPTIONS,
+    });
 }
 
 // ─── Dashboard Subcommand ─────────────────────────────────────────────────────
@@ -408,7 +477,16 @@ async function handleDashboard(interaction, selectedPanelId, onBack = null) {
             activePanelData = validPanels[0];
         }
     } else if (selectedPanelId) {
-        return await InteractionHelper.sendErrorNotice(interaction, 'Ce panneau n\'existe plus ou a été supprimé.');
+        return await InteractionHelper.safeReply(interaction, {
+            embeds: [noticeEmbed(
+                'error',
+                'Ce panneau n’existe plus ou a été supprimé. Relance `/reactroles dashboard` pour voir les panneaux actifs.',
+                UI_CONTEXT,
+                '❌ Panneau introuvable',
+            )],
+            flags: MessageFlags.Ephemeral,
+            allowedMentions: MENTION_OPTIONS,
+        });
     }
 
     const discordMsg = activePanelData ? await fetchPanelDiscordMessage(guild, activePanelData) : null;
@@ -417,10 +495,16 @@ async function handleDashboard(interaction, selectedPanelId, onBack = null) {
     InteractionHelper.armDashboardSession(interaction);
 
     let rootInteraction = interaction;
+    let listPage = 0;
+    const navIds = [
+        `${RR_LIST_PREV}_${guildId}`,
+        `${RR_LIST_NEXT}_${guildId}`,
+        `${RR_LIST_JUMP}_${guildId}`,
+    ];
     const collector = interaction.channel.createMessageComponentCollector({
         filter: i =>
             i.user.id === interaction.user.id &&
-            (i.customId === `rr_opts_${guildId}` || i.customId === `rr_switch_${guildId}`),
+            (i.customId === `rr_opts_${guildId}` || i.customId === `rr_switch_${guildId}` || navIds.includes(i.customId)),
         time: 300_000,
     });
 
@@ -439,6 +523,24 @@ async function handleDashboard(interaction, selectedPanelId, onBack = null) {
     collector.on('collect', async ci => {
         InteractionHelper.armDashboardSession(interaction);
         try {
+            if (navIds.includes(ci.customId)) {
+                await ci.deferUpdate().catch(() => {});
+
+                const pageCount = Math.max(1, Math.ceil(validPanels.length / PANEL_LIST_PAGE_SIZE));
+                if (ci.customId === `${RR_LIST_PREV}_${guildId}`) {
+                    listPage = Math.max(0, listPage - 1);
+                } else if (ci.customId === `${RR_LIST_NEXT}_${guildId}`) {
+                    listPage = Math.min(pageCount - 1, listPage + 1);
+                } else {
+                    const requested = Number(ci.values?.[0]);
+                    if (!Number.isInteger(requested)) return;
+                    listPage = Math.min(pageCount - 1, Math.max(0, requested));
+                }
+
+                await showPanelList(rootInteraction, guildId, guild, validPanels, listPage);
+                return;
+            }
+
             if (ci.customId === `rr_switch_${guildId}`) {
                 await ci.deferUpdate().catch(() => {});
 
@@ -481,10 +583,10 @@ async function handleDashboard(interaction, selectedPanelId, onBack = null) {
             logger.error('Error in reactroles dashboard collector:', error);
             const msg =
                 error instanceof XlwyBotError
-                    ? error.userMessage || 'Une erreur est survenue.'
-                    : 'Une erreur inattendue est survenue.';
+                    ? error.userMessage || 'Une erreur est survenue. Réessaie dans un instant.'
+                    : 'Une erreur inattendue est survenue. Réessaie dans un instant.';
             if (!ci.replied && !ci.deferred) await ci.deferUpdate().catch(() => {});
-            await InteractionHelper.sendErrorNotice(ci, msg);
+            await sendPanelNotice(ci, msg, 'error');
         }
     });
 
@@ -493,7 +595,8 @@ async function handleDashboard(interaction, selectedPanelId, onBack = null) {
         try {
             if (btnInteraction.customId === `rr_list_${guildId}`) {
                 await btnInteraction.deferUpdate().catch(() => {});
-                await showPanelList(rootInteraction, guildId, guild, validPanels);
+                listPage = 0;
+                await showPanelList(rootInteraction, guildId, guild, validPanels, listPage);
                 return;
             }
 
@@ -549,10 +652,10 @@ async function handleDashboard(interaction, selectedPanelId, onBack = null) {
             logger.error('Error in reactroles button collector:', error);
             const msg =
                 error instanceof XlwyBotError
-                    ? error.userMessage || 'Une erreur est survenue.'
-                    : 'Une erreur inattendue est survenue.';
+                    ? error.userMessage || 'Une erreur est survenue. Réessaie dans un instant.'
+                    : 'Une erreur inattendue est survenue. Réessaie dans un instant.';
             if (!btnInteraction.replied && !btnInteraction.deferred) await btnInteraction.deferUpdate().catch(() => {});
-            await InteractionHelper.sendErrorNotice(btnInteraction, msg);
+            await sendPanelNotice(btnInteraction, msg, 'error');
         }
     });
 
@@ -601,10 +704,10 @@ async function rebuildLivePanelMessage(guild, panelData) {
 
 function validateSelectableRole(role, guild) {
     if (!role) return 'Rôle introuvable.';
-    if (role.id === guild.id) return 'Impossible d\'utiliser @everyone.';
+    if (role.id === guild.id) return 'Impossible d’utiliser @everyone.';
     if (role.managed) return 'Les rôles gérés (intégration/bot) ne peuvent pas être utilisés.';
     if (hasDangerousPermissions(role)) return 'Ce rôle possède des permissions sensibles (Administrateur, Gérer le serveur, etc.).';
-    if (role.position >= guild.members.me.roles.highest.position) return 'Ce rôle est au-dessus de mon rôle le plus haut. Place mon rôle au-dessus d\'abord.';
+    if (role.position >= guild.members.me.roles.highest.position) return 'Ce rôle est au-dessus de mon rôle le plus haut. Place mon rôle au-dessus d’abord.';
     return null;
 }
 
@@ -613,13 +716,13 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
 
     if (!me.permissions.has(PermissionFlagsBits.ManageRoles)) {
         await btnInteraction.deferUpdate().catch(() => {});
-        await sendPanelNotice(btnInteraction, 'J\'ai besoin de la permission **Gérer les rôles** pour créer un panneau.');
+        await sendPanelNotice(btnInteraction, 'J’ai besoin de la permission **Gérer les rôles** pour créer un panneau.', 'warning');
         return;
     }
 
     if (!me.permissions.has(PermissionFlagsBits.ManageChannels)) {
         await btnInteraction.deferUpdate().catch(() => {});
-        await sendPanelNotice(btnInteraction, 'J\'ai besoin de la permission **Gérer les salons** pour créer un panneau.');
+        await sendPanelNotice(btnInteraction, 'J’ai besoin de la permission **Gérer les salons** pour créer un panneau.', 'warning');
         return;
     }
 
@@ -632,14 +735,10 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
 
     await btnInteraction.deferUpdate().catch(() => {});
     await btnInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('➕ Nouveau panneau — Étape 1/3')
-                .setDescription('Choisis le **salon** où le panneau de rôles sera publié.')
-                .setColor(getColor('info')),
-        ],
+        embeds: [stepEmbed(1, 'Choisis le **salon** où le panneau de rôles sera publié.')],
         components: [new ActionRowBuilder().addComponents(channelSelect)],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: MENTION_OPTIONS,
     }).catch(() => {});
 
     const channelCollector = rootInteraction.channel.createMessageComponentCollector({
@@ -664,11 +763,11 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
                 return;
             }
             if (!channel.permissionsFor(me).has(PermissionFlagsBits.SendMessages)) {
-                await reject(`Je n'ai pas la permission d'envoyer des messages dans ${channel}.`);
+                await reject(`Je n’ai pas la permission d’envoyer des messages dans ${channel}.`);
                 return;
             }
             if (!channel.permissionsFor(me).has(PermissionFlagsBits.AddReactions)) {
-                await reject(`Je n'ai pas la permission d'ajouter des réactions dans ${channel}.`);
+                await reject(`Je n’ai pas la permission d’ajouter des réactions dans ${channel}.`);
                 return;
             }
 
@@ -682,9 +781,13 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
 
     if (!channelStep.ok) {
         if (channelStep.message) {
-            await sendPanelNotice(btnInteraction, channelStep.message);
+            await sendPanelNotice(btnInteraction, channelStep.message, 'error');
         } else {
-            await sendPanelNotice(btnInteraction, '⏱️ Étape 1 expirée. Aucun panneau n\'a été créé. Clique à nouveau sur **➕ Créer un panneau**.');
+            await sendPanelNotice(
+                btnInteraction,
+                'Étape 1 expirée. Aucun panneau n’a été créé. Clique à nouveau sur **➕ Créer un panneau**.',
+                'warning',
+            );
         }
         return;
     }
@@ -711,7 +814,11 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
     try {
         await channelStep.modalHost.showModal(textModal);
     } catch {
-        await sendPanelNotice(btnInteraction, '⏱️ La fenêtre de saisie a expiré. Aucun panneau n\'a été créé.');
+        await sendPanelNotice(
+            btnInteraction,
+            'La fenêtre de saisie a expiré. Aucun panneau n’a été créé.',
+            'warning',
+        );
         return;
     }
 
@@ -723,7 +830,7 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
         .catch(() => null);
 
     if (!textSubmitted) {
-        await sendPanelNotice(btnInteraction, '⏱️ Étape 2 expirée. Aucun panneau n\'a été créé.');
+        await sendPanelNotice(btnInteraction, 'Étape 2 expirée. Aucun panneau n’a été créé.', 'warning');
         return;
     }
 
@@ -738,15 +845,12 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
         .setMaxValues(25);
 
     await textSubmitted.editReply({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('➕ Nouveau panneau — Étape 3/3')
-                .setDescription(
-                    `**Salon :** ${targetChannel}\n\nSélectionne entre **1 et 25 rôles** à proposer. Ils apparaîtront dans le menu du panneau.`,
-                )
-                .setColor(getColor('info')),
-        ],
+        embeds: [stepEmbed(
+            3,
+            `**Salon :** ${targetChannel}\n\nSélectionne entre **1 et 25 rôles** à proposer. Ils apparaîtront dans le menu du panneau.`,
+        )],
         components: [new ActionRowBuilder().addComponents(roleSelect)],
+        allowedMentions: MENTION_OPTIONS,
     }).catch(() => {});
 
     const roleCollector = rootInteraction.channel.createMessageComponentCollector({
@@ -773,8 +877,14 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
 
             if (accepted.length === 0) {
                 await roleInteraction.followUp({
-                    content: `⚠️ Aucun rôle valide\n${rejected.join('\n')}`,
+                    embeds: [noticeEmbed(
+                        'warning',
+                        rejected.join('\n') || 'Aucun rôle valide n’a été sélectionné.',
+                        'Création de panneau',
+                        '⚠️ Aucun rôle valide',
+                    )],
                     flags: MessageFlags.Ephemeral,
+                    allowedMentions: MENTION_OPTIONS,
                 });
                 // max: 1 arrête déjà le collecteur : il faut résoudre ici,
                 // sinon le `end` (c.size > 0) ne résout jamais la promesse.
@@ -792,7 +902,7 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
     });
 
     if (!roleStep.ok) {
-        await sendPanelNotice(textSubmitted, '⏱️ Étape 3 expirée. Aucun panneau n\'a été créé.');
+        await sendPanelNotice(textSubmitted, 'Étape 3 expirée. Aucun panneau n’a été créé.', 'warning');
         return;
     }
 
@@ -804,6 +914,7 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
         message = await targetChannel.send({
             content: buildPanelContent('', description, roles),
             components: [buildReactionRoleSelect(roles)],
+            allowedMentions: MENTION_OPTIONS,
         });
     } catch (error) {
         logger.error('Could not send reaction role panel message:', error);
@@ -829,16 +940,29 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
     }
 
     const roleMentions = roles.map(r => r.toString()).join(', ');
+    const createdEmbed = noticeEmbed(
+        'success',
+        `Panneau publié dans ${targetChannel}.`,
+        'Création de panneau',
+        '✅ Panneau créé',
+    );
+    createdEmbed.addFields(
+        { name: '🎭 Rôles', value: `${formatNumber(roles.length)}\n\`${progressBar(roles.length, 25, 10)}\``, inline: true },
+        { name: '📍 Salon', value: `${targetChannel}`, inline: true },
+        { name: '🔗 Lien du panneau', value: `[Ouvrir le message](${message.url})`, inline: false },
+    );
 
     await textSubmitted.editReply({
-        content: `✅ Panneau créé\n**Salon :** ${targetChannel}\n**Rôles :** ${roles.length}\n**Liste :** ${roleMentions}\n\n[Voir le panneau](${message.url})`,
+        embeds: [createdEmbed],
         components: [],
+        allowedMentions: MENTION_OPTIONS,
     }).catch(() => {});
 
     if (roleStep.rejected.length > 0) {
         await sendPanelNotice(
             textSubmitted,
             `Rôles ignorés :\n${roleStep.rejected.join('\n')}`,
+            'warning',
         );
     }
 
@@ -883,6 +1007,7 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
                 onBack,
                 refreshedPanels || [],
             ),
+            allowedMentions: MENTION_OPTIONS,
         }).catch(() => {});
     }
 
@@ -893,42 +1018,45 @@ async function handleCreatePanel(btnInteraction, rootInteraction, guildId, guild
 
 function buildPanelDashboardEmbed(panelData, discordMsg, guild, allPanels) {
     if (!panelData) {
-        return new EmbedBuilder()
-            .setTitle('🎭 Tableau de bord des rôles par réaction')
-            .setDescription(
-                allPanels.length > 1
-                    ? `**${allPanels.length}** panneaux existent, mais aucun n'est valide. Utilise **➕ Créer un panneau** pour en ajouter un nouveau.`
-                    : 'Aucun panneau n\'existe encore.\n\nClique sur **➕ Créer un panneau** ci-dessous : je te guiderai pour choisir le salon, le texte et les rôles.',
-            )
-            .setColor(getColor('info'))
-            .addFields(
+        return createEmbed({
+            title: '🎭 Tableau de bord des rôles',
+            description: allPanels.length > 1
+                ? `${formatNumber(allPanels.length)} panneaux existent, mais aucun n’est valide. Utilise **➕ Créer un panneau** pour en ajouter un nouveau.`
+                : 'Aucun panneau n’existe encore.\n\nClique sur **➕ Créer un panneau** ci-dessous : je te guiderai pour choisir le salon, le texte et les rôles.',
+            color: 'info',
+            thumbnail: guildIconUrl(guild, 128),
+            fields: [
                 { name: '🎭 Rôles', value: '`Aucun`', inline: true },
-            )
-            .setFooter({ text: 'Le tableau de bord se ferme après 5 minutes d\'inactivité' })
-            .setTimestamp();
+            ],
+            footer: brandFooter('Tableau de bord'),
+        });
     }
 
     const channel = guild.channels.cache.get(panelData.channelId);
     const title = panelData.title || discordMsg?.embeds?.[0]?.title || 'Panneau sans titre';
-    const roleList =
-        panelData.roles.length > 0
-            ? panelData.roles.map(id => `<@&${id}>`).join(', ')
-            : '`Aucun`';
+    const roleCount = Array.isArray(panelData.roles) ? panelData.roles.length : 0;
 
-    return new EmbedBuilder()
-        .setTitle('🎭 Tableau de bord des rôles par réaction')
-        .setDescription(
-            `**Titre :** ${title}\n\nSélectionnez une option ci-dessous pour modifier un réglage.${discordMsg ? `\n[Cliquez ici pour voir le panneau](${discordMsg.url})` : ''}`,
-        )
-        .setColor(getColor('info'))
-        .addFields(
+    return createEmbed({
+        title: '🎭 Tableau de bord des rôles',
+        description: [
+            `**Titre :** ${String(title).slice(0, 120)}`,
+            'Sélectionne une option ci-dessous pour modifier un réglage.',
+            discordMsg ? `[Voir le panneau](${discordMsg.url})` : null,
+        ].filter(Boolean).join('\n'),
+        color: 'info',
+        thumbnail: guildIconUrl(guild, 128),
+        fields: [
             { name: '📍 Salon', value: channel ? `<#${channel.id}>` : '`Introuvable`', inline: true },
-            { name: '🎭 Rôles', value: `\`${panelData.roles.length} / 25\``, inline: true },
-            { name: '📊 Panneaux', value: `\`${allPanels.length}\``, inline: true },
-            { name: '🏷️ Liste des rôles', value: roleList, inline: false },
-        )
-        .setFooter({ text: 'Le tableau de bord se ferme après 5 minutes d\'inactivité' })
-        .setTimestamp();
+            {
+                name: '🎭 Rôles',
+                value: `${formatNumber(roleCount)} / 25\n\`${progressBar(roleCount, 25, 10)}\``,
+                inline: true,
+            },
+            { name: '📊 Panneaux', value: formatNumber(allPanels.length), inline: true },
+            { name: '🏷️ Liste des rôles', value: shortRoleList(panelData.roles, guild), inline: false },
+        ],
+        footer: brandFooter('Tableau de bord'),
+    });
 }
 
 function buildPanelDashboardComponents(panelData, guildId, guild, onBack, allPanels) {
@@ -999,7 +1127,7 @@ function buildPanelDashboardComponents(panelData, guildId, guild, onBack, allPan
 
     const optionsSelect = new StringSelectMenuBuilder()
         .setCustomId(`rr_opts_${guildId}`)
-        .setPlaceholder('Sélectionnez une action…')
+        .setPlaceholder('Sélectionne une action…')
         .addOptions(
             new StringSelectMenuOptionBuilder()
                 .setLabel('Ajouter un rôle')
@@ -1024,6 +1152,7 @@ async function showPanelDashboard(interaction, panelData, discordMsg, guildId, g
     await InteractionHelper.safeEditReply(interaction, {
         embeds: [buildPanelDashboardEmbed(panelData, discordMsg, guild, allPanels)],
         components: buildPanelDashboardComponents(panelData, guildId, guild, onBack, allPanels),
+        allowedMentions: MENTION_OPTIONS,
     });
 }
 
@@ -1033,36 +1162,53 @@ export async function openReactionRolesPanel(interaction, onBack) {
 
 // ─── Panel List View ──────────────────────────────────────────────────────────
 
-function buildPanelListEmbed(guild, allPanels) {
+function buildPanelListEmbed(guild, allPanels, page = 0, pageCount = 1) {
     if (!allPanels.length) {
-        return new EmbedBuilder()
-            .setTitle('📋 Panneaux de rôles par réaction')
-            .setDescription('Aucun panneau actif pour le moment.\n\nClique sur **➕ Créer un panneau** pour en ajouter un.')
-            .setColor(getColor('info'))
-            .setTimestamp();
+        return createEmbed({
+            title: '📋 Panneaux de rôles',
+            description: 'Aucun panneau actif pour le moment.\n\nClique sur **➕ Créer un panneau** pour en ajouter un.',
+            color: 'info',
+            thumbnail: guildIconUrl(guild, 128),
+            fields: [
+                { name: '📊 Panneaux', value: '`0`', inline: true },
+            ],
+            footer: brandFooter('Liste des panneaux'),
+        });
     }
 
-    const lines = allPanels.slice(0, 20).map((panel, index) => {
+    const currentPage = Math.min(Math.max(0, page), Math.max(0, pageCount - 1));
+    const slice = allPanels.slice(
+        currentPage * PANEL_LIST_PAGE_SIZE,
+        (currentPage + 1) * PANEL_LIST_PAGE_SIZE,
+    );
+    const fields = slice.map((panel, index) => {
         const channel = guild.channels.cache.get(panel.channelId);
-        const title = panel.title || 'Panneau sans titre';
         const roleCount = Array.isArray(panel.roles) ? panel.roles.length : 0;
-        const channelLabel = channel ? `<#${channel.id}>` : '`salon introuvable`';
-        return `**${index + 1}.** ${title}\n↪ Salon : ${channelLabel} • Rôles : \`${roleCount}\`\n↪ [Voir le message](https://discord.com/channels/${guild.id}/${panel.channelId}/${panel.messageId})`;
+        const position = String(currentPage * PANEL_LIST_PAGE_SIZE + index + 1).padStart(2, '0');
+        return {
+            name: `${position} · ${String(panel.title || 'Panneau sans titre').slice(0, 200)}`.slice(0, 256),
+            value: [
+                `Salon : ${channel ? `<#${channel.id}>` : '`introuvable`'} • Rôles : \`${formatNumber(roleCount)}\``,
+                `[Ouvrir le panneau](${panelUrl(guild, panel)})`,
+            ].join('\n'),
+            inline: false,
+        };
     });
 
-    if (allPanels.length > 20) {
-        lines.push(`\n*+${allPanels.length - 20} autre(s) panneau(x).*`);
-    }
-
-    return new EmbedBuilder()
-        .setTitle('📋 Panneaux de rôles par réaction')
-        .setDescription(lines.join('\n\n'))
-        .setColor(getColor('info'))
-        .setFooter({ text: `${allPanels.length} panneau(x) actif(s) • Sélectionne un panneau pour le gérer` })
-        .setTimestamp();
+    return createEmbed({
+        title: '📋 Panneaux de rôles',
+        description: [
+            `${formatNumber(allPanels.length)} panneau(x) actif(s). Sélectionne un panneau pour le gérer.`,
+            `Page **${currentPage + 1}/${pageCount}** \`${progressBar(currentPage + 1, pageCount, 10)}\``,
+        ].join('\n'),
+        color: 'info',
+        thumbnail: guildIconUrl(guild, 128),
+        fields,
+        footer: brandFooter('Liste des panneaux'),
+    });
 }
 
-function buildPanelListComponents(guildId, guild, allPanels) {
+function buildPanelListComponents(guildId, guild, allPanels, page = 0, pageCount = 1) {
     const rows = [];
 
     if (allPanels.length > 0) {
@@ -1096,30 +1242,49 @@ function buildPanelListComponents(guildId, guild, allPanels) {
             .setEmoji('🔄')
     ));
 
+    if (pageCount > 1) {
+        rows.push(...buildNavRow({
+            page,
+            pageCount,
+            prevId: `${RR_LIST_PREV}_${guildId}`,
+            nextId: `${RR_LIST_NEXT}_${guildId}`,
+            indicatorId: `${RR_LIST_JUMP}_${guildId}_indicator`,
+        }));
+        rows.push(...buildPageJumpRow({
+            page,
+            pageCount,
+            customId: `${RR_LIST_JUMP}_${guildId}`,
+        }));
+    }
+
     return rows;
 }
 
-async function showPanelList(interaction, guildId, guild, allPanels) {
+async function showPanelList(interaction, guildId, guild, allPanels, page = 0) {
+    const pageCount = Math.max(1, Math.ceil(allPanels.length / PANEL_LIST_PAGE_SIZE));
+    const currentPage = Math.min(Math.max(0, page), pageCount - 1);
+
     await InteractionHelper.safeEditReply(interaction, {
-        embeds: [buildPanelListEmbed(guild, allPanels)],
-        components: buildPanelListComponents(guildId, guild, allPanels),
+        embeds: [buildPanelListEmbed(guild, allPanels, currentPage, pageCount)],
+        components: buildPanelListComponents(guildId, guild, allPanels, currentPage, pageCount),
+        allowedMentions: MENTION_OPTIONS,
     });
 }
 
 // ─── Panel Notices ────────────────────────────────────────────────────────────
 
-async function sendPanelNotice(interaction, text) {
+async function sendPanelNotice(interaction, text, kind = 'info') {
+    const payload = {
+        embeds: [noticeEmbed(kind, text, UI_CONTEXT)],
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: MENTION_OPTIONS,
+    };
+
     try {
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({
-                content: `<@${interaction.user.id}> ${text}`,
-                flags: MessageFlags.Ephemeral,
-            });
+            await interaction.followUp(payload);
         } else {
-            await interaction.reply({
-                content: text,
-                flags: MessageFlags.Ephemeral,
-            });
+            await interaction.reply(payload);
         }
     } catch (error) {
         logger.debug('Reaction role panel notice failed:', error.message);
@@ -1195,7 +1360,10 @@ async function handleEditText(buttonInteraction, rootInteraction, panelData, gui
         })
         .catch(() => null);
 
-    if (!submitted) return;
+    if (!submitted) {
+        await sendPanelNotice(buttonInteraction, 'Édition annulée. Le panneau n’a pas été modifié.', 'warning');
+        return;
+    }
 
     const newTitle = submitted.fields.getTextInputValue('panel_title').trim();
     const newDesc = submitted.fields.getTextInputValue('panel_description').trim();
@@ -1219,8 +1387,14 @@ async function handleEditText(buttonInteraction, rootInteraction, panelData, gui
     }
 
     await submitted.reply({
-        content: '✅ Panneau mis à jour — Le titre et la description ont été mis à jour.',
+        embeds: [noticeEmbed(
+            'success',
+            'Le titre et la description du panneau ont été mis à jour.',
+            'Édition de panneau',
+            '✅ Panneau mis à jour',
+        )],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: MENTION_OPTIONS,
     });
 
     const refreshedMsg = channel
@@ -1240,9 +1414,15 @@ async function fallbackEditTextPrompt(buttonInteraction, rootInteraction, panelD
         .setStyle(ButtonStyle.Primary);
 
     await buttonInteraction.followUp({
-        content: '⚠️ Édition du texte indisponible — Clique sur le bouton ci-dessous pour rouvrir l\'éditeur.',
+        embeds: [noticeEmbed(
+            'warning',
+            'Clique sur le bouton ci-dessous pour rouvrir l’éditeur.',
+            'Édition de panneau',
+            '⚠️ Édition du texte indisponible',
+        )],
         components: [new ActionRowBuilder().addComponents(retryButton)],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: MENTION_OPTIONS,
     }).catch(() => {});
 
     const collector = rootInteraction.channel.createMessageComponentCollector({
@@ -1259,7 +1439,7 @@ async function fallbackEditTextPrompt(buttonInteraction, rootInteraction, panelD
 
     collector.on('end', c => {
         if (c.size === 0) {
-            sendPanelNotice(buttonInteraction, '⏱️ Édition annulée. Le panneau n\'a pas été modifié.');
+            sendPanelNotice(buttonInteraction, 'Édition annulée. Le panneau n’a pas été modifié.', 'warning');
         }
     });
 }
@@ -1268,26 +1448,30 @@ async function handleAddRole(selectInteraction, rootInteraction, panelData, guil
     await selectInteraction.deferUpdate();
 
     if (panelData.roles.length >= 25) {
-        await InteractionHelper.sendErrorNotice(selectInteraction, 'Ce panneau a déjà atteint le maximum de 25 rôles.');
+        await sendPanelNotice(selectInteraction, 'Ce panneau a déjà atteint le maximum de 25 rôles.', 'warning');
         return;
     }
 
     const roleSelect = new RoleSelectMenuBuilder()
         .setCustomId('rr_add_role_pick')
-        .setPlaceholder('Sélectionnez un rôle à ajouter…')
+        .setPlaceholder('Sélectionne un rôle à ajouter…')
         .setMaxValues(1);
 
+    const roleCount = Array.isArray(panelData.roles) ? panelData.roles.length : 0;
     await selectInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('➕ Ajouter un rôle')
-                .setDescription(
-                    `**Rôles actuels :** ${panelData.roles.length}/25\n\nSélectionnez un rôle à ajouter à ce panneau.`,
-                )
-                .setColor(getColor('info')),
-        ],
+        embeds: [createEmbed({
+            title: '➕ Ajouter un rôle',
+            description: [
+                `**Rôles actuels :** ${roleCount} / 25`,
+                `\`${progressBar(roleCount, 25, 10)}\``,
+                'Sélectionne un rôle à ajouter à ce panneau.',
+            ].join('\n'),
+            color: 'info',
+            footer: brandFooter('Gestion des rôles'),
+        })],
         components: [new ActionRowBuilder().addComponents(roleSelect)],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: MENTION_OPTIONS,
     });
 
     const roleCollector = rootInteraction.channel.createMessageComponentCollector({
@@ -1303,23 +1487,23 @@ async function handleAddRole(selectInteraction, rootInteraction, panelData, guil
         const role = roleInteraction.roles.first();
 
         if (panelData.roles.includes(role.id)) {
-            await InteractionHelper.sendErrorNotice(roleInteraction, `${role} est déjà dans ce panneau.`);
+            await sendPanelNotice(roleInteraction, `${role} est déjà dans ce panneau.`, 'error');
             return;
         }
         if (role.id === guild.id) {
-            await InteractionHelper.sendErrorNotice(roleInteraction, 'Vous ne pouvez pas utiliser @everyone.');
+            await sendPanelNotice(roleInteraction, 'Tu ne peux pas utiliser @everyone.', 'error');
             return;
         }
         if (role.managed) {
-            await InteractionHelper.sendErrorNotice(roleInteraction, 'Les rôles gérés (intégration/bot) ne peuvent pas être utilisés.');
+            await sendPanelNotice(roleInteraction, 'Les rôles gérés (intégration/bot) ne peuvent pas être utilisés.', 'error');
             return;
         }
         if (hasDangerousPermissions(role)) {
-            await InteractionHelper.sendErrorNotice(roleInteraction, 'Ce rôle possède des permissions sensibles (Administrateur, Gérer le serveur, etc.) et ne peut pas être utilisé.');
+            await sendPanelNotice(roleInteraction, 'Ce rôle possède des permissions sensibles (Administrateur, Gérer le serveur, etc.) et ne peut pas être utilisé.', 'error');
             return;
         }
         if (role.position >= guild.members.me.roles.highest.position) {
-            await InteractionHelper.sendErrorNotice(roleInteraction, "Ce rôle est au-dessus de mon rôle le plus haut dans la hiérarchie. Placez mon rôle au-dessus d'abord.");
+            await sendPanelNotice(roleInteraction, 'Ce rôle est au-dessus de mon rôle le plus haut. Place mon rôle au-dessus d’abord.', 'error');
             return;
         }
 
@@ -1330,8 +1514,14 @@ async function handleAddRole(selectInteraction, rootInteraction, panelData, guil
         await rebuildLivePanelMessage(guild, panelData);
 
         await roleInteraction.followUp({
-            content: `✅ Rôle ajouté — ${role} a été ajouté au panneau.`,
+            embeds: [noticeEmbed(
+                'success',
+                `${role} a été ajouté au panneau.`,
+                'Gestion des rôles',
+                '✅ Rôle ajouté',
+            )],
             flags: MessageFlags.Ephemeral,
+            allowedMentions: MENTION_OPTIONS,
         });
 
         const channel = guild.channels.cache.get(panelData.channelId);
@@ -1343,7 +1533,7 @@ async function handleAddRole(selectInteraction, rootInteraction, panelData, guil
 
     roleCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun rôle sélectionné. Aucune modification n\'a été effectuée.');
+            sendPanelNotice(selectInteraction, 'Aucun rôle sélectionné. Aucune modification n’a été effectuée.', 'warning');
         }
     });
 }
@@ -1361,13 +1551,13 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
         .filter(Boolean);
 
     if (roleOptions.length === 0) {
-        await InteractionHelper.sendErrorNotice(selectInteraction, 'Les rôles de ce panneau n\'existent plus sur le serveur.');
+        await sendPanelNotice(selectInteraction, 'Les rôles de ce panneau n’existent plus sur le serveur.', 'error');
         return;
     }
 
     const removeSelect = new StringSelectMenuBuilder()
         .setCustomId('rr_remove_role_pick')
-        .setPlaceholder('Sélectionnez un rôle à retirer…')
+        .setPlaceholder('Sélectionne un rôle à retirer…')
         .setMaxValues(1)
         .addOptions(
             roleOptions.map(r =>
@@ -1376,14 +1566,15 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
         );
 
     await selectInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('➖ Retirer un rôle')
-                .setDescription('Sélectionnez le rôle que vous souhaitez retirer de ce panneau.')
-                .setColor(getColor('info')),
-        ],
+        embeds: [createEmbed({
+            title: '➖ Retirer un rôle',
+            description: 'Sélectionne le rôle que tu souhaites retirer de ce panneau.',
+            color: 'info',
+            footer: brandFooter('Gestion des rôles'),
+        })],
         components: [new ActionRowBuilder().addComponents(removeSelect)],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: MENTION_OPTIONS,
     });
 
     const removeCollector = rootInteraction.channel.createMessageComponentCollector({
@@ -1410,8 +1601,14 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
             await deleteReactionRoleMessage(client, guildId, panelData.messageId);
 
             await removeInteraction.followUp({
-                content: '✅ Rôle retiré — C\'était le dernier rôle du panneau. Le panneau a été supprimé.',
+                embeds: [noticeEmbed(
+                    'success',
+                    'C’était le dernier rôle du panneau. Le panneau a été supprimé.',
+                    'Gestion des rôles',
+                    '✅ Rôle retiré',
+                )],
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: MENTION_OPTIONS,
             });
 
             // Remove the deleted panel from the array
@@ -1422,24 +1619,26 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
 
             if (panels.length === 0) {
                 await InteractionHelper.safeEditReply(rootInteraction, {
-                    embeds: [
-                        new EmbedBuilder()
-                            .setTitle('📋 Tableau de bord des rôles par réaction')
-                            .setDescription('Aucun panneau ne subsiste. Utilisez `/reactroles setup` pour en créer un.')
-                            .setColor(getColor('info')),
-                    ],
+                    embeds: [noticeEmbed(
+                        'info',
+                        'Aucun panneau ne subsiste. Utilise `/reactroles setup` pour en créer un.',
+                        UI_CONTEXT,
+                        '📋 Aucun panneau actif',
+                    )],
                     components: [],
+                    allowedMentions: MENTION_OPTIONS,
                 });
             } else {
                 // Dashboard closed after last role removed
                 await InteractionHelper.safeEditReply(rootInteraction, {
-                    embeds: [
-                        new EmbedBuilder()
-                            .setTitle('📋 Tableau de bord des rôles par réaction')
-                            .setDescription('Panneau supprimé. Lancez `/reactroles dashboard` pour gérer un autre panneau.')
-                            .setColor(getColor('success')),
-                    ],
+                    embeds: [noticeEmbed(
+                        'success',
+                        'Panneau supprimé. Lance `/reactroles dashboard` pour gérer un autre panneau.',
+                        UI_CONTEXT,
+                        '✅ Panneau supprimé',
+                    )],
                     components: [],
+                    allowedMentions: MENTION_OPTIONS,
                 });
             }
         } else {
@@ -1448,8 +1647,14 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
             await rebuildLivePanelMessage(guild, panelData);
 
             await removeInteraction.followUp({
-                content: `✅ Rôle retiré — ${role ? role.toString() : `<@&${roleId}>`} a été retiré du panneau.`,
+                embeds: [noticeEmbed(
+                    'success',
+                    `${role ? `\`${role.name}\`` : `\`${roleId}\``} a été retiré du panneau.`,
+                    'Gestion des rôles',
+                    '✅ Rôle retiré',
+                )],
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: MENTION_OPTIONS,
             });
 
             const channel = guild.channels.cache.get(panelData.channelId);
@@ -1462,7 +1667,7 @@ async function handleRemoveRole(selectInteraction, rootInteraction, panelData, p
 
     removeCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            InteractionHelper.sendErrorNotice(selectInteraction, 'Aucun rôle sélectionné. Aucune modification n\'a été effectuée.');
+            sendPanelNotice(selectInteraction, 'Aucun rôle sélectionné. Aucune modification n’a été effectuée.', 'warning');
         }
     });
 }
@@ -1478,10 +1683,10 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
 
     const deleteModal = new ModalBuilder()
         .setCustomId('rr_delete_confirm_modal')
-        .setTitle('Supprimer le panneau de rôles par réaction');
+        .setTitle('Supprimer ce panneau');
 
     const deleteWarningText = new TextDisplayBuilder()
-        .setContent(`⚠️ Vous êtes sur le point de supprimer définitivement le panneau **${title}**. Cela supprimera le message Discord et toutes les attributions de rôles associées.`);
+        .setContent(`⚠️ Tu es sur le point de supprimer définitivement le panneau **${title}**. Le message Discord et ses attributions de rôles seront supprimés.`);
 
     const deleteCheckbox = new CheckboxBuilder()
         .setCustomId('delete_confirmation')
@@ -1505,6 +1710,7 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
         .catch(() => null);
 
     if (!submitted) {
+        await sendPanelNotice(btnInteraction, 'Confirmation expirée. Le panneau n’a pas été supprimé.', 'warning');
         await showPanelDashboard(rootInteraction, panelData, discordMsg, guildId, guild, onBack, panels);
         return;
     }
@@ -1512,7 +1718,7 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
     const confirmed = submitted.fields.getCheckbox('delete_confirmation');
 
     if (!confirmed) {
-        await InteractionHelper.sendErrorNotice(submitted, 'Vous devez cocher la case de confirmation pour supprimer le panneau.');
+        await sendPanelNotice(submitted, 'Tu dois cocher la case de confirmation pour supprimer le panneau.', 'error');
         await showPanelDashboard(rootInteraction, panelData, discordMsg, guildId, guild, onBack, panels);
         return;
     }
@@ -1544,8 +1750,14 @@ async function handleDeletePanel(btnInteraction, rootInteraction, panelData, pan
     }
 
     await submitted.followUp({
-        content: `✅ Panneau supprimé — **${title}** a été supprimé.`,
+        embeds: [noticeEmbed(
+            'success',
+            `**${String(title).slice(0, 120)}** a été supprimé.`,
+            'Suppression de panneau',
+            '✅ Panneau supprimé',
+        )],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: MENTION_OPTIONS,
     });
 
     // Remove the deleted panel from the array

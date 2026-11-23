@@ -1,4 +1,3 @@
-import { getColor } from '../../../config/bot.js';
 import crypto from 'node:crypto';
 import {
     ActionRowBuilder,
@@ -7,12 +6,18 @@ import {
     ChannelSelectMenuBuilder,
     ChannelType,
     ComponentType,
-    EmbedBuilder,
     MessageFlags,
     PermissionFlagsBits,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
 } from 'discord.js';
+import { createEmbed } from '../../../utils/embeds.js';
+import {
+    brandFooter,
+    discordTimestamp,
+    formatNumber,
+    progressBar,
+} from '../../../ui/kit.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
 import { isBotOwner } from '../../../utils/ownerIds.js';
@@ -61,26 +66,33 @@ function typeLabel(type) {
     return TYPE_LABELS[type] || type;
 }
 
-function formatCount(count) {
-    return typeof count === 'number' ? count.toLocaleString('en-US') : '?';
-}
-
 function truncate(value, max) {
     return value.length > max ? `${value.substring(0, max - 1)}…` : value;
 }
 
 async function buildDashboardEmbed(guild, counters, stats) {
     const fields = [
-        { name: '👥 Membres', value: formatCount(stats.totalCount), inline: true },
-        { name: '🌐 En ligne', value: formatCount(stats.onlineCount), inline: true },
-        { name: '🔊 En vocal', value: formatCount(stats.voiceCount), inline: true },
-        { name: '🤖 Bots', value: formatCount(stats.botCount), inline: true },
+        {
+            name: 'Membres',
+            value: `${formatNumber(stats.totalCount)} au total • ${formatNumber(stats.onlineCount)} en ligne ${progressBar(stats.onlineCount, stats.totalCount, 8)}`,
+            inline: false,
+        },
+        {
+            name: 'Activité',
+            value: `${formatNumber(stats.voiceCount)} en vocal • ${formatNumber(stats.botCount)} bots`,
+            inline: true,
+        },
+        {
+            name: 'Statut',
+            value: `📊 ${formatNumber(counters.length)} compteur(s) configuré(s)`,
+            inline: true,
+        },
     ];
 
     if (counters.length === 0) {
         fields.push({
-            name: '📊 Compteurs',
-            value: '`Aucun`\nUtilise **➕ Créer** pour ajouter ton premier compteur.',
+            name: 'Aucun compteur',
+            value: 'Utilise **Créer** pour ajouter ton premier compteur.',
             inline: false,
         });
     } else {
@@ -88,8 +100,8 @@ async function buildDashboardEmbed(guild, counters, stats) {
             const channel = await resolveCounterChannel(guild, counter.channelId);
             const count = await getCounterCount(guild, counter.type, stats);
             fields.push({
-                name: truncate(`📌 Compteur ${getCounterEmoji(counter.type)} ${typeLabel(counter.type)}`, 256),
-                value: `${channel ? `<#${channel.id}>` : '`Salon introuvable`'}\n\`${formatCount(count)}\` • ${counter.enabled === false ? '⏸️ Désactivé' : '✅ Actif'}`,
+                name: truncate(`Compteur ${typeLabel(counter.type)}`, 256),
+                value: `${channel ? `<#${channel.id}>` : '`Salon introuvable`'}\n\`${formatNumber(count)}\` • ${counter.enabled === false ? '❌ Désactivé' : '✅ Activé'}`,
                 inline: true,
             });
         }
@@ -99,22 +111,23 @@ async function buildDashboardEmbed(guild, counters, stats) {
                 .map(counter => `${getCounterEmoji(counter.type)} ${typeLabel(counter.type)}`)
                 .join(' • ');
             fields.push({
-                name: `➕ ${counters.length - MAX_LISTED_COUNTERS} autre(s) compteur(s)`,
+                name: `${formatNumber(counters.length - MAX_LISTED_COUNTERS)} autres compteurs`,
                 value: truncate(hidden, 1024),
                 inline: false,
             });
         }
     }
 
-    return new EmbedBuilder()
-        .setTitle('📊 Tableau de bord des compteurs')
-        .setDescription(
-            `Gère les salons compteurs de **${guild.name}**.\nLes noms se mettent à jour automatiquement aux arrivées, départs, changements de vocal et toutes les 6 minutes.`,
-        )
-        .setColor(getColor('info'))
-        .addFields(fields)
-        .setFooter({ text: `**${counters.length}** compteur(s) • le tableau de bord se ferme après 5 minutes d'inactivité` })
-        .setTimestamp();
+    return createEmbed({
+        title: 'Tableau de bord des compteurs',
+        description: [
+            `Gère les salons compteurs de **${guild.name}**.`,
+            'Les noms se mettent à jour automatiquement aux arrivées, départs, changements de vocal et toutes les 6 minutes.',
+        ].join('\n'),
+        color: 'info',
+        fields,
+        footer: brandFooter('Compteurs • fermeture après 5 minutes d’inactivité'),
+    });
 }
 
 function buildButtonRow() {
@@ -144,7 +157,7 @@ async function buildSelectRow(guild, counters) {
 
     const select = new StringSelectMenuBuilder()
         .setCustomId('ss_dash_select')
-        .setPlaceholder('Gère un compteur...');
+        .setPlaceholder('Gère un compteur…');
 
     for (const counter of counters.slice(0, MAX_SELECT_OPTIONS)) {
         const channel = await resolveCounterChannel(guild, counter.channelId);
@@ -186,6 +199,7 @@ async function refreshDashboard(rootInteraction, client) {
             embeds: [await buildDashboardEmbed(rootInteraction.guild, counters, stats)],
             components: await buildComponents(rootInteraction.guild, counters),
             flags: MessageFlags.Ephemeral,
+            allowedMentions: { parse: [] },
         });
     } catch (error) {
         logger.debug('Could not refresh serverstats dashboard:', error.message);
@@ -238,8 +252,9 @@ async function stopStep(step, stepNumber, fallbackInteraction) {
         await step.interaction.deferUpdate().catch(() => {});
         await step.interaction
             .followUp({
-                content: '↩️ Création annulée. Aucun compteur n\'a été créé.',
+                content: 'Création annulée — aucun compteur n’a été créé.',
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             })
             .catch(() => null);
         return;
@@ -248,7 +263,7 @@ async function stopStep(step, stepNumber, fallbackInteraction) {
     logger.debug(`Serverstats create flow timed out at step ${stepNumber}/3`);
     await InteractionHelper.sendErrorNotice(
         fallbackInteraction,
-        `⏱️ **Étape ${stepNumber}/3** expirée : aucune sélection effectuée. Aucun compteur n'a été créé. Clique de nouveau sur **➕ Créer**.`,
+        `Étape ${stepNumber}/3 expirée — aucune sélection effectuée. Aucun compteur n’a été créé. Clique de nouveau sur **Créer**.`,
     ).catch(() => null);
 }
 
@@ -265,6 +280,7 @@ export default {
                 embeds: [await buildDashboardEmbed(interaction.guild, counters, stats)],
                 components: await buildComponents(interaction.guild, counters),
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
 
             InteractionHelper.armDashboardSession(interaction);
@@ -361,8 +377,9 @@ async function runRefresh(btnInteraction, client) {
     }
 
     await btnInteraction.followUp({
-        content: `🔄 Actualisation — ${lines.join('\n')}`,
+        content: `✅ Actualisation — ${lines.join('\n')}`,
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 }
 
@@ -373,7 +390,7 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
         await btnInteraction.deferUpdate().catch(() => {});
         await InteractionHelper.sendErrorNotice(
             btnInteraction,
-            'Une création de compteur est déjà en cours. Termine-la avec le bouton **❌ Annuler la création**, ou clique sur **➕ Créer** dans une minute.',
+            'Une création de compteur est déjà en cours. Termine-la avec le bouton **Annuler la création**, ou clique sur **Créer** dans une minute.',
         ).catch(() => null);
         return;
     }
@@ -389,7 +406,7 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
 
     if (availableTypes.length === 0) {
         await btnInteraction.deferUpdate().catch(() => {});
-        await InteractionHelper.sendErrorNotice(btnInteraction, 'Tous les types de compteurs existent déjà. Supprime-en un avant d\'en créer un autre.').catch(() => null);
+        await InteractionHelper.sendErrorNotice(btnInteraction, 'Tous les types de compteurs existent déjà. Supprime-en un avant d’en créer un autre.').catch(() => null);
         return;
     }
 
@@ -402,7 +419,7 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
     try {
         const typeSelect = new StringSelectMenuBuilder()
             .setCustomId(`ss_new_type_${flowId}`)
-            .setPlaceholder('Choisis le type de compteur...');
+            .setPlaceholder('Choisis le type de compteur…');
 
         for (const type of availableTypes) {
             typeSelect.addOptions(
@@ -415,14 +432,16 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
         }
 
         const typeMessage = await btnInteraction.followUp({
-            embeds: [
-                new EmbedBuilder()
-                    .setTitle('➕ Nouveau compteur — Étape 1/3')
-                    .setDescription('Choisis le **type de compteur** à créer.')
-                    .setColor(getColor('info')),
-            ],
+            embeds: [createEmbed({
+                title: 'Nouveau compteur — étape 1/3',
+                description: 'Choisis le **type de compteur** à créer.',
+                color: 'info',
+                fields: [{ name: 'Statut', value: '➕ Création en cours', inline: false }],
+                footer: brandFooter('Création de compteur'),
+            })],
             components: [new ActionRowBuilder().addComponents(typeSelect), buildCancelRow(flowId)],
             flags: MessageFlags.Ephemeral,
+            allowedMentions: { parse: [] },
         });
 
         const typeStep = await waitForStep({
@@ -444,7 +463,7 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
 
         const kindSelect = new StringSelectMenuBuilder()
             .setCustomId(`ss_new_kind_${flowId}`)
-            .setPlaceholder('Choisis le type de salon...')
+            .setPlaceholder('Choisis le type de salon…')
             .addOptions(
                 new StringSelectMenuOptionBuilder()
                     .setLabel('Salon vocal (recommandé)')
@@ -459,16 +478,16 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
             );
 
         const kindMessage = await typeStep.interaction.followUp({
-            embeds: [
-                new EmbedBuilder()
-                    .setTitle('➕ Nouveau compteur — Étape 2/3')
-                    .setDescription(
-                        `Type choisi : **${typeLabel(type)}**\nChoisis maintenant le **type de salon** à créer.`,
-                    )
-                    .setColor(getColor('info')),
-            ],
+            embeds: [createEmbed({
+                title: 'Nouveau compteur — étape 2/3',
+                description: `Type choisi : **${typeLabel(type)}**\nChoisis maintenant le **type de salon** à créer.`,
+                color: 'info',
+                fields: [{ name: 'Statut', value: '➕ Création en cours', inline: false }],
+                footer: brandFooter('Création de compteur'),
+            })],
             components: [new ActionRowBuilder().addComponents(kindSelect), buildCancelRow(flowId)],
             flags: MessageFlags.Ephemeral,
+            allowedMentions: { parse: [] },
         });
 
         const kindStep = await waitForStep({
@@ -499,19 +518,21 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
         if (categories.size > 0) {
             const categorySelect = new ChannelSelectMenuBuilder()
                 .setCustomId(`ss_new_category_${flowId}`)
-                .setPlaceholder('Choisis la catégorie du salon...')
+                .setPlaceholder('Choisis la catégorie du salon…')
                 .addChannelTypes(ChannelType.GuildCategory)
                 .setMaxValues(1);
 
             const categoryMessage = await kindStep.interaction.followUp({
-                embeds: [
-                    new EmbedBuilder()
-                        .setTitle('➕ Nouveau compteur — Étape 3/3')
-                        .setDescription('Choisis la **catégorie** où le salon du compteur sera créé.')
-                        .setColor(getColor('info')),
-                ],
+                embeds: [createEmbed({
+                    title: 'Nouveau compteur — étape 3/3',
+                    description: 'Choisis la **catégorie** où le salon du compteur sera créé.',
+                    color: 'info',
+                    fields: [{ name: 'Statut', value: '➕ Création en cours', inline: false }],
+                    footer: brandFooter('Création de compteur'),
+                })],
                 components: [new ActionRowBuilder().addComponents(categorySelect), buildCancelRow(flowId)],
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
 
             categoryStep = await waitForStep({
@@ -561,7 +582,7 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
         const saved = await saveServerCounters(client, guild.id, [...freshCounters, newCounter]);
         if (!saved) {
             await channel.delete('Échec de l\'enregistrement du compteur').catch(() => null);
-            await InteractionHelper.sendErrorNotice(lastInteraction, 'Échec de l\'enregistrement du compteur. Réessaie.').catch(() => null);
+            await InteractionHelper.sendErrorNotice(lastInteraction, 'Échec de l’enregistrement du compteur. Réessaie.').catch(() => null);
             return;
         }
 
@@ -571,6 +592,7 @@ async function handleCreate(btnInteraction, rootInteraction, client) {
         await lastInteraction.followUp({
             content: `✅ Compteur créé — **Type :** ${typeLabel(type)}\n**Catégorie :** ${category || '_racine du serveur_'}\n**Salon :** ${finalChannel}\n**Nom actuel :** ${finalChannel.name}${updated ? '' : '\n\n⚠️ Le nom sera corrigé au prochain passage automatique.'}`,
             flags: MessageFlags.Ephemeral,
+            allowedMentions: { parse: [] },
         });
 
         await refreshDashboard(rootInteraction, client);
@@ -587,7 +609,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
     await selectInteraction.deferUpdate().catch(() => {});
 
     if (!counter) {
-        await InteractionHelper.sendErrorNotice(selectInteraction, 'Ce compteur n\'existe plus.').catch(() => null);
+        await InteractionHelper.sendErrorNotice(selectInteraction, 'Ce compteur n’existe plus.').catch(() => null);
         return;
     }
 
@@ -597,19 +619,24 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
     const enabled = counter.enabled !== false;
 
     const promptMessage = await selectInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle(`${getCounterEmoji(counter.type)} ${typeLabel(counter.type)}`)
-                .setDescription(
-                    `**Type :** ${typeLabel(counter.type)}\n**Valeur actuelle :** \`${formatCount(count)}\`\n**Statut :** ${enabled ? '✅ Actif' : '⏸️ Désactivé'}`,
-                )
-                .addFields({
+        embeds: [createEmbed({
+            title: typeLabel(counter.type),
+            description: `**Type :** ${typeLabel(counter.type)}\n**Valeur actuelle :** \`${formatNumber(count)}\`\n**Créé :** ${discordTimestamp(counter.createdAt, 'D')}`,
+            color: 'info',
+            fields: [
+                {
+                    name: 'Statut',
+                    value: `${getCounterEmoji(counter.type)} ${enabled ? '✅ Activé' : '❌ Désactivé'}`,
+                    inline: true,
+                },
+                {
                     name: 'Salon',
                     value: channel ? `<#${channel.id}>\n\`${channel.name}\`` : '`Salon introuvable ou supprimé`',
                     inline: false,
-                })
-                .setColor(getColor('info')),
-        ],
+                },
+            ],
+            footer: brandFooter('Gestion des compteurs'),
+        })],
         components: [
             new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -620,7 +647,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
                 new ButtonBuilder()
                     .setCustomId(`ss_dash_item_toggle:${counter.id}`)
                     .setLabel(enabled ? 'Désactiver' : 'Activer')
-                    .setEmoji(enabled ? '⏸️' : '▶️')
+                    .setEmoji(enabled ? '❌' : '✅')
                     .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
                     .setCustomId(`ss_dash_item_delete:${counter.id}`)
@@ -635,6 +662,7 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
             ),
         ],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 
     const expectedIds = [
@@ -672,9 +700,10 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
             const updatedChannel = await resolveCounterChannel(guild, counter.channelId);
             await itemInteraction.followUp({
                 content: refreshed
-                    ? `🔄 Compteur actualisé — \`${formatCount(await getCounterCount(guild, counter.type, stats))}\`\n**Salon :** ${updatedChannel || 'introuvable'}${updatedChannel ? `\n**Nom :** ${updatedChannel.name}` : ''}`
-                    : '⚠️ Échec — Impossible de modifier le nom du salon. Vérifie que je peux renommer ce salon.',
+                    ? `✅ Compteur actualisé — \`${formatNumber(await getCounterCount(guild, counter.type, stats))}\`\n**Salon :** ${updatedChannel || 'introuvable'}${updatedChannel ? `\n**Nom :** ${updatedChannel.name}` : ''}`
+                    : '❌ Échec — Impossible de modifier le nom du salon. Vérifie que je peux renommer ce salon.',
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
         }
 
@@ -682,29 +711,31 @@ async function handleCounterSelection(selectInteraction, rootInteraction, client
             const freshCounters = await getServerCounters(client, guild.id);
             const target = freshCounters.find(item => item.id === counter.id);
             if (!target) {
-                await InteractionHelper.sendErrorNotice(itemInteraction, 'Ce compteur n\'existe plus.').catch(() => null);
+                await InteractionHelper.sendErrorNotice(itemInteraction, 'Ce compteur n’existe plus.').catch(() => null);
                 return;
             }
             target.enabled = target.enabled === false;
             const saved = await saveServerCounters(client, guild.id, freshCounters);
             if (!saved) {
-                await InteractionHelper.sendErrorNotice(itemInteraction, 'Échec de l\'enregistrement. Réessaie.').catch(() => null);
+                await InteractionHelper.sendErrorNotice(itemInteraction, 'Échec de l’enregistrement. Réessaie.').catch(() => null);
                 return;
             }
             if (target.enabled) {
                 await updateCounter(client, guild, target, await getGuildCounterStats(guild));
             }
             await itemInteraction.followUp({
-                content: `${target.enabled ? '▶️ Compteur activé' : '⏸️ Compteur désactivé'} — Le compteur **${typeLabel(target.type)}** est désormais **${target.enabled ? 'actif' : 'désactivé'}**.`,
+                content: `${target.enabled ? '✅ Compteur activé' : '❌ Compteur désactivé'} — Le compteur **${typeLabel(target.type)}** est désormais **${target.enabled ? 'actif' : 'désactivé'}**.`,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
         }
 
         if (itemInteraction.customId === `ss_dash_item_delete:${counter.id}`) {
             const result = await performDeletionByCounterId(client, guild, counter.id);
             await itemInteraction.followUp({
-                content: `${result.success ? '🗑️ Compteur supprimé' : '⚠️ Échec'} — ${result.message}`,
+                content: `${result.success ? '✅ Compteur supprimé' : '❌ Échec'} — ${result.message}`,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
         }
 

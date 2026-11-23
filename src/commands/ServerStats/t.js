@@ -1,5 +1,12 @@
-import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { createEmbed, errorEmbed, infoEmbed } from '../../utils/embeds.js';
+import {
+    brandFooter,
+    discordTimestamp,
+    formatNumber,
+    guildIconUrl,
+    progressBar,
+} from '../../ui/kit.js';
 import { logger } from '../../utils/logger.js';
 import {
     getGuildStatsSummary,
@@ -10,6 +17,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 
 const MAX_DISPLAY = 25;
 const DEFAULT_DISPLAY = 10;
+const MENTION_OPTIONS = { parse: [] };
 
 function medalForIndex(index) {
     if (index === 0) return '🥇';
@@ -22,6 +30,16 @@ function formatTopLines(entries, formatter) {
     return entries
         .map((entry, index) => `${medalForIndex(index)} **${entry.displayName || 'Utilisateur inconnu'}** — ${formatter(entry)}`)
         .join('\n');
+}
+
+function withFooter(embed, context = 'Classement d’activité') {
+    embed.setFooter(brandFooter(context));
+    return embed;
+}
+
+function truncate(value, max = 1000) {
+    const text = String(value ?? '');
+    return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
 async function resolveMembers(guild, userIds) {
@@ -43,7 +61,7 @@ async function resolveMembers(guild, userIds) {
 export default {
     data: new SlashCommandBuilder()
         .setName("t")
-        .setDescription("* Classement des membres les plus actifs (messages + vocal)")
+        .setDescription("Classement des membres les plus actifs (messages + vocal)")
         .addIntegerOption((option) =>
             option
                 .setName("limit")
@@ -55,22 +73,46 @@ export default {
 
     async execute(interaction, guildConfig, client) {
         if (!interaction.guild) {
-            await InteractionHelper.sendErrorNotice(interaction, "Cette commande ne peut être utilisée que sur un serveur.");
+            const embed = withFooter(errorEmbed(
+                'Cette commande ne peut être utilisée que sur un serveur.',
+            ), 'Classement d’activité');
+            await InteractionHelper.safeReply(interaction, {
+                embeds: [embed],
+                flags: MessageFlags.Ephemeral,
+                allowedMentions: MENTION_OPTIONS,
+            });
             return;
         }
 
         const limitRaw = interaction.options.getInteger("limit");
         const limit = Math.min(MAX_DISPLAY, Math.max(3, limitRaw || DEFAULT_DISPLAY));
 
-        const { users, startedAt } = await getGuildStatsSummary(client, interaction.guild.id);
+        let summary;
+        try {
+            summary = await getGuildStatsSummary(client, interaction.guild.id);
+        } catch (error) {
+            logger.error('Failed to load activity ranking:', error);
+            const embed = withFooter(errorEmbed(
+                'Impossible de charger le classement. Réessaie dans un instant.',
+            ), 'Classement d’activité');
+            await InteractionHelper.safeReply(interaction, {
+                embeds: [embed],
+                flags: MessageFlags.Ephemeral,
+                allowedMentions: MENTION_OPTIONS,
+            });
+            return;
+        }
+
+        const { users, startedAt } = summary;
 
         if (users.length === 0) {
-            await interaction.reply({
-                embeds: [createEmbed({
-                    title: "📊 Classement d'activité",
-                    description: "Aucune donnée pour le moment. Les statistiques commencent à être collectées dès maintenant.",
-                    color: 'info'
-                })]
+            const embed = withFooter(infoEmbed(
+                'Aucune donnée pour le moment. Les statistiques commencent à être collectées dès maintenant.',
+                '📊 Classement d’activité',
+            ));
+            await InteractionHelper.safeReply(interaction, {
+                embeds: [embed],
+                allowedMentions: MENTION_OPTIONS,
             });
             return;
         }
@@ -106,48 +148,71 @@ export default {
         const decoratedVoice = byVoice.map((u) => ({ ...u, displayName: members.get(u.userId)?.name }));
 
         const messagesText = decoratedMessages.length > 0
-            ? formatTopLines(decoratedMessages, (u) => `${u.messages.toLocaleString('fr-FR')} msg`)
+            ? formatTopLines(decoratedMessages, (u) => `${formatNumber(u.messages)} msg`)
             : 'Aucun message enregistré.';
         const voiceText = decoratedVoice.length > 0
             ? formatTopLines(decoratedVoice, (u) => formatVoiceDuration(u.voiceSeconds))
             : 'Aucune activité vocale enregistrée.';
 
+        const totalMessages = users.reduce((sum, u) => sum + u.messages, 0);
+        const totalVoiceSeconds = users.reduce((sum, u) => sum + u.voiceSeconds, 0);
+        const topMessages = byMessages.reduce((sum, u) => sum + u.messages, 0);
+        const topVoiceSeconds = byVoice.reduce((sum, u) => sum + u.voiceSeconds, 0);
+
+        const summaryEmbed = createEmbed({
+            title: '📊 Classement d’activité',
+            description: [
+                `${formatNumber(users.length)} membre(s) suivi(s) • Top ${formatNumber(limit)}`,
+                `Statistiques collectées depuis le ${discordTimestamp(startedAt, 'd')}`,
+            ].join('\n'),
+            color: 'info',
+            thumbnail: guildIconUrl(interaction.guild, 128),
+            fields: [
+                {
+                    name: '✉️ Messages',
+                    value: [
+                        `\`${progressBar(topMessages, totalMessages, 10)}\` ${formatNumber(topMessages)} / ${formatNumber(totalMessages)}`,
+                        truncate(messagesText),
+                    ].join('\n'),
+                    inline: false,
+                },
+                {
+                    name: '🎙️ Vocal',
+                    value: [
+                        `\`${progressBar(topVoiceSeconds, totalVoiceSeconds, 10)}\` ${formatVoiceDuration(topVoiceSeconds)} / ${formatVoiceDuration(totalVoiceSeconds)}`,
+                        truncate(voiceText),
+                    ].join('\n'),
+                    inline: false,
+                },
+            ],
+            footer: brandFooter('Top activité'),
+        });
+
         try {
             const imageBuffer = await renderTopImage({
                 guildName: interaction.guild.name,
-                guildIconUrl: interaction.guild.iconURL({ extension: 'png', size: 128 }),
+                guildIconUrl: guildIconUrl(interaction.guild, 128),
                 startedAt,
                 memberCount: users.length,
                 messageEntries,
                 voiceEntries,
-                totalMessages: users.reduce((sum, u) => sum + u.messages, 0),
-                totalVoiceSeconds: users.reduce((sum, u) => sum + u.voiceSeconds, 0)
+                totalMessages,
+                totalVoiceSeconds
             });
-            await interaction.reply({ files: [{ attachment: imageBuffer, name: 'top.png' }] });
+            await InteractionHelper.safeReply(interaction, {
+                embeds: [summaryEmbed],
+                files: [{ attachment: imageBuffer, name: 'top.png' }],
+                allowedMentions: MENTION_OPTIONS,
+            });
             return;
         } catch (imageError) {
+            // Le rendu image échoue parfois (police manquante, mémoire) : on garde
+            // le classement lisible, sans jamais exposer la pile d’erreur.
             logger.warn('Failed to render top image, falling back to embed:', imageError);
-            const fallbackEmbed = createEmbed({
-                title: "📊 Top activité",
-                description: `Statistiques cumulées depuis le <t:${Math.floor(startedAt / 1000)}:d> — ${users.length} membre(s) suivi(s).`,
-                color: 'primary',
-                fields: [
-                    {
-                        name: "✉️ Messages",
-                        value: messagesText,
-                        inline: true
-                    },
-                    {
-                        name: "🎙️ Vocal",
-                        value: voiceText,
-                        inline: true
-                    }
-                ]
+            await InteractionHelper.safeReply(interaction, {
+                embeds: [summaryEmbed],
+                allowedMentions: MENTION_OPTIONS,
             });
-            if (typeof imageError?.stack === 'string') {
-                fallbackEmbed.addFields({ name: "🔧 Rendu image", value: `Échec de la génération :\n\`\`\`${(imageError.stack || '').split('\n').slice(0, 3).join('\n')}\`\`\`` });
-            }
-            await interaction.reply({ embeds: [fallbackEmbed] });
             return;
         }
     }

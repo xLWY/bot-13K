@@ -1,9 +1,10 @@
 import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
-import { BotConfig } from '../../config/bot.js';
+import { brandFooter } from '../../ui/kit.js';
+
+const NO_MENTIONS = { parse: [], repliedUser: false };
 
 export default {
   data: new SlashCommandBuilder()
@@ -13,17 +14,20 @@ export default {
 
   async execute(interaction) {
     try {
-      // Initial embed builder interface
       const embed = createEmbed({
-        title: '🎨 Embed Builder',
-        description: 'Utilise les boutons ci-dessous pour personnaliser ton embed.',
-        color: BotConfig.embeds.colors.info
-      })
-        .addFields(
-          { name: '📝 Titre', value: 'Non défini', inline: true },
-          { name: '📖 Description', value: 'Non définie', inline: true },
-          { name: '🎨 Couleur', value: 'Par défaut', inline: true }
-        );
+        title: 'ℹ️ Constructeur d’embed',
+        description: 'Utilise les boutons ci-dessous pour composer ton embed, puis prévisualise-le avant de l’envoyer.',
+        color: 'info',
+        fields: [
+          { name: 'Titre', value: 'Non défini', inline: true },
+          { name: 'Description', value: 'Non définie', inline: true },
+          { name: 'Couleur', value: 'Par défaut', inline: true },
+          { name: 'Champs', value: '0', inline: true },
+          { name: 'Visuels', value: 'Image : non définie • Miniature : non définie', inline: true },
+          { name: 'Salon d’envoi', value: 'Salon actuel', inline: true },
+        ],
+        footer: brandFooter('Constructeur d’embed'),
+      });
 
       const row = new ActionRowBuilder()
         .addComponents(
@@ -61,7 +65,7 @@ export default {
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId('embed_channel')
-            .setLabel('Salon d\'envoi')
+            .setLabel('Salon d’envoi')
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId('embed_send')
@@ -87,7 +91,8 @@ export default {
 
       await InteractionHelper.safeReply(interaction, {
         embeds: [embed],
-        components: [row, row2, row3]
+        components: [row, row2, row3],
+        allowedMentions: NO_MENTIONS,
       });
 
       logger.info(`Embed builder started`, {
@@ -102,9 +107,9 @@ export default {
         guildId: interaction.guildId,
         commandName: 'embedbuilder'
       });
-      await handleInteractionError(interaction, error, {
-        commandName: 'embedbuilder',
-        source: 'embedbuilder_command'
+      await InteractionHelper.safeReply(interaction, {
+        embeds: [errorEmbed('Impossible d’ouvrir le constructeur d’embed. Réessaie dans un instant.')],
+        allowedMentions: NO_MENTIONS,
       });
     }
   }

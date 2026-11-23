@@ -1,4 +1,3 @@
-import { getColor } from '../../../config/bot.js';
 import {
     ActionRowBuilder,
     ButtonBuilder,
@@ -6,12 +5,16 @@ import {
     ChannelSelectMenuBuilder,
     ChannelType,
     ComponentType,
-    EmbedBuilder,
     MessageFlags,
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
 } from 'discord.js';
+import { createEmbed } from '../../../utils/embeds.js';
+import {
+    brandFooter,
+    formatNumber,
+} from '../../../ui/kit.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError } from '../../../utils/errorHandler.js';
@@ -36,44 +39,42 @@ function buildDashboardEmbed(cfg, guild) {
             .join('\n')
         : '`Aucun`';
 
-    return new EmbedBuilder()
-        .setTitle('📈 Tableau de bord du Leveling / XP')
-        .setDescription(
-            `Gère le système d'XP et de niveaux pour **${guild.name}**.\nUtilise les boutons ci-dessous pour configurer chaque paramètre.`,
-        )
-        .setColor(getColor('info'))
-        .addFields(
-            { name: '⚙️ Statut', value: cfg.enabled ? '✅ Activé' : '❌ Désactivé', inline: true },
-            { name: '💎 XP par message', value: `${xpRange.min} - ${xpRange.max}`, inline: true },
-            { name: '⏱️ Délai', value: `${cfg.xpCooldown ?? 20} s`, inline: true },
-            { name: '📢 Annonces', value: cfg.announceLevelUp ? '✅ Activées' : '❌ Désactivées', inline: true },
+    return createEmbed({
+        title: 'Tableau de bord de l’XP et des niveaux',
+        description: `Gère le système d’XP et de niveaux pour **${guild.name}**.\nUtilise les boutons ci-dessous pour configurer chaque paramètre.`,
+        color: 'info',
+        fields: [
+            { name: 'Statut', value: `⚙️ ${cfg.enabled ? '✅ Activé' : '❌ Désactivé'}`, inline: true },
+            { name: 'XP par message', value: `${formatNumber(xpRange.min)} - ${formatNumber(xpRange.max)}`, inline: true },
+            { name: 'Délai', value: `${cfg.xpCooldown ?? 20} s`, inline: true },
+            { name: 'Annonces', value: cfg.announceLevelUp ? '✅ Activées' : '❌ Désactivées', inline: true },
             {
-                name: '📨 Canal de notification',
+                name: 'Canal de notification',
                 value: cfg.levelUpChannel ? `<#${cfg.levelUpChannel}>` : '`Non configuré (canal système)`',
                 inline: true,
             },
-            { name: '🎯 Multiplicateur', value: `${cfg.xpMultiplier ?? 1}x`, inline: true },
-            { name: '🎁 Récompenses de rôle', value: roleRewards, inline: false },
-        )
-        .setFooter({ text: 'Le tableau de bord se ferme après 5 minutes d\'inactivité' })
-        .setTimestamp();
+            { name: 'Multiplicateur', value: `${cfg.xpMultiplier ?? 1}x`, inline: true },
+            { name: 'Récompenses de rôle', value: roleRewards, inline: false },
+        ],
+        footer: brandFooter('XP et niveaux • fermeture après 5 minutes d’inactivité'),
+    });
 }
 
 function buildButtonRows() {
     const configRow = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('lvl_cfg_enable')
-            .setLabel('Activer / Désactiver')
+            .setLabel('Activer ou désactiver')
             .setEmoji('⚙️')
             .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
             .setCustomId('lvl_cfg_channel')
-            .setLabel('Canal de notif.')
+            .setLabel('Canal de notification')
             .setEmoji('📨')
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
             .setCustomId('lvl_cfg_xp')
-            .setLabel('Plage XP')
+            .setLabel('Plage d’XP')
             .setEmoji('💎')
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
@@ -123,6 +124,7 @@ async function refreshDashboard(rootInteraction, client, guildId) {
         await InteractionHelper.safeEditReply(rootInteraction, {
             embeds: [buildDashboardEmbed(cfg, rootInteraction.guild)],
             components: buildButtonRows(),
+            allowedMentions: { parse: [] },
         });
     } catch (error) {
         logger.debug('Leveling dashboard refresh failed:', error.message);
@@ -140,6 +142,7 @@ export default {
             await InteractionHelper.safeEditReply(interaction, {
                 embeds: [buildDashboardEmbed(cfg, interaction.guild)],
                 components: buildButtonRows(),
+                allowedMentions: { parse: [] },
             });
 
             InteractionHelper.armDashboardSession(interaction);
@@ -197,7 +200,7 @@ export default {
 
                     const message = error instanceof XlwyBotError
                         ? (error.userMessage || 'Une erreur est survenue lors de la configuration.')
-                        : `Une erreur inattendue est survenue (${error.message}).`;
+                        : 'Une erreur est survenue lors de la configuration. Réessaie dans un instant.';
 
                     await sendNotice(btnInteraction, message);
                 }
@@ -206,7 +209,7 @@ export default {
             logger.error('Leveling dashboard failed to open:', error);
             await sendNotice(
                 interaction,
-                `Impossible d'ouvrir le tableau de bord du leveling (${error.message}).`,
+                'Impossible d’ouvrir le tableau de bord de l’XP et des niveaux. Réessaie dans un instant.',
             );
         }
     },
@@ -222,13 +225,14 @@ async function handleEnable(btnInteraction, client, guildId) {
         await saveLevelingConfig(client, guildId, cfg);
     } catch (error) {
         cfg.enabled = !nextState;
-        await sendNotice(btnInteraction, error?.userMessage || 'Impossible d\'enregistrer le changement.');
+        await sendNotice(btnInteraction, error?.userMessage || 'Impossible d’enregistrer le changement.');
         return;
     }
 
     await btnInteraction.followUp({
-        content: `📈 Leveling — Le système de leveling est désormais **${cfg.enabled ? 'activé' : 'désactivé'}**.`,
+        content: `${cfg.enabled ? '✅' : '❌'} Leveling — Le système de leveling est désormais **${cfg.enabled ? 'activé' : 'désactivé'}**.`,
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 }
 
@@ -239,8 +243,9 @@ async function handleAnnounce(btnInteraction, client, guildId) {
     await saveLevelingConfig(client, guildId, cfg);
 
     await btnInteraction.followUp({
-        content: `📢 Annonces — Les annonces de montée de niveau sont **${cfg.announceLevelUp ? 'activées' : 'désactivées'}**.`,
+        content: `${cfg.announceLevelUp ? '✅' : '❌'} Annonces — Les annonces de montée de niveau sont **${cfg.announceLevelUp ? 'activées' : 'désactivées'}**.`,
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 }
 
@@ -254,14 +259,16 @@ async function handleChannel(btnInteraction, rootInteraction, client, guildId) {
         .setMaxValues(1);
 
     await btnInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle('📨 Canal de notification')
-                .setDescription('Sélectionne le salon où seront envoyées les notifications de montée de niveau.')
-                .setColor(getColor('info')),
-        ],
+        embeds: [createEmbed({
+            title: 'Canal de notification',
+            description: 'Sélectionne le salon où seront envoyées les notifications de montée de niveau.',
+            color: 'info',
+            fields: [{ name: 'Statut', value: '📨 Configuration en cours', inline: false }],
+            footer: brandFooter('XP et niveaux • canal de notification'),
+        })],
         components: [new ActionRowBuilder().addComponents(channelSelect)],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 
     const chanCollector = rootInteraction.channel.createMessageComponentCollector({
@@ -275,7 +282,7 @@ async function handleChannel(btnInteraction, rootInteraction, client, guildId) {
         chanCollector.stop('collected');
         const channel = chanInteraction.channels.first();
         if (!channel) {
-            await sendNotice(chanInteraction, 'Aucun salon sélectionné. Le paramètre n\'a pas été modifié.');
+            await sendNotice(chanInteraction, 'Aucun salon sélectionné. Le paramètre n’a pas été modifié.');
             return;
         }
 
@@ -293,7 +300,7 @@ async function handleChannel(btnInteraction, rootInteraction, client, guildId) {
 
     chanCollector.on('end', (collected, reason) => {
         if (reason === 'time' && collected.size === 0) {
-            sendNotice(btnInteraction, 'Aucun salon sélectionné. Le paramètre n\'a pas été modifié.')
+            sendNotice(btnInteraction, 'Aucun salon sélectionné. Le paramètre n’a pas été modifié.')
                 .catch(() => {});
         }
     });
@@ -304,7 +311,7 @@ async function handleXp(btnInteraction, rootInteraction, client, guildId) {
 
     const modal = new ModalBuilder()
         .setCustomId('lvl_cfg_xp_modal')
-        .setTitle('Plage d\'XP par message')
+        .setTitle('Plage d’XP par message')
         .addComponents(
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
@@ -330,7 +337,7 @@ async function handleXp(btnInteraction, rootInteraction, client, guildId) {
 
     const shown = await btnInteraction.showModal(modal).then(() => true).catch(() => false);
     if (!shown) {
-        await sendNotice(btnInteraction, 'Impossible d\'ouvrir la fenêtre de saisie. Réessaie.');
+        await sendNotice(btnInteraction, 'Impossible d’ouvrir la fenêtre de saisie. Réessaie.');
         return;
     }
 
@@ -348,8 +355,9 @@ async function handleXp(btnInteraction, rootInteraction, client, guildId) {
 
     if (Number.isNaN(min) || Number.isNaN(max) || min < 1 || max < 1 || min > max) {
         await submitted.reply({
-            content: '⚠️ Plage invalide — L\'XP minimum doit être inférieur ou égal au maximum, et les deux doivent être ≥ 1.',
+            content: '❌ Plage invalide — L’XP minimum doit être inférieur ou égal au maximum, et les deux doivent être ≥ 1.',
             flags: MessageFlags.Ephemeral,
+            allowedMentions: { parse: [] },
         });
         return;
     }
@@ -359,8 +367,9 @@ async function handleXp(btnInteraction, rootInteraction, client, guildId) {
     await saveLevelingConfig(client, guildId, cfg);
 
     await submitted.reply({
-        content: `💎 Plage d'XP — Chaque message accorde désormais entre **${min}** et **${max}** XP.`,
+        content: `💎 Plage d’XP — Chaque message accorde désormais entre **${formatNumber(min)}** et **${formatNumber(max)}** XP.`,
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 
     await refreshDashboard(rootInteraction, client, guildId);
@@ -371,7 +380,7 @@ async function handleCooldown(btnInteraction, rootInteraction, client, guildId) 
 
     const modal = new ModalBuilder()
         .setCustomId('lvl_cfg_cooldown_modal')
-        .setTitle('Délai entre deux gains d\'XP')
+        .setTitle('Délai entre deux gains d’XP')
         .addComponents(
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
@@ -387,7 +396,7 @@ async function handleCooldown(btnInteraction, rootInteraction, client, guildId) 
 
     const shown = await btnInteraction.showModal(modal).then(() => true).catch(() => false);
     if (!shown) {
-        await sendNotice(btnInteraction, 'Impossible d\'ouvrir la fenêtre de saisie. Réessaie.');
+        await sendNotice(btnInteraction, 'Impossible d’ouvrir la fenêtre de saisie. Réessaie.');
         return;
     }
 
@@ -403,8 +412,9 @@ async function handleCooldown(btnInteraction, rootInteraction, client, guildId) 
     const seconds = parseInt(submitted.fields.getTextInputValue('seconds_input'), 10);
     if (Number.isNaN(seconds) || seconds < 0 || seconds > 3600) {
         await submitted.reply({
-            content: '⚠️ Délai invalide — Le délai doit être compris entre 0 et 3600 secondes.',
+            content: '❌ Délai invalide — Le délai doit être compris entre 0 et 3600 secondes.',
             flags: MessageFlags.Ephemeral,
+            allowedMentions: { parse: [] },
         });
         return;
     }
@@ -414,8 +424,9 @@ async function handleCooldown(btnInteraction, rootInteraction, client, guildId) 
     await saveLevelingConfig(client, guildId, latest);
 
     await submitted.reply({
-        content: `⏱️ Délai — Un utilisateur peut gagner de l'XP toutes les **${seconds}** seconde(s).`,
+        content: `⏱️ Délai — Un utilisateur peut gagner de l’XP toutes les **${formatNumber(seconds)}** seconde(s).`,
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 
     await refreshDashboard(rootInteraction, client, guildId);

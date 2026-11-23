@@ -1,4 +1,7 @@
-import { EmbedBuilder } from 'discord.js';
+import { MessageFlags } from 'discord.js';
+import { getColor } from '../../../config/bot.js';
+import { createEmbed } from '../../../utils/embeds.js';
+import { brandFooter, formatNumber } from '../../../ui/kit.js';
 import { logger } from '../../../utils/logger.js';
 import { getServerCounters } from '../../../services/serverstatsService.js';
 
@@ -57,35 +60,37 @@ export async function handleDebug(interaction, client) {
 
     const isDegraded = dbStatus?.isDegraded === true;
 
-    const embed = new EmbedBuilder()
-        .setTitle('🔍 Diagnostic des compteurs')
-        .setColor(isDegraded || readError || counters.length === 0 ? 0xed4245 : 0x57f287)
-        .addFields(
+    const embed = createEmbed({
+        title: 'Diagnostic des compteurs',
+        description: 'Ce diagnostic est éphémère et ne modifie rien.',
+        color: isDegraded || readError || counters.length === 0 ? getColor('error') : getColor('success'),
+        fields: [
             {
-                name: '📦 Valeur brute en base',
+                name: 'Valeur brute en base',
                 value: `${describe(raw)}\n${rawPreview}`,
                 inline: false,
             },
             {
-                name: '✅ Compteurs exploitables',
-                value: `\`${counters.length}\`\n${counters.length ? counters.map(c => `• \`${c.id}\` → ${c.type} → <#${c.channelId}>`).join('\n') : '`Aucun` — le panel affichera "Aucun".'}`,
+                name: 'Compteurs exploitables',
+                value: `\`${formatNumber(counters.length)}\`\n${counters.length ? counters.map(c => `• \`${c.id}\` → ${c.type} → <#${c.channelId}>`).join('\n') : '`Aucun` — le panel affichera « Aucun ». '}`,
                 inline: false,
             },
             {
-                name: '🔌 État de la base',
+                name: 'État de la base',
                 value: isDegraded
-                    ? '`⚠️ MODE MÉMOIRE` — PostgreSQL indisponible. Tout est perdu au prochain redémarrage. **C\'est la cause de la disparition.**'
+                    ? '`⚠️ MODE MÉMOIRE` — PostgreSQL indisponible. Tout est perdu au prochain redémarrage. **C’est la cause de la disparition.**'
                     : `\`${dbStatus?.connectionType || 'inconnu'}\`${dbStatus?.isDegraded === false ? ' — persistant, OK' : ''}`,
                 inline: false,
             },
             {
-                name: '🗄️ Type de backend',
+                name: 'Type de backend',
                 value: `\`${client.db?.constructor?.name || 'inconnu'}\``,
                 inline: false,
             },
-        )
-        .setFooter({ text: 'Ce diagnostic est éphémère et ne modifie rien.' })
-        .setTimestamp();
+        ],
+        footer: brandFooter('Diagnostic'),
+        timestamp: true,
+    });
 
-    await interaction.reply({ embeds: [embed], flags: 64 });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
 }

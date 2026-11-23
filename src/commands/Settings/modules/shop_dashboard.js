@@ -1,4 +1,3 @@
-import { getColor } from '../../../config/bot.js';
 import {
     ActionRowBuilder,
     ButtonBuilder,
@@ -7,8 +6,9 @@ import {
     StringSelectMenuOptionBuilder,
     MessageFlags,
     ComponentType,
-    EmbedBuilder,
 } from 'discord.js';
+import { createEmbed } from '../../../utils/embeds.js';
+import { brandFooter, buildNavRow, formatNumber } from '../../../ui/kit.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
 import shopService from '../../../services/shopService.js';
@@ -18,32 +18,32 @@ import { getEconomyData, formatShopItem } from '../../../utils/economy.js';
 const ITEMS_PER_PAGE = 5;
 
 function buildShopEmbed(pageItems, categoryName, balance, currencyName, page, totalPages) {
-    const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
-        .setFooter({ text: `Page ${page}/${totalPages}` })
-        .setTimestamp();
+    const header = [
+        `Solde : **${formatNumber(balance)} ${currencyName}**`,
+        `Catégorie : **${categoryName}**`,
+        `Page **${page}/${totalPages}**`,
+    ].join('\n');
 
     if (pageItems.length === 0) {
-        embed
-            .setTitle('🛒 Boutique')
-            .setDescription(
-                `Solde : **${balance.toLocaleString('fr-FR')} ${currencyName}**\nCatégorie : **${categoryName}**\n\n**Aucun article dans cette catégorie.**\n\nUtilise le menu ci-dessous pour choisir une catégorie.`,
-            );
-        return embed;
+        return createEmbed({
+            title: 'Boutique',
+            description: `${header}\n\nAucun article dans cette catégorie. Utilise le menu ci-dessous pour en choisir une autre.`,
+            color: 'info',
+            footer: brandFooter('Boutique'),
+        });
     }
 
     const itemLines = pageItems
         .map((item, idx) => formatShopItem(item, (page - 1) * ITEMS_PER_PAGE + idx + 1))
         .join('\n');
 
-    embed
-        .setTitle('🛒 Boutique')
-        .setDescription(
-            `Solde : **${balance.toLocaleString('fr-FR')} ${currencyName}**\nCatégorie : **${categoryName}**\n\nUtilise le menu ci-dessous pour choisir une catégorie, puis un article à acheter.`,
-        )
-        .addFields({ name: '🛍️ Articles', value: itemLines.slice(0, 1024), inline: false });
-
-    return embed;
+    return createEmbed({
+        title: 'Boutique',
+        description: `${header}\n\nChoisis une catégorie, puis un article à acheter.`,
+        color: 'info',
+        fields: [{ name: 'Articles', value: itemLines.slice(0, 1024), inline: false }],
+        footer: brandFooter('Boutique'),
+    });
 }
 
 function buildCategorySelect() {
@@ -65,7 +65,7 @@ function buildItemSelect(items) {
     if (!items.length) return null;
     const options = items.slice(0, 25).map(item =>
         new StringSelectMenuOptionBuilder()
-            .setLabel(`${item.name} — ${getCurrentPrice(item.id).toLocaleString('fr-FR')}`)
+            .setLabel(`${item.name} — ${formatNumber(getCurrentPrice(item.id))}`)
             .setValue(item.id),
     );
     return new StringSelectMenuBuilder()
@@ -85,34 +85,27 @@ function buildButtonRows() {
     return [backRow];
 }
 
-function buildNavRow(page, totalPages) {
-    const prev = new ButtonBuilder()
-        .setCustomId('shop_cfg_prev')
-        .setLabel('⬅️')
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(page <= 1);
-    const next = new ButtonBuilder()
-        .setCustomId('shop_cfg_next')
-        .setLabel('➡️')
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(page >= totalPages);
-    return new ActionRowBuilder().addComponents(prev, next);
-}
-
 function renderInteraction(interaction, allItems, categoryName, balance, currencyName, page) {
     const totalPages = Math.max(1, Math.ceil(allItems.length / ITEMS_PER_PAGE));
     const start = (page - 1) * ITEMS_PER_PAGE;
     const pageItems = allItems.slice(start, start + ITEMS_PER_PAGE);
 
     const embed = buildShopEmbed(pageItems, categoryName, balance, currencyName, page, totalPages);
+    const itemSelect = buildItemSelect(pageItems);
     const components = [
         new ActionRowBuilder().addComponents(buildCategorySelect()),
-        ...(buildItemSelect(pageItems) ? [new ActionRowBuilder().addComponents(buildItemSelect(pageItems))] : []),
-        ...(allItems.length > ITEMS_PER_PAGE ? [buildNavRow(page, totalPages)] : []),
+        ...(itemSelect ? [new ActionRowBuilder().addComponents(itemSelect)] : []),
+        ...buildNavRow({
+            page: page - 1,
+            pageCount: totalPages,
+            prevId: 'shop_cfg_prev',
+            nextId: 'shop_cfg_next',
+            indicatorId: 'shop_cfg_indicator',
+        }),
         ...buildButtonRows(),
     ];
 
-    return { embeds: [embed], components, flags: MessageFlags.Ephemeral };
+    return { embeds: [embed], components, flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } };
 }
 
 export default {
@@ -251,19 +244,24 @@ async function handlePurchase(selectInteraction, rootInteraction, client, guildI
     );
 
     const currency = shopService.getCurrencyInfo();
-    const price = getCurrentPrice(itemId).toLocaleString('fr-FR');
+    const price = formatNumber(getCurrentPrice(itemId));
+
+    const confirmEmbed = createEmbed({
+        title: `Article · ${item.name}`,
+        description: item.description || 'Aucune description.',
+        color: 'info',
+        fields: [
+            { name: 'Prix', value: `${price} ${currency.namePlural}`, inline: true },
+            { name: 'Type', value: `${item.type}`, inline: true },
+        ],
+        footer: brandFooter('Boutique'),
+    });
 
     await selectInteraction.followUp({
-        embeds: [
-            new EmbedBuilder()
-                .setTitle(`🛒 ${item.name}`)
-                .setDescription(
-                    `${item.description || 'Aucune description.'}\n\n**Prix :** ${price} ${currency.namePlural}\n**Type :** ${item.type}`,
-                )
-                .setColor(getColor('info')),
-        ],
+        embeds: [confirmEmbed],
         components: [confirmRow],
         flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 
     const confirmCollector = rootInteraction.channel.createMessageComponentCollector({

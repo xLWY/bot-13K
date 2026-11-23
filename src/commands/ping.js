@@ -1,10 +1,25 @@
-import { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits, version as djsVersion } from 'discord.js';
-import { getColor } from '../config/bot.js';
+import { SlashCommandBuilder, MessageFlags, PermissionFlagsBits, version as djsVersion } from 'discord.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
+import { createEmbed, errorEmbed, infoEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
+import { brandFooter, formatNumber } from '../ui/kit.js';
+
+const CONTEXT = 'Latence';
 
 function round(ms) {
     return Math.max(0, Math.round(ms));
+}
+
+function errorPage(message) {
+    return errorEmbed(message).setFooter(brandFooter(CONTEXT));
+}
+
+async function sendError(interaction, message) {
+    await InteractionHelper.safeEditReply(interaction, {
+        embeds: [errorPage(message)],
+        components: [],
+        allowedMentions: { parse: [], repliedUser: false },
+    });
 }
 
 export default {
@@ -20,38 +35,38 @@ export default {
         try {
             const sentAt = Date.now();
 
-            await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
+            if (!(await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral }))) return;
 
-            const message = await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    new EmbedBuilder()
-                        .setColor(getColor('success'))
-                        .setDescription('\u{1F3B1} Ping...')
-                ],
-                flags: MessageFlags.Ephemeral
-            });
+            const waiting = infoEmbed('Calcul de la latence en cours…', 'ℹ️ Ping')
+                .setFooter(brandFooter(CONTEXT));
+            const message = await InteractionHelper.safeEditReply(interaction, { embeds: [waiting] });
 
             const roundTrip = round((message?.createdTimestamp || sentAt) - sentAt);
             const heartbeat = round(client.ws.ping);
+            const isConnected = Number.isFinite(client.ws.ping) && client.ws.ping >= 0;
+            const status = isConnected ? '🟢 Connexion active' : '🔴 Websocket indisponible';
+
+            const embed = createEmbed({
+                title: 'Latence du bot',
+                description: 'Mesures relevées à l’instant.',
+                color: 'info',
+                fields: [
+                    { name: 'État', value: status, inline: false },
+                    { name: 'Websocket', value: `\`${formatNumber(heartbeat)} ms\``, inline: true },
+                    { name: 'Aller-retour', value: `\`${formatNumber(roundTrip)} ms\``, inline: true },
+                    { name: 'Disponibilité', value: `\`${formatUptime(client.uptime ?? 0)}\``, inline: true },
+                    { name: 'Bibliothèque', value: `\`discord.js v${djsVersion}\``, inline: true },
+                ],
+                footer: brandFooter(CONTEXT),
+            });
 
             await InteractionHelper.safeEditReply(interaction, {
-                embeds: [
-                    new EmbedBuilder()
-                        .setColor(getColor('info'))
-                        .setTitle('\u{1F4C8} Latence du bot')
-                        .addFields(
-                            { name: '\u{1F3E1} Websocket', value: `\`${heartbeat} ms\``, inline: true },
-                            { name: '\u{23F1} Aller-retour', value: `\`${roundTrip} ms\``, inline: true },
-                            { name: '\u{1F5B1}\u{FE0F} Uptime', value: `\`${formatUptime(client.uptime)}\``, inline: true },
-                        )
-                        .setFooter({ text: `discord.js v${djsVersion}` })
-                        .setTimestamp()
-                ],
-                flags: MessageFlags.Ephemeral
+                embeds: [embed],
+                allowedMentions: { parse: [], repliedUser: false },
             });
         } catch (error) {
             logger.error('Error in /ping:', error);
-            await InteractionHelper.sendErrorNotice(interaction, 'Impossible de calculer la latence.').catch(() => {});
+            await sendError(interaction, 'Impossible de calculer la latence. Réessaie dans un instant.');
         }
     },
 };

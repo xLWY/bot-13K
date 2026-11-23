@@ -1,8 +1,12 @@
 import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
-import { moderationMentionPayload } from '../../utils/moderation.js';
+import { errorEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
+import { brandFooter } from '../../ui/kit.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { logger } from '../../utils/logger.js';
+
+const NO_MENTIONS = { parse: [], repliedUser: false };
+const CONTEXT = 'Gestion des rôles';
 
 function parseMentions(message) {
     const roles = [...(message.mentions.roles?.values?.() ?? [])];
@@ -45,42 +49,49 @@ function parseMentions(message) {
     return { role: roles[0], user: users[0] };
 }
 
-async function fail(interaction, message) {
-    await InteractionHelper.safeEditReply(interaction, {
-        content: message,
-    }).catch(() => {});
+function cleanLabel(value) {
+    return String(value ?? 'Inconnu').replace(/[`@]/g, '').slice(0, 80);
 }
 
-async function notifyPrefixArgumentError(interaction, text) {
-    const sent = await interaction.user.send({
-        content: text,
-        allowedMentions: { parse: [] },
-    }).catch((error) => {
-        logger.warn(`Could not DM addrole notice to ${interaction.user.tag} (${interaction.user.id}): ${error.code || error.message}`);
-        return null;
-    });
+function payload(embed) {
+    return {
+        embeds: [embed.setFooter(brandFooter(CONTEXT))],
+        components: [],
+        allowedMentions: NO_MENTIONS,
+    };
+}
 
-    if (sent) return;
-
-    const fallback = await interaction.reply({
-        content: `<@${interaction.user.id}> ${text}`,
-        allowedMentions: { users: [interaction.user.id] },
-    }).catch((error) => {
-        logger.warn(`addrole fallback notice failed: ${error.code || error.message}`);
-        return null;
-    });
-
-    if (fallback?.delete) {
-        setTimeout(() => {
-            fallback.delete().catch(() => {});
-        }, 5000).unref?.();
+/**
+ * Les erreurs de commandes préfixées partent en MP : Discord ne permet pas
+ * de rendre un message de salon éphémère.
+ */
+async function fail(interaction, message, context = CONTEXT) {
+    const embed = errorEmbed(message).setFooter(brandFooter(context));
+    if (interaction.isPrefixCommand?.()) {
+        const sent = await interaction.user.send({
+            embeds: [embed],
+            allowedMentions: NO_MENTIONS,
+        }).catch((error) => {
+            logger.debug(`[AddRole] DM notice failed: ${error.code || error.message}`);
+            return null;
+        });
+        if (sent) {
+            await interaction.deleteReply?.().catch(() => {});
+            return;
+        }
+        await InteractionHelper.safeReply(interaction, {
+            content: message,
+            allowedMentions: NO_MENTIONS,
+        }).catch(() => {});
+        return;
     }
+    await InteractionHelper.safeEditReply(interaction, payload(embed)).catch(() => {});
 }
 
 export default {
     data: new SlashCommandBuilder()
         .setName('addrole')
-        .setDescription('Ajouter un rôle à un membre (mentions dans n\'importe quel ordre)')
+        .setDescription('Ajouter un rôle à un membre (mentions dans n’importe quel ordre)')
         .addRoleOption((option) =>
             option
                 .setName('role')
@@ -109,7 +120,7 @@ export default {
         if (isPrefix) {
             const parsed = parseMentions(interaction.message);
             if (parsed.error) {
-                return notifyPrefixArgumentError(interaction, parsed.error);
+                return fail(interaction, parsed.error, 'Arguments');
             }
             role = parsed.role;
             user = parsed.user;
@@ -119,13 +130,10 @@ export default {
         }
 
         if (!role || !user) {
-            if (isPrefix) {
-                return notifyPrefixArgumentError(interaction, 'Il manque : **un rôle** et **un membre**.');
-            }
-            return fail(interaction, 'Il manque : **un rôle** et **un membre**.');
+            return fail(interaction, 'Il manque : **un rôle** et **un membre**.', 'Arguments');
         }
 
-        const deferSuccess = await InteractionHelper.safeDefer(interaction, {});
+        const deferSuccess = await InteractionHelper.safeDefer(interaction);
         if (!deferSuccess) return;
 
         try {
@@ -139,7 +147,7 @@ export default {
                 ?? await guild.members.fetch(interaction.user.id).catch(() => null);
 
             if (!authorMember) {
-                return fail(interaction, 'Je n\'arrive pas à te trouver dans ce serveur.');
+                return fail(interaction, 'Je n’arrive pas à te trouver dans ce serveur.');
             }
 
             if (!isOwner && !authorMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
@@ -150,17 +158,17 @@ export default {
                 ?? await guild.members.fetchMe().catch(() => null);
 
             if (!botMember) {
-                return fail(interaction, 'Je n\'arrive pas à récupérer mon propre membre dans ce serveur.');
+                return fail(interaction, 'Je n’arrive pas à récupérer mon propre membre dans ce serveur.');
             }
 
             if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
-                return fail(interaction, 'Je n\'ai pas la permission **Gérer les rôles**.');
+                return fail(interaction, 'Je n’ai pas la permission **Gérer les rôles**.');
             }
 
             const targetMember = await guild.members.fetch(user.id).catch(() => null);
 
             if (!targetMember) {
-                return fail(interaction, 'Ce membre n\'est pas dans le serveur.');
+                return fail(interaction, 'Ce membre n’est pas dans le serveur.');
             }
 
             if (role.id === guild.id) {
@@ -180,9 +188,9 @@ export default {
             }
 
             if (targetMember.roles.cache.has(role.id)) {
-                return InteractionHelper.safeEditReply(interaction, {
-                    content: `${targetMember} a déjà le rôle **${role.name}**.`,
-                });
+                return InteractionHelper.safeEditReply(interaction, payload(
+                    warningEmbed(`<@${targetMember.id}> possède déjà le rôle \`${cleanLabel(role.name)}\`.`),
+                ));
             }
 
             await targetMember.roles.add(
@@ -194,12 +202,17 @@ export default {
                 `[AddRole] ${interaction.user.tag} a ajouté le rôle ${role.name} (${role.id}) à ${targetMember.user.tag} (${targetMember.id}) dans ${guild.name}`,
             );
 
-            return InteractionHelper.safeEditReply(interaction, {
-                ...moderationMentionPayload(targetMember.id, `a reçu le rôle **${role.name}**.`),
-            });
+            return InteractionHelper.safeEditReply(interaction, payload(
+                successEmbed(`<@${targetMember.id}> a reçu le rôle \`${cleanLabel(role.name)}\`.`, '✅ Rôle ajouté')
+                    .addFields(
+                        { name: 'Membre', value: `<@${targetMember.id}> • \`${targetMember.id}\``, inline: false },
+                        { name: 'Rôle', value: `\`${cleanLabel(role.name)}\` • \`${role.id}\``, inline: false },
+                        { name: 'Modérateur', value: `<@${interaction.user.id}>`, inline: true },
+                    ),
+            ));
         } catch (error) {
             logger.error('AddRole command error:', error);
-            return fail(interaction, 'Impossible d\'ajouter ce rôle. Vérifie mes permissions et la position de mon rôle.');
+            return fail(interaction, 'Impossible d’ajouter ce rôle. Vérifie mes permissions et la position de mon rôle.');
         }
     },
 };

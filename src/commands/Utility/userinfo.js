@@ -1,9 +1,11 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed } from '../../utils/embeds.js';
+import { createEmbed, errorEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
-import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { getUserLevelData, getXpForLevel, MAX_LEVEL } from '../../services/leveling.js';
+import { brandFooter, discordTimestamp, formatNumber, progressBar } from '../../ui/kit.js';
+
+const NO_MENTIONS = { parse: [], repliedUser: false };
 
 const BADGES = {
   Staff: '🛠️ Staff Discord',
@@ -24,7 +26,13 @@ const BADGES = {
   Spammer: '🚫 Spammeur'
 };
 
-const STATUS_EMOJIS = { online: '🟢', idle: '🟡', dnd: '🔴', offline: '⚫', invisible: '⚫' };
+const STATUS_LABELS = {
+  online: '🟢 En ligne',
+  idle: 'En attente',
+  dnd: '🔴 Ne pas déranger',
+  offline: 'Hors ligne',
+  invisible: 'Hors ligne'
+};
 
 const ACTIVITY_LABELS = {
   PLAYING: 'Joue à',
@@ -35,14 +43,23 @@ const ACTIVITY_LABELS = {
   Custom: 'Personnalisé'
 };
 
+function cleanName(value) {
+  return String(value ?? 'Utilisateur').replace(/[`@]/g, '').slice(0, 80);
+}
+
+function truncate(value, max) {
+  const text = String(value ?? '');
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
 export default {
   data: new SlashCommandBuilder()
-    .setName("userinfo")
-    .setDescription("* Obtenir des informations détaillées sur un utilisateur")
+    .setName('userinfo')
+    .setDescription('Obtenir des informations détaillées sur un utilisateur')
     .addUserOption((option) =>
       option
-        .setName("target")
-        .setDescription("L'utilisateur à inspecter (par défaut vous-même)"),
+        .setName('target')
+        .setDescription('L’utilisateur à inspecter (par défaut toi-même)'),
     ),
 
   async execute(interaction) {
@@ -58,7 +75,15 @@ export default {
       }
 
       const guild = interaction.guild;
-      const user = interaction.options.getUser("target") || interaction.user;
+      if (!guild) {
+        await InteractionHelper.safeEditReply(interaction, {
+          embeds: [errorEmbed('Cette commande est disponible uniquement dans un serveur.')],
+          allowedMentions: NO_MENTIONS,
+        });
+        return;
+      }
+
+      const user = interaction.options.getUser('target') || interaction.user;
 
       let member = guild.members.cache.get(user.id);
       if (!member) {
@@ -72,32 +97,21 @@ export default {
 
       const bannerURL = fetchedUser.bannerURL?.({ size: 1024 }) || null;
 
-      const createdTs = Math.floor(user.createdTimestamp / 1000);
-      const joinedTs = member?.joinedTimestamp ? Math.floor(member.joinedTimestamp / 1000) : null;
-
       const presence = member?.presence;
       const status = presence?.status || 'offline';
       const activity = presence?.activities?.find((a) => a.type !== 4) || presence?.activities?.[0];
       const activityText = activity
-        ? `${ACTIVITY_LABELS[activity.type] || 'Activité'}: ${activity.name}` +
-          (activity.details ? ` — ${activity.details}` : '') +
-          (activity.state ? ` / ${activity.state}` : '')
+        ? `${ACTIVITY_LABELS[activity.type] || 'Activité'} : ${truncate([activity.name, activity.details, activity.state].filter(Boolean).join(' — '), 100)}`
         : null;
-      const statusText =
-        `${STATUS_EMOJIS[status] || '⚫'} ${status === 'offline' ? 'Hors ligne' : status.charAt(0).toUpperCase() + status.slice(1)}` +
-        (activityText ? `\n${activityText}` : '');
 
+      let roleCount = 0;
       let rolesText = 'Pas dans le serveur';
       if (member) {
         const roles = member.roles.cache.filter((role) => role.id !== guild.id);
-        if (roles.size === 0) {
-          rolesText = '@everyone';
-        } else {
-          const joinedNames = roles.map((role) => role.name).join(', ');
-          rolesText = joinedNames.length > 1000
-            ? `${joinedNames.slice(0, joinedNames.lastIndexOf(',', 1000))} …`
-            : joinedNames;
-        }
+        roleCount = roles.size;
+        rolesText = roleCount === 0
+          ? '@everyone'
+          : truncate(roles.map((role) => role.name).join(', '), 350);
       }
 
       let joinPosition = null;
@@ -109,54 +123,82 @@ export default {
       }
 
       const boosterText = member?.premiumSinceTimestamp
-        ? `Depuis <t:${Math.floor(member.premiumSinceTimestamp / 1000)}:R>`
+        ? `Depuis ${discordTimestamp(member.premiumSinceTimestamp)}`
         : 'Aucun';
       const timeoutText = member?.communicationDisabledUntilTimestamp
-        ? `Jusqu'au <t:${Math.floor(member.communicationDisabledUntilTimestamp / 1000)}:R>`
+        ? `Jusqu’au ${discordTimestamp(member.communicationDisabledUntilTimestamp)}`
         : 'Aucun';
 
       let levelText = 'Pas encore de données de niveau';
       try {
         const data = await getUserLevelData(interaction.client, guild.id, user.id);
         if (data.totalXp > 0 || data.level > 0) {
-          const progress = data.level >= MAX_LEVEL
-            ? 'Niveau max atteint'
-            : `${data.xp} / ${getXpForLevel(data.level + 1)} XP`;
-          levelText = `Niveau **${data.level}**\n${progress}\n**${data.totalXp}** XP au total${data.rank > 0 ? `\nRang **#${data.rank}**` : ''}`;
+          const nextLevelXp = data.level >= MAX_LEVEL ? null : getXpForLevel(data.level + 1);
+          levelText = [
+            `Niveau **${data.level}** • **${formatNumber(data.totalXp)}** XP au total`,
+            data.level >= MAX_LEVEL
+              ? 'Niveau max atteint'
+              : `${progressBar(data.xp, nextLevelXp, 10)} \`${formatNumber(data.xp)} / ${formatNumber(nextLevelXp)} XP\``,
+            data.rank > 0 ? `Rang **#${formatNumber(data.rank)}**` : null,
+          ].filter(Boolean).join('\n');
         }
       } catch (error) {
         levelText = 'Données de niveau indisponibles';
       }
 
-      const embed = createEmbed({ title: `👤 Infos Utilisateur : ${member?.displayName || user.displayName || user.username}` })
-        .setDescription(`${user}`)
-        .setThumbnail(user.displayAvatarURL({ size: 256 }))
-        .addFields(
-          { name: "ID", value: user.id, inline: true },
-          { name: "Bot", value: user.bot ? "Oui" : "Non", inline: true },
-          { name: "Badges", value: badgeText, inline: true },
-          { name: "Compte Créé", value: `<t:${createdTs}:F> (<t:${createdTs}:R>)`, inline: false },
+      const displayName = cleanName(member?.displayName || user.displayName || user.username);
+      const embed = createEmbed({
+        title: `Fiche de ${displayName}`,
+        description: [
+          `${user} • ${member ? 'Membre du serveur.' : 'Cette personne n’est pas membre du serveur.'}`,
+          'Les données de niveau affichées proviennent de ce serveur.',
+        ].join('\n'),
+        color: 'info',
+        thumbnail: user.displayAvatarURL({ size: 256 }),
+        image: bannerURL,
+        fields: [
           {
-            name: "A Rejoint le Serveur",
-            value: joinedTs
-              ? `<t:${joinedTs}:F> (<t:${joinedTs}:R>)${joinPosition ? `\nPosition de rejointe : #${joinPosition}` : ''}`
-              : "Pas dans le serveur",
+            name: 'Identité',
+            value: [
+              `ID : \`${user.id}\``,
+              `Type : ${user.bot ? 'Bot' : 'Utilisateur'}`,
+              `Badges : ${truncate(badgeText, 110)}`,
+            ].join('\n'),
             inline: false,
           },
-          { name: "Rôles", value: rolesText, inline: false },
-          { name: "Rôle le Plus Haut", value: member?.roles?.highest?.name || "Aucun", inline: true },
-          { name: "Booster du Serveur", value: boosterText, inline: true },
-          { name: "Timeout", value: timeoutText, inline: true },
-          { name: "Statut", value: statusText, inline: false },
-          { name: "Leveling", value: levelText, inline: false },
-        )
-        .setFooter({ text: `Demandé par ${interaction.user.displayName}` });
+          {
+            name: 'Dates',
+            value: [
+              `Créé : ${discordTimestamp(user.createdTimestamp, 'F')}`,
+              `Rejoint : ${member?.joinedTimestamp ? discordTimestamp(member.joinedTimestamp, 'F') : 'Pas dans le serveur'}${joinPosition ? ` • position #${formatNumber(joinPosition)}` : ''}`,
+            ].join('\n'),
+            inline: false,
+          },
+          {
+            name: 'Sur le serveur',
+            value: [
+              `Rôle le plus haut : ${truncate(member?.roles?.highest?.name ?? 'Aucun', 60)}`,
+              `Boost : ${boosterText}`,
+              `Timeout : ${timeoutText}`,
+            ].join('\n'),
+            inline: false,
+          },
+          { name: `Rôles (${formatNumber(roleCount)})`, value: rolesText, inline: false },
+          {
+            name: 'Statut',
+            value: `${STATUS_LABELS[status] || 'Hors ligne'}${activityText ? `\n${activityText}` : ''}`,
+            inline: false,
+          },
+          { name: 'Niveau', value: levelText, inline: false },
+        ],
+        footer: brandFooter('Fiche utilisateur'),
+      });
 
-      if (bannerURL) {
-        embed.setImage(bannerURL);
-      }
+      await InteractionHelper.safeEditReply(interaction, {
+        embeds: [embed],
+        allowedMentions: NO_MENTIONS,
+      });
 
-      await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });
       logger.info(`UserInfo command executed`, {
         userId: interaction.user.id,
         targetUserId: user.id,
@@ -170,9 +212,9 @@ export default {
         guildId: interaction.guildId,
         commandName: 'userinfo'
       });
-      await handleInteractionError(interaction, error, {
-        commandName: 'userinfo',
-        source: 'userinfo_command'
+      await InteractionHelper.safeEditReply(interaction, {
+        embeds: [errorEmbed('Impossible d’afficher les informations de cet utilisateur. Réessaie dans un instant.')],
+        allowedMentions: NO_MENTIONS,
       });
     }
   },

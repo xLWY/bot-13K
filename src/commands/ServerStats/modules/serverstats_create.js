@@ -1,5 +1,8 @@
 import { PermissionFlagsBits, ChannelType } from 'discord.js';
 import crypto from 'node:crypto';
+import { getColor } from '../../../config/bot.js';
+import { createEmbed } from '../../../utils/embeds.js';
+import { brandFooter } from '../../../ui/kit.js';
 import { getServerCounters, saveServerCounters, updateCounter, getCounterBaseName, getCounterEmoji, getCounterTypeLabel } from '../../../services/serverstatsService.js';
 import { logger } from '../../../utils/logger.js';
 
@@ -95,8 +98,22 @@ export async function handleCreate(interaction, client) {
             return;
         }
 
+        const embed = createEmbed({
+            title: 'Compteur créé',
+            description: 'Le compteur sera actualisé automatiquement toutes les 6 minutes. Utilise `/serverstats list` pour le retrouver.',
+            color: getColor('success'),
+            fields: [
+                { name: 'Type', value: `${getCounterEmoji(type)} ${getCounterTypeLabel(type)}`, inline: true },
+                { name: 'Salon', value: `${targetChannel}`, inline: true },
+                { name: 'Catégorie', value: `${category}`, inline: true },
+                { name: 'Nom du salon', value: `\`${targetChannel.name}\``, inline: false },
+            ],
+            footer: brandFooter('Compteurs'),
+        });
+
         await InteractionHelper.safeEditReply(interaction, {
-            content: `✅ **Compteur créé avec succès !**\n\n**Type :** ${getCounterTypeLabel(type)}\n**Type de salon :** ${targetChannel.type === ChannelType.GuildVoice ? 'vocal' : 'texte'}\n**Catégorie :** ${category}\n**Salon :** ${targetChannel}\n**Nom du salon :** ${targetChannel.name}\n\nLe compteur sera actualisé automatiquement (au maximum toutes les 6 minutes).\n\nUtilise \`/serverstats list\` pour voir tous les compteurs.`
+            embeds: [embed],
+            allowedMentions: { parse: [] },
         }).catch(logger.error);
 
     } catch (error) {

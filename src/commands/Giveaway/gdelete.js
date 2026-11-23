@@ -1,11 +1,81 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { logger } from '../../utils/logger.js';
-import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
+import { XlwyBotError, ErrorTypes, getUserMessage } from '../../utils/errorHandler.js';
 import { getGuildGiveaways, deleteGiveaway } from '../../utils/giveaways.js';
 import { logEvent, EVENT_TYPES } from '../../services/loggingService.js';
-
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { createEmbed, errorEmbed } from '../../utils/embeds.js';
+import { brandFooter, formatNumber, guildIconUrl } from '../../ui/kit.js';
+
+const FOOTER_CONTEXT = 'Suppression de concours';
+const NO_MENTIONS = { parse: [], repliedUser: false };
+
+/** Les réponses de gestion sont privées en serveur et ne mentionnent personne. */
+function privatePayload(interaction, payload) {
+    return {
+        ...payload,
+        allowedMentions: NO_MENTIONS,
+        ...(interaction.inGuild() ? { flags: MessageFlags.Ephemeral } : {}),
+    };
+}
+
+function errorPayload(text) {
+    const embed = errorEmbed(text);
+    embed.setFooter(brandFooter(FOOTER_CONTEXT));
+    return { embeds: [embed], components: [] };
+}
+
+async function replyError(interaction, error) {
+    logger.error('Error in gdelete command:', error);
+    await InteractionHelper.safeReply(
+        interaction,
+        privatePayload(interaction, errorPayload(getUserMessage(error))),
+    );
+}
+
+function cleanText(value) {
+    return String(value ?? 'Inconnu').replace(/[`@]/g, '').slice(0, 80);
+}
+
+function buildSuccessPayload(interaction, giveaway, { deletedMessage, channelName, winnerIds, wasEnded }) {
+    const displayChannel = channelName === 'unknown-channel'
+        ? 'salon inconnu'
+        : cleanText(channelName);
+
+    const winnerStatus = winnerIds.length > 0
+        ? `Ce concours avait déjà ${formatNumber(winnerIds.length)} gagnant(s).`
+        : wasEnded
+            ? 'Ce concours était terminé sans gagnant valide.'
+            : 'Aucun gagnant n’avait été tiré avant la suppression.';
+
+    const embed = createEmbed({
+        title: '✅ Concours supprimé',
+        description: `Le concours **${cleanText(giveaway.prize)}** a été retiré de la base de données. ${winnerStatus}`,
+        color: 'success',
+        thumbnail: guildIconUrl(interaction.guild, 96),
+        fields: [
+            {
+                name: '🧹 Message',
+                value: deletedMessage
+                    ? `Supprimé dans \`#${displayChannel}\``
+                    : 'Introuvable ou salon inaccessible',
+                inline: false,
+            },
+            {
+                name: '👥 Participations',
+                value: formatNumber(giveaway.participants?.length ?? 0),
+                inline: true,
+            },
+            { name: '🗂️ État', value: wasEnded ? 'Terminé' : 'Actif', inline: true },
+            { name: '🆔 Identifiant', value: `\`${giveaway.messageId}\``, inline: true },
+        ],
+        footer: brandFooter(FOOTER_CONTEXT),
+    });
+
+    return { embeds: [embed], components: [] };
+}
+
 export default {
     data: new SlashCommandBuilder()
         .setName("gdelete")
@@ -20,9 +90,11 @@ export default {
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
+    deferEphemeral: true,
+
     async execute(interaction) {
         try {
-            
+
             if (!interaction.inGuild()) {
                 throw new XlwyBotError(
                     'Giveaway command used outside guild',
@@ -32,12 +104,12 @@ export default {
                 );
             }
 
-            
+
             if (!isBotOwner(interaction.member.id) && !interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 throw new XlwyBotError(
                     'User lacks ManageGuild permission',
                     ErrorTypes.PERMISSION,
-                    "Vous devez avoir la permission `Gérer le serveur` pour supprimer un concours.",
+                    'Tu dois avoir la permission `Gérer le serveur` pour supprimer un concours.',
                     { userId: interaction.user.id, guildId: interaction.guildId }
                 );
             }
@@ -46,12 +118,12 @@ export default {
 
             const messageId = interaction.options.getString("messageid");
 
-            
+
             if (!messageId || !/^\d+$/.test(messageId)) {
                 throw new XlwyBotError(
                     'Invalid message ID format',
                     ErrorTypes.VALIDATION,
-                    'Veuillez fournir un identifiant de message valide.',
+                    'Fournis un identifiant de message valide.',
                     { providedId: messageId }
                 );
             }
@@ -63,7 +135,7 @@ export default {
                 throw new XlwyBotError(
                     `Giveaway not found: ${messageId}`,
                     ErrorTypes.VALIDATION,
-                    "Aucun concours n'a été trouvé avec cet identifiant de message.",
+                    'Aucun concours n’a été trouvé avec cet identifiant de message. Vérifie l’ID et réessaie.',
                     { messageId, guildId: interaction.guildId }
                 );
             }
@@ -87,7 +159,7 @@ export default {
                 return true;
             };
 
-            
+
             try {
                 const channel = await interaction.client.channels.fetch(giveaway.channelId).catch(() => null);
                 if (await tryDeleteFromChannel(channel)) {
@@ -111,7 +183,7 @@ export default {
                 logger.warn(`Could not delete giveaway message: ${error.message}`);
             }
 
-            
+
             const removedFromDatabase = await deleteGiveaway(
                 interaction.client,
                 interaction.guildId,
@@ -122,7 +194,7 @@ export default {
                 throw new XlwyBotError(
                     `Failed to delete giveaway from database: ${messageId}`,
                     ErrorTypes.UNKNOWN,
-                    "Le concours n'a pas pu être retiré de la base de données. Veuillez réessayer.",
+                    'Le concours n’a pas pu être retiré de la base de données. Réessaie dans un instant.',
                     { messageId, guildId: interaction.guildId }
                 );
             }
@@ -134,28 +206,18 @@ export default {
                 throw new XlwyBotError(
                     `Giveaway still exists after deletion: ${messageId}`,
                     ErrorTypes.UNKNOWN,
-                    "La suppression n'a pas été enregistrée dans la base de données. Veuillez réessayer.",
+                    'La suppression n’a pas été enregistrée dans la base de données. Réessaie dans un instant.',
                     { messageId, guildId: interaction.guildId }
                 );
             }
-
-            const statusMsg = deletedMessage
-                ? `et le message a été supprimé de #${channelName}`
-                : `mais le message était déjà supprimé ou le salon était inaccessible.`;
 
             const winnerIds = Array.isArray(giveaway.winnerIds) ? giveaway.winnerIds : [];
             const hasWinners = winnerIds.length > 0;
             const wasEnded = giveaway.ended === true || giveaway.isEnded === true || hasWinners;
 
-            const winnerStatusMsg = hasWinners
-                ? `Ce concours avait déjà ${winnerIds.length} gagnant(s) sélectionné(s).`
-                : wasEnded
-                    ? 'Ce concours était terminé sans gagnant valide.'
-                    : "Aucun gagnant n'avait été tiré avant la suppression.";
-
             logger.info(`Giveaway deleted: ${messageId} in ${channelName}`);
 
-            
+
             try {
                 await logEvent({
                     client: interaction.client,
@@ -183,20 +245,16 @@ export default {
                 logger.debug('Error logging giveaway deletion:', logError);
             }
 
-            return InteractionHelper.safeReply(interaction, {
-                content: `Concours supprimé — Concours supprimé pour **${giveaway.prize}** ${statusMsg}. ${winnerStatusMsg}`,
-                flags: MessageFlags.Ephemeral,
-            });
+            return InteractionHelper.safeReply(
+                interaction,
+                privatePayload(
+                    interaction,
+                    buildSuccessPayload(interaction, giveaway, { deletedMessage, channelName, winnerIds, wasEnded }),
+                ),
+            );
 
         } catch (error) {
-            logger.error('Error in gdelete command:', error);
-            await handleInteractionError(interaction, error, {
-                type: 'command',
-                commandName: 'gdelete',
-                context: 'giveaway_deletion'
-            });
+            await replyError(interaction, error);
         }
     },
 };
-
-

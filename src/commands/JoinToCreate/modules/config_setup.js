@@ -1,14 +1,18 @@
-import { getColor } from '../../../config/bot.js';
 import {
     ActionRowBuilder,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
     MessageFlags,
     ComponentType,
-    EmbedBuilder,
     ButtonBuilder,
     ButtonStyle
 } from 'discord.js';
+import { createEmbed } from '../../../utils/embeds.js';
+import {
+    brandFooter,
+    formatNumber,
+    progressBar,
+} from '../../../ui/kit.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
@@ -34,33 +38,40 @@ export default {
             );
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle('⚙️ Configuration Join to Create')
-            .setDescription(`Configurer les réglages de ${triggerChannel}`)
-            .setColor(getColor('info'))
-            .addFields(
+        const bitrateKbps = (currentConfig.channelOptions?.[triggerChannel.id]?.bitrate || currentConfig.bitrate) / 1000;
+
+        const embed = createEmbed({
+            title: 'Configuration Join to Create',
+            description: `Configurer les réglages de ${triggerChannel}`,
+            color: 'info',
+            fields: [
                 {
-                    name: '📝 Modèle de nom actuel',
+                    name: 'Statut',
+                    value: `⚙️ ${currentConfig.enabled ? '✅ Activé' : '❌ Désactivé'}`,
+                    inline: false
+                },
+                {
+                    name: 'Modèle de nom actuel',
                     value: `\`${currentConfig.channelOptions?.[triggerChannel.id]?.nameTemplate || currentConfig.channelNameTemplate}\``,
                     inline: false
                 },
                 {
-                    name: '👥 Limite de membres actuelle',
-                    value: `${currentConfig.channelOptions?.[triggerChannel.id]?.userLimit || currentConfig.userLimit === 0 ? 'Illimitée' : currentConfig.userLimit + ' membres'}`,
+                    name: 'Limite de membres actuelle',
+                    value: `${currentConfig.channelOptions?.[triggerChannel.id]?.userLimit || currentConfig.userLimit === 0 ? 'Illimitée' : formatNumber(currentConfig.userLimit) + ' membres'}`,
                     inline: true
                 },
                 {
-                    name: '🎵 Débit binaire actuel',
-                    value: `${(currentConfig.channelOptions?.[triggerChannel.id]?.bitrate || currentConfig.bitrate) / 1000} kbps`,
+                    name: 'Débit binaire actuel',
+                    value: `${formatNumber(bitrateKbps)} kbps ${progressBar(bitrateKbps - 8, 376, 8)}`,
                     inline: true
                 }
-            )
-            .setFooter({ text: 'Choisis une option de configuration ci-dessous' })
-            .setTimestamp();
+            ],
+            footer: brandFooter('Configuration Join to Create • choisis une option ci-dessous'),
+        });
 
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId(`jointocreate_config_${triggerChannel.id}`)
-            .setPlaceholder('Choisir une option de configuration')
+            .setPlaceholder('Choisis une option de configuration')
             .addOptions(
                 new StringSelectMenuOptionBuilder()
                     .setLabel('Modifier le modèle de nom')
@@ -89,6 +100,7 @@ export default {
         await InteractionHelper.safeEditReply(interaction, {
             embeds: [embed],
             components: [row],
+            allowedMentions: { parse: [] },
         }).catch(error => {
             logger.error('Failed to edit reply in config_setup:', error);
         });
@@ -96,7 +108,7 @@ export default {
         const collector = interaction.channel.createMessageComponentCollector({
             componentType: ComponentType.StringSelect,
             filter: (i) => i.user.id === interaction.user.id && i.customId === `jointocreate_config_${triggerChannel.id}`,
-time: 60000
+            time: 60_000
         });
 
         collector.on('collect', async (selectInteraction) => {
@@ -163,13 +175,19 @@ time: 60000
 };
 
 async function handleNameTemplateChange(interaction, triggerChannel, currentConfig, client) {
-    const embed = new EmbedBuilder()
-        .setTitle('📝 Configuration du modèle de nom')
-        .setDescription("Saisis le nouveau modèle de nom de canal.")
-        .addFields(
+    const embed = createEmbed({
+        title: 'Configuration du modèle de nom',
+        description: 'Saisis le nouveau modèle de nom de salon.',
+        color: 'info',
+        fields: [
+            {
+                name: 'Statut',
+                value: '📝 Modification en cours',
+                inline: false
+            },
             {
                 name: 'Variables disponibles',
-                value: '• `{username}` - Nom d\'utilisateur\n• `{display_name}` - Nom affiché\n• `{user_tag}` - Étiquette (User#1234)\n• `{guild_name}` - Nom du serveur',
+                value: '• `{username}` - Nom d’utilisateur\n• `{display_name}` - Nom affiché\n• `{user_tag}` - Étiquette (User#1234)\n• `{guild_name}` - Nom du serveur',
                 inline: false
             },
             {
@@ -177,11 +195,15 @@ async function handleNameTemplateChange(interaction, triggerChannel, currentConf
                 value: `\`${currentConfig.channelOptions?.[triggerChannel.id]?.nameTemplate || currentConfig.channelNameTemplate}\``,
                 inline: false
             }
-        )
-        .setColor(getColor('info'))
-        .setFooter({ text: "Saisis ton nouveau modèle dans le chat ci-dessous" });
+        ],
+        footer: brandFooter('Modèle de nom • saisis le nouveau modèle dans le chat'),
+    });
 
-    await interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    await interaction.followUp({
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
+    });
 
     const collector = interaction.channel.createMessageCollector({
         filter: (m) => m.author.id === interaction.user.id,
@@ -211,6 +233,7 @@ time: 600_000,
             await interaction.followUp({
                 content: `✅ Modèle mis à jour — Le modèle de nom a été changé pour \`${newTemplate}\``,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
 
             await message.delete().catch(() => {});
@@ -237,20 +260,30 @@ time: 600_000,
 }
 
 async function handleUserLimitChange(interaction, triggerChannel, currentConfig, client) {
-    const embed = new EmbedBuilder()
-        .setTitle('👥 Configuration de la limite de membres')
-        .setDescription('Saisis la nouvelle limite de membres (0-99, où 0 = illimité).')
-        .addFields(
+    const embed = createEmbed({
+        title: 'Configuration de la limite de membres',
+        description: 'Saisis la nouvelle limite de membres (0-99, où 0 = illimité).',
+        color: 'info',
+        fields: [
+            {
+                name: 'Statut',
+                value: '👥 Modification en cours',
+                inline: false
+            },
             {
                 name: 'Limite actuelle',
-                value: `${currentConfig.channelOptions?.[triggerChannel.id]?.userLimit || currentConfig.userLimit === 0 ? 'Illimitée' : currentConfig.userLimit + ' membres'}`,
+                value: `${currentConfig.channelOptions?.[triggerChannel.id]?.userLimit || currentConfig.userLimit === 0 ? 'Illimitée' : formatNumber(currentConfig.userLimit) + ' membres'}`,
                 inline: false
             }
-        )
-        .setColor(getColor('info'))
-        .setFooter({ text: 'Saisis la nouvelle limite dans le chat ci-dessous' });
+        ],
+        footer: brandFooter('Limite de membres • saisis la nouvelle limite dans le chat'),
+    });
 
-    await interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    await interaction.followUp({
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
+    });
 
     const collector = interaction.channel.createMessageCollector({
         filter: (m) => m.author.id === interaction.user.id && /^\d+$/.test(m.content.trim()),
@@ -278,8 +311,9 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
             });
 
             await interaction.followUp({
-                content: `✅ Limite mise à jour — La limite a été changée : ${newLimit === 0 ? 'illimitée' : newLimit + ' membres'}`,
+                content: `✅ Limite mise à jour — La limite a été changée : ${newLimit === 0 ? 'illimitée' : formatNumber(newLimit) + ' membres'}`,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
 
             await message.delete().catch(() => {});
@@ -306,13 +340,21 @@ async function handleUserLimitChange(interaction, triggerChannel, currentConfig,
 }
 
 async function handleBitrateChange(interaction, triggerChannel, currentConfig, client) {
-    const embed = new EmbedBuilder()
-        .setTitle('🎵 Configuration du débit binaire')
-        .setDescription('Saisis le nouveau débit binaire en kbps (8-384).')
-        .addFields(
+    const bitrateKbps = (currentConfig.channelOptions?.[triggerChannel.id]?.bitrate || currentConfig.bitrate) / 1000;
+
+    const embed = createEmbed({
+        title: 'Configuration du débit binaire',
+        description: 'Saisis le nouveau débit binaire en kbps (8-384).',
+        color: 'info',
+        fields: [
+            {
+                name: 'Statut',
+                value: '🎵 Modification en cours',
+                inline: false
+            },
             {
                 name: 'Débit actuel',
-                value: `${(currentConfig.channelOptions?.[triggerChannel.id]?.bitrate || currentConfig.bitrate) / 1000} kbps`,
+                value: `${formatNumber(bitrateKbps)} kbps ${progressBar(bitrateKbps - 8, 376, 8)}`,
                 inline: false
             },
             {
@@ -320,11 +362,15 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
                 value: '• 64 kbps - Qualité normale\n• 96 kbps - Bonne qualité\n• 128 kbps - Haute qualité\n• 256 kbps - Très haute qualité',
                 inline: false
             }
-        )
-        .setColor(getColor('info'))
-        .setFooter({ text: 'Saisis le nouveau débit dans le chat ci-dessous' });
+        ],
+        footer: brandFooter('Débit binaire • saisis le nouveau débit dans le chat'),
+    });
 
-    await interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    await interaction.followUp({
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
+    });
 
     const collector = interaction.channel.createMessageCollector({
         filter: (m) => m.author.id === interaction.user.id && /^\d+$/.test(m.content.trim()),
@@ -352,8 +398,9 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
             });
 
             await interaction.followUp({
-                content: `✅ Débit mis à jour — Débit binaire changé à ${newBitrate} kbps`,
+                content: `✅ Débit mis à jour — Débit binaire changé à ${formatNumber(newBitrate)} kbps`,
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
 
             await message.delete().catch(() => {});
@@ -380,11 +427,19 @@ async function handleBitrateChange(interaction, triggerChannel, currentConfig, c
 }
 
 async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, client) {
-    const embed = new EmbedBuilder()
-        .setTitle('⚠️ Retirer le canal déclencheur')
-        .setDescription(`Es-tu sûr de vouloir retirer ${triggerChannel} du système Join to Create ?`)
-        .setColor('#ff6600')
-        .setFooter({ text: 'Cette action est irréversible' });
+    const embed = createEmbed({
+        title: 'Retirer le canal déclencheur',
+        description: `Es-tu sûr de vouloir retirer ${triggerChannel} du système Join to Create ?`,
+        color: 'warning',
+        fields: [
+            {
+                name: 'Statut',
+                value: '⚠️ Confirmation requise',
+                inline: false
+            }
+        ],
+        footer: brandFooter('Action sensible • cette action est irréversible'),
+    });
 
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -397,10 +452,11 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
             .setStyle(ButtonStyle.Secondary)
     );
 
-    await interaction.followUp({ 
-        embeds: [embed], 
+    await interaction.followUp({
+        embeds: [embed],
         components: [row],
-        flags: MessageFlags.Ephemeral 
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 
     const collector = interaction.channel.createMessageComponentCollector({
@@ -422,6 +478,7 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
                     await buttonInteraction.followUp({
                         content: `✅ Canal retiré — ${triggerChannel} a été retiré du système Join to Create.`,
                         flags: MessageFlags.Ephemeral,
+                        allowedMentions: { parse: [] },
                     });
                 } else {
                     await InteractionHelper.sendErrorNotice(buttonInteraction, "Impossible de retirer le canal déclencheur.");
@@ -443,6 +500,7 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
             await buttonInteraction.followUp({
                 content: '✅ Annulé — Le retrait du canal a été annulé.',
                 flags: MessageFlags.Ephemeral,
+                allowedMentions: { parse: [] },
             });
         }
     });
@@ -457,52 +515,54 @@ async function handleRemoveTrigger(interaction, triggerChannel, currentConfig, c
 async function handleViewSettings(interaction, triggerChannel, currentConfig, client) {
     const channelConfig = currentConfig.channelOptions?.[triggerChannel.id] || {};
     
-    const embed = new EmbedBuilder()
-        .setTitle('📋 Réglages actuels')
-        .setDescription(`Configuration de ${triggerChannel}`)
-        .setColor(getColor('info'))
-        .addFields(
+    const embed = createEmbed({
+        title: 'Réglages actuels',
+        description: `Configuration de ${triggerChannel}`,
+        color: 'info',
+        fields: [
             {
-                name: '🎯 Canal déclencheur',
+                name: 'Statut',
+                value: `📋 ${currentConfig.enabled ? '✅ Activé' : '❌ Désactivé'}`,
+                inline: true
+            },
+            {
+                name: 'Canal déclencheur',
                 value: `${triggerChannel} (${triggerChannel.id})`,
                 inline: false
             },
             {
-                name: '📝 Modèle de nom',
+                name: 'Modèle de nom',
                 value: `\`${channelConfig.nameTemplate || currentConfig.channelNameTemplate}\``,
                 inline: false
             },
             {
-                name: '👥 Limite de membres',
-                value: `${channelConfig.userLimit || currentConfig.userLimit === 0 ? 'Illimitée' : (channelConfig.userLimit || currentConfig.userLimit) + ' membres'}`,
+                name: 'Limite de membres',
+                value: `${channelConfig.userLimit || currentConfig.userLimit === 0 ? 'Illimitée' : formatNumber(channelConfig.userLimit || currentConfig.userLimit) + ' membres'}`,
                 inline: true
             },
             {
-                name: '🎵 Débit binaire',
-                value: `${(channelConfig.bitrate || currentConfig.bitrate) / 1000} kbps`,
+                name: 'Débit binaire',
+                value: `${formatNumber((channelConfig.bitrate || currentConfig.bitrate) / 1000)} kbps`,
                 inline: true
             },
             {
-                name: '📁 Catégorie',
+                name: 'Catégorie',
                 value: currentConfig.categoryId ? `<#${currentConfig.categoryId}>` : 'Non définie',
                 inline: true
             },
             {
-                name: '📊 Statut du système',
-                value: currentConfig.enabled ? '✅ Activé' : '❌ Désactivé',
-                inline: true
-            },
-            {
-                name: '🔢 Salons temporaires actifs',
-                value: Object.keys(currentConfig.temporaryChannels || {}).length.toString(),
+                name: 'Salons temporaires actifs',
+                value: formatNumber(Object.keys(currentConfig.temporaryChannels || {}).length),
                 inline: true
             }
-        )
-        .setTimestamp();
+        ],
+        footer: brandFooter('Join to Create • réglages actuels'),
+    });
 
-    await interaction.followUp({ 
-        embeds: [embed], 
-        flags: MessageFlags.Ephemeral 
+    await interaction.followUp({
+        embeds: [embed],
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
     });
 }
 

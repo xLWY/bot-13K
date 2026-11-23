@@ -1,4 +1,6 @@
 import { ChannelType, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { createEmbed } from '../../../utils/embeds.js';
+import { brandFooter, formatNumber } from '../../../ui/kit.js';
 import { logger } from '../../../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { addJoinToCreateTrigger } from '../../../utils/database.js';
@@ -34,28 +36,31 @@ export default {
                 categoryId: category?.id
             });
 
-            const content =
-                `✅ Configuration Join to Create terminée\n\n` +
-                `Canal déclencheur créé : ${triggerChannel}\n\n` +
-                `**Paramètres :**\n` +
-                `• Modèle de nom du canal : \`${nameTemplate}\`\n` +
-                `• Limite de membres : ${userLimit === 0 ? 'Illimitée' : userLimit + ' membres'}\n` +
-                `• Débit binaire : ${bitrate} kbps\n` +
-                `${category ? `• Catégorie : ${category.name}` : '• Catégorie : Racine'}\n\n` +
-                `Lorsqu'un membre rejoint ce canal, un salon vocal temporaire est créé pour lui.`;
+            const embed = createEmbed({
+                title: 'Configuration terminée',
+                description: `Le canal déclencheur ${triggerChannel} est prêt. Lorsqu’un membre le rejoint, un salon vocal temporaire est créé pour lui.`,
+                fields: [
+                    { name: 'Modèle de nom', value: `\`${nameTemplate}\``, inline: false },
+                    { name: 'Limite de membres', value: userLimit === 0 ? 'Illimitée' : formatNumber(userLimit), inline: true },
+                    { name: 'Débit binaire', value: `${formatNumber(bitrate)} kbps`, inline: true },
+                    { name: 'Catégorie', value: category ? `${category.name}` : 'Racine', inline: true },
+                ],
+                footer: brandFooter('Join to Create'),
+            });
+            const payload = { embeds: [embed], allowedMentions: { parse: [] } };
 
             try {
                 if (interaction.deferred) {
-                    await InteractionHelper.safeEditReply(interaction, { content });
+                    await InteractionHelper.safeEditReply(interaction, payload);
                 } else {
-                    await InteractionHelper.safeReply(interaction, { content, flags: MessageFlags.Ephemeral });
+                    await InteractionHelper.safeReply(interaction, { ...payload, flags: MessageFlags.Ephemeral });
                 }
             } catch (responseError) {
                 logger.error('Error responding to interaction:', responseError);
-                
+
                 try {
                     if (!interaction.replied) {
-                        await InteractionHelper.safeReply(interaction, { content, flags: MessageFlags.Ephemeral });
+                        await InteractionHelper.safeReply(interaction, { ...payload, flags: MessageFlags.Ephemeral });
                     }
                 } catch (e) {
                     logger.error('All response attempts failed:', e);
