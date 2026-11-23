@@ -23,6 +23,8 @@ Connection URL precedence: `DATABASE_URL` > `POSTGRES_URL` > `POSTGRES_CONNECTIO
 
 `OWNER_IDS` must contain digits only, comma-separated. If it is empty the Discord application owner is used as a fallback. `GUILD_ID` controls where guild commands are registered; leaving it empty registers them globally.
 
+At startup the bot logs an `INVITE LINK: ...` line. Use it to add the bot to a server: if the log says `Serving 0 guild(s)`, the bot is in no server at all, so it appears offline in Discord, DMs are refused, and guild command registration fails with `DiscordAPIError[10004]: Unknown Guild`. The loader now falls back to global-only registration in that case.
+
 ## Health endpoints
 
 | Endpoint | Meaning |

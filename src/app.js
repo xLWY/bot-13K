@@ -132,6 +132,10 @@ GatewayIntentBits.GuildBans,
         startupLog(`INVITE LINK: ${inviteUrl}`);
       }
       
+      if (this.guilds.cache.size === 0) {
+        startupLog('WARNING: bot is not in any guild. Use the INVITE LINK above to add it to a server.');
+      }
+
       startupLog('ONLINE - bot is connected and handling messages');
       
       // Slash registration is deliberately NOT awaited: a slow or failing Discord

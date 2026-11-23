@@ -483,7 +483,28 @@ const registeredNames = new Set();
             
             logger.info('Command validation passed');
             
-            const guild = await client.guilds.fetch(guildId);
+            let guild;
+            try {
+                guild = await client.guilds.fetch(guildId);
+            } catch (error) {
+                // Le bot peut etre hors du serveur configure (GUILD_ID obsolete,
+                // bot kick, serveur supprime). Discord repond alors 10004 et la
+                // commande de serveur ne peut pas etre enregistree. On bascule
+                // sur un enregistrement global complet pour rester utilisable.
+                if (error?.code === 10004) {
+                    logger.warn(
+                        `GUILD_ID ${guildId} is not a guild the bot belongs to ` +
+                        '(Discord 10004). Falling back to global-only registration.'
+                    );
+                    await withTimeout(
+                        client.application.commands.set(validCommands.map(forGlobalRegistration)),
+                        'Global fallback registration'
+                    );
+                    logger.info('Global fallback registration complete.');
+                    return;
+                }
+                throw error;
+            }
 
             // Discord interdit aux bots de modifier les permissions de commande
             // par utilisateur. Pour les commandes auxquelles le owner n'a pas
