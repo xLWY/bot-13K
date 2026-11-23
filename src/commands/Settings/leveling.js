@@ -432,7 +432,7 @@ export default {
             logger.error(`[Leveling] Command error for guild ${guildId}:`, error);
             await errorReply(
                 interaction,
-                error.userMessage || 'Une erreur est survenue lors de la gestion du leveling. Veuillez réessayer.',
+                error.userMessage || 'Une erreur est survenue lors de la gestion du leveling. Réessaie dans un instant.',
             );
         }
     }

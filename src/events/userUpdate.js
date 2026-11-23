@@ -52,7 +52,7 @@ export default {
           guildId: guild.id,
           eventType: EVENT_TYPES.MEMBER_NAME_CHANGE,
           data: {
-            description: `<@${newUser.id}> a modifié son nom d'utilisateur`,
+            description: `<@${newUser.id}> a modifié son nom d’utilisateur`,
             userId: newUser.id,
             fields: [
               {

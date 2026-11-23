@@ -34,7 +34,7 @@ export default {
             throw new XlwyBotError(
                 `Channel ${triggerChannel.id} is not a Join to Create trigger`,
                 ErrorTypes.VALIDATION,
-                `${triggerChannel} n'est pas configuré comme canal déclencheur Join to Create.`
+                `${triggerChannel} n’est pas configuré comme canal déclencheur Join to Create.`
             );
         }
 

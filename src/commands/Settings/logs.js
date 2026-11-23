@@ -207,7 +207,7 @@ export default {
 
                 const success = await setLoggingChannel(client, interaction.guild.id, channel.id);
                 if (!success) {
-                    return errorReply(interaction, 'Échec de la configuration du canal des logs. Veuillez réessayer.');
+                    return errorReply(interaction, 'Échec de la configuration du canal des logs. Réessaie dans un instant.');
                 }
 
                 logger.info(`[Logs] Set logging channel to ${channel.name} (${channel.id}) in ${interaction.guild.name} (${interaction.guild.id}) by ${interaction.user.tag}`);
@@ -287,7 +287,7 @@ export default {
             });
         } catch (error) {
             logger.error(`[Logs] Failed to configure logging for guild ${interaction.guild.id}:`, error);
-            await errorReply(interaction, 'Une erreur est survenue lors de la configuration des logs. Veuillez réessayer.');
+            await errorReply(interaction, 'Une erreur est survenue lors de la configuration des logs. Réessaie dans un instant.');
         }
     }
 };

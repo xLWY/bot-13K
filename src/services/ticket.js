@@ -19,7 +19,7 @@ import { getTicketStaffRoleIds } from '../utils/ticketStaffRoles.js';
 
 const DEFAULT_TYPES = {
   support: { emoji: '🛟', label: 'Support', description: 'Une question ou un problème à régler', slug: 'support' },
-  prize: { emoji: '🎁', label: 'Lot Giveaway', description: "Récupérer un lot gagné lors d'un concours", slug: 'lot' },
+  prize: { emoji: '🎁', label: 'Lot Giveaway', description: "Récupérer un lot gagné lors d’un concours", slug: 'lot' },
   partner: { emoji: '🤝', label: 'Partenariat', description: 'Proposer un partenariat ou une collaboration', slug: 'partenariat' },
   other: { emoji: '📩', label: 'Autre', description: 'Toute autre demande', slug: 'autre' },
 };
@@ -114,7 +114,7 @@ function buildTicketEmbed({ ticketData, guild, member, ticketNumber }) {
 
   return createEmbed({
     title: `🎫 Ticket #${number}`,
-    description: `${creator}, un membre de l'équipe va s'occuper de votre demande très vite.\n\nMerci de décrire précisément votre besoin dans ce salon.`,
+    description: `${creator}, un membre de l’équipe va s’occuper de ta demande très vite.\n\nDécris précisément ton besoin dans ce salon.`,
     color: 'info',
     fields,
     footer: { text: `Ticket #${number} • ${guild?.name || ''}` },
@@ -191,7 +191,7 @@ export async function createTicket(guild, member, options = {}) {
     if (currentTicketCount >= maxTicketsPerUser) {
       return {
         success: false,
-        error: `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.`,
+        error: `Tu as atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\nFerme tes tickets existants avant d’en créer un nouveau.`,
       };
     }
 
@@ -307,7 +307,7 @@ return { success: true, channel, ticketData };
       service: 'ticketService',
       operation: 'createTicket',
       message: 'Ticket operation failed: createTicket',
-      userMessage: 'Impossible de créer le ticket. Réessayez dans un instant.',
+      userMessage: 'Impossible de créer le ticket. Réessaie dans un instant.',
       context: { guildId: guild?.id, userId: member?.id }
     });
     logger.error('Error creating ticket:', {
@@ -344,7 +344,7 @@ export async function closeTicket(channel, closer, reason = 'Aucun motif précis
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: "Ce canal n'est pas un ticket" };
+      return { success: false, error: "Ce canal n’est pas un ticket" };
     }
 
     const config = await getGuildConfig(channel.client, channel.guild.id);
@@ -460,7 +460,7 @@ try {
       service: 'ticketService',
       operation: 'closeTicket',
       message: 'Ticket operation failed: closeTicket',
-      userMessage: 'Impossible de fermer le ticket. Réessayez dans un instant.',
+      userMessage: 'Impossible de fermer le ticket. Réessaie dans un instant.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, closerId: closer?.id }
     });
     logger.error('Error closing ticket:', {
@@ -485,7 +485,7 @@ export async function claimTicket(channel, claimer) {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: "Ce canal n'est pas un ticket" };
+      return { success: false, error: "Ce canal n’est pas un ticket" };
     }
 
     if (ticketData.claimedBy) {
@@ -559,7 +559,7 @@ export async function claimTicket(channel, claimer) {
       service: 'ticketService',
       operation: 'claimTicket',
       message: 'Ticket operation failed: claimTicket',
-      userMessage: 'Impossible de réclamer le ticket. Réessayez dans un instant.',
+      userMessage: 'Impossible de réclamer le ticket. Réessaie dans un instant.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, claimerId: claimer?.id }
     });
     logger.error('Error claiming ticket:', {
@@ -583,13 +583,13 @@ export async function reopenTicket(channel, reopener) {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: "Ce canal n'est pas un ticket" };
+      return { success: false, error: "Ce canal n’est pas un ticket" };
     }
 
     if (ticketData.status !== 'closed') {
       return {
         success: false,
-        error: 'Ce ticket n\'est actuellement pas fermé',
+        error: 'Ce ticket n’est actuellement pas fermé',
       };
     }
 
@@ -681,7 +681,7 @@ export async function reopenTicket(channel, reopener) {
       service: 'ticketService',
       operation: 'reopenTicket',
       message: 'Ticket operation failed: reopenTicket',
-      userMessage: 'Impossible de rouvrir le ticket. Réessayez dans un instant.',
+      userMessage: 'Impossible de rouvrir le ticket. Réessaie dans un instant.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, reopenerId: reopener?.id }
     });
     logger.error('Error reopening ticket:', {
@@ -804,7 +804,7 @@ export async function deleteTicket(channel, deleter) {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: "Ce canal n'est pas un ticket" };
+      return { success: false, error: "Ce canal n’est pas un ticket" };
     }
 
     const deleteEmbed = createEmbed({
@@ -940,7 +940,7 @@ export async function deleteTicket(channel, deleter) {
       service: 'ticketService',
       operation: 'deleteTicket',
       message: 'Ticket operation failed: deleteTicket',
-      userMessage: 'Impossible de supprimer le ticket. Réessayez dans un instant.',
+      userMessage: 'Impossible de supprimer le ticket. Réessaie dans un instant.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, deleterId: deleter?.id }
     });
     logger.error('Error deleting ticket:', {
@@ -964,20 +964,20 @@ export async function unclaimTicket(channel, unclaimer) {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: "Ce canal n'est pas un ticket" };
+      return { success: false, error: "Ce canal n’est pas un ticket" };
     }
 
     if (!ticketData.claimedBy) {
       return {
         success: false,
-        error: "Ce ticket n'est actuellement réclamé par personne",
+        error: "Ce ticket n’est actuellement réclamé par personne",
       };
     }
 
     if (!isBotOwner(unclaimer.id) && ticketData.claimedBy !== unclaimer.id && !unclaimer.permissions.has(PermissionFlagsBits.ManageChannels)) {
       return {
         success: false,
-        error: 'Vous ne pouvez retirer le réclamant que de vos propres tickets (ou avec la permission Gérer les salons).',
+        error: 'Tu ne peux retirer le réclamant que de tes propres tickets (ou avec la permission Gérer les salons).',
       };
     }
 
@@ -1038,7 +1038,7 @@ export async function unclaimTicket(channel, unclaimer) {
       service: 'ticketService',
       operation: 'unclaimTicket',
       message: 'Ticket operation failed: unclaimTicket',
-      userMessage: 'Impossible de retirer la réclamation. Réessayez dans un instant.',
+      userMessage: 'Impossible de retirer la réclamation. Réessaie dans un instant.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, unclaimerId: unclaimer?.id }
     });
     logger.error('Error unclaiming ticket:', {

@@ -6,7 +6,7 @@ Generated from `src/commands/` (November 2026). Files directly inside `modules/`
 
 | Scope | Behaviour |
 | --- | --- |
-| Global (all guilds + DMs) | Only the DM-enabled owner commands `/ownerrole` and `/manage`. Their `default_member_permissions` are stripped globally; the owner check stays in code. |
+| Global (all guilds + DMs) | The DM-enabled commands `/ownerrole`, `/manage`, `/invite` and `/botinfo`. Their `default_member_permissions` are stripped globally; the owner check stays in code. |
 | Per-guild | Every other command, registered in `GUILD_ID` when set, otherwise globally. |
 | Prefix | Most commands also work with `!` in guilds (`!ping`, `!manage list`, …). In DMs the prefix is restricted to the owner and to an explicit allowlist. |
 
@@ -26,8 +26,8 @@ DM with the bot, the command code is not involved: the DM channel itself is
 refused. Check, in order:
 
 1. You and the bot share at least one server (open the bot profile → *Mutual
-   servers*). If not, add it with
-   `https://discord.com/oauth2/authorize?client_id=<CLIENT_ID>&scope=bot%20applications.commands&permissions=8`.
+   servers*). If not, run `/invite` or use
+   `https://discord.com/oauth2/authorize?client_id=<CLIENT_ID>&scope=bot%20applications.commands&permissions=268782678`.
 2. **Public Bot** is enabled in the Developer Portal → *Bot* tab.
 3. The bot is not in your blocked-users list.
 4. *Allow direct messages from server members* is enabled in your privacy settings.
@@ -40,6 +40,8 @@ refused. Check, in order:
 | --- | --- | --- |
 | `/ping` | Bot latency | yes |
 | `/help` | Interactive command browser | yes |
+| `/invite` | Get the OAuth2 link to add the bot to a server | yes |
+| `/botinfo` | Status, guild count, commands, uptime and database mode | yes |
 | `/diag` | Owner diagnostic (guilds, commands, logs, uptime) | yes, owner |
 | `/logtest` | Verify owner DM log delivery | yes, owner |
 

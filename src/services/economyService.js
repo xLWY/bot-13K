@@ -42,7 +42,7 @@ class EconomyService {
       throw createError(
         "Invalid balance state",
         ErrorTypes.VALIDATION,
-        "L'opération créerait un solde de compte invalide.",
+        "L’opération créerait un solde de compte invalide.",
         { value, ...context }
       );
     }
@@ -191,7 +191,7 @@ class EconomyService {
       throw createError(
         "Insufficient funds",
         ErrorTypes.VALIDATION,
-        `Tu n'as que **$${senderData.wallet.toLocaleString()}** en espèces.`,
+        `Tu n’as que **$${senderData.wallet.toLocaleString()}** en espèces.`,
         { required: amount, available: senderData.wallet, senderId }
       );
     }
@@ -343,7 +343,7 @@ class EconomyService {
       throw createError(
         "Insufficient funds",
         ErrorTypes.VALIDATION,
-        `Tu n'as que **$${balanceBefore.toLocaleString()}**.`,
+        `Tu n’as que **$${balanceBefore.toLocaleString()}**.`,
         { required: amount, available: balanceBefore, reason }
       );
     }
@@ -384,7 +384,7 @@ class EconomyService {
       throw createError(
         "Insufficient cash",
         ErrorTypes.VALIDATION,
-        `Tu n'as que **$${userData.wallet.toLocaleString()}** en espèces.`,
+        `Tu n’as que **$${userData.wallet.toLocaleString()}** en espèces.`,
         { required: amount, available: userData.wallet }
       );
     }
@@ -440,7 +440,7 @@ class EconomyService {
       throw createError(
         "Insufficient bank balance",
         ErrorTypes.VALIDATION,
-        `Tu n'as que **$${bank.toLocaleString()}** en banque.`,
+        `Tu n’as que **$${bank.toLocaleString()}** en banque.`,
         { required: amount, available: bank }
       );
     }

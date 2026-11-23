@@ -30,7 +30,7 @@ import {
 } from '../../../services/joinToCreateService.js';
 import { brandFooter, formatNumber } from '../../../ui/kit.js';
 
-const TRIGGER_CHANNEL_NAME = '➕ Créer votre salon';
+const TRIGGER_CHANNEL_NAME = '➕ Créer ton salon';
 const PICKER_TIME = 300_000;
 const MODAL_TIME = 120_000;
 

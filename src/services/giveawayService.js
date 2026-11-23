@@ -48,7 +48,7 @@ export function parseDuration(durationString) {
         throw new XlwyBotError(
             'Invalid duration format provided',
             ErrorTypes.VALIDATION,
-            'Veuillez fournir une durée valide (ex. : 1h, 30m, 5d, 10s).',
+            'Fournis une durée valide (ex. : 1h, 30m, 5d, 10s).',
             { durationString }
         );
     }
@@ -60,7 +60,7 @@ export function parseDuration(durationString) {
         throw new XlwyBotError(
             `Invalid duration format: ${durationString}`,
             ErrorTypes.VALIDATION,
-            'Format de durée invalide. Utilisez : 1h, 30m, 5d, 10s (min : 10s, max : 30d)',
+            'Format de durée invalide. Utilise : 1h, 30m, 5d, 10s (min : 10s, max : 30d)',
             { input: durationString }
         );
     }
@@ -95,7 +95,7 @@ export function parseDuration(durationString) {
             throw new XlwyBotError(
                 `Unknown duration unit: ${unit}`,
                 ErrorTypes.VALIDATION,
-                'Utilisez s (secondes), m (minutes), h (heures) ou d (jours).',
+                'Utilise s (secondes), m (minutes), h (heures) ou d (jours).',
                 { unit }
             );
     }
@@ -133,7 +133,7 @@ export function validatePrize(prize) {
         throw new XlwyBotError(
             'Prize must be a non-empty string',
             ErrorTypes.VALIDATION,
-            'Veuillez fournir une description de lot valide.',
+            'Fournis une description de lot valide.',
             { prize }
         );
     }
@@ -196,11 +196,11 @@ export function createGiveawayEmbed(giveaway, status, winners = []) {
                 ? winners.map(id => `<@${id}>`).join(', ')
                 : 'Aucune participation valide';
             embed.addFields({ name: '🎊 Gagnant(s)', value: winnerDisplay, inline: false });
-            embed.setFooter({ text: 'Merci d\'avoir participé !' });
+            embed.setFooter({ text: 'Merci d’avoir participé !' });
         } else {
             const endTime = giveaway.endsAt || giveaway.endTime;
             embed.addFields({ name: '⏰ Se termine', value: `<t:${Math.floor(endTime / 1000)}:R>`, inline: false });
-            embed.setFooter({ text: 'Cliquez sur le bouton ci-dessous pour participer !' });
+            embed.setFooter({ text: 'Clique sur le bouton ci-dessous pour participer !' });
         }
 
         embed.setTimestamp();
@@ -275,7 +275,7 @@ export function selectWinners(participants, winnerCount) {
         throw new XlwyBotError(
             'Invalid winner count for selection',
             ErrorTypes.VALIDATION,
-            'Le nombre de gagnants doit être d\'au moins 1.',
+            'Le nombre de gagnants doit être d’au moins 1.',
             { winnerCount }
         );
     }

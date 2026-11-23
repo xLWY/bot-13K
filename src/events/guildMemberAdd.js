@@ -120,7 +120,7 @@ export default {
                     try {
                         const arrivalMsg = await arrivalChannel.send(
                             await formatWelcomeMessageAsync(
-                                welcomeConfig.arrivalMessage || "**{user}** vient d'arriver, dites-lui bonjour ! 👋",
+                                welcomeConfig.arrivalMessage || "**{user}** vient d’arriver, dites-lui bonjour ! 👋",
                                 { user, guild, member, config: welcomeConfig }
                             )
                         );
@@ -247,7 +247,7 @@ async function notifyBrokenWelcomeChannel(client, guild, typeLabel, missingChann
     brokenWelcomeAlerts.set(guildId, now);
 
     const label = typeLabel === 'bienvenue' ? 'canal de bienvenue' : 'salon de ping';
-    const description = `Le **${label}** de bienvenue configuré n'existe plus ou n'est plus accessible.\n\n**Ancien ID :** \`${missingChannelId || 'inconnu'}\`\n\nReconfigure-le via **\`/panel\`** → **Bienvenue**.`;
+    const description = `Le **${label}** de bienvenue configuré n’existe plus ou n’est plus accessible.\n\n**Ancien ID :** \`${missingChannelId || 'inconnu'}\`\n\nReconfigure-le via **\`/panel\`** → **Bienvenue**.`;
 
     try {
         await logEvent({

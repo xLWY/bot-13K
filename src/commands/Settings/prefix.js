@@ -97,7 +97,7 @@ export default {
             });
         } catch (error) {
             logger.error(`[Prefix] Failed to update prefix for guild ${guild.id}:`, error);
-            await errorReply(interaction, 'Une erreur est survenue lors de la mise à jour du préfixe. Veuillez réessayer.');
+            await errorReply(interaction, 'Une erreur est survenue lors de la mise à jour du préfixe. Réessaie dans un instant.');
         }
     }
 };

@@ -28,7 +28,7 @@ export const counterDeleteActionHandler = {
       }
 
       if (ownerId && interaction.user.id !== ownerId) {
-        await InteractionHelper.sendErrorNotice(interaction, 'Seul l\'utilisateur qui a lancé cette suppression peut utiliser ces boutons.');
+        await InteractionHelper.sendErrorNotice(interaction, 'Seul l’utilisateur qui a lancé cette suppression peut utiliser ces boutons.');
         return;
       }
 

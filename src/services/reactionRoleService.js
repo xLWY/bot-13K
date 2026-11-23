@@ -99,7 +99,7 @@ async function validateRoleSafety(client, guildId, roleId) {
         throw createError(
             `Role not found: ${roleId}`,
             ErrorTypes.VALIDATION,
-            'Un ou plusieurs rôles sélectionnés n\'existent plus.',
+            'Un ou plusieurs rôles sélectionnés n’existent plus.',
             { guildId, roleId }
         );
     }
@@ -225,7 +225,7 @@ export async function createReactionRoleMessage(client, guildId, channelId, mess
         throw createError(
             `Database error creating reaction role message`,
             ErrorTypes.DATABASE,
-            'Impossible d\'enregistrer les données des rôles par réaction. Réessaie.',
+            'Impossible d’enregistrer les données des rôles par réaction. Réessaie.',
             { guildId, messageId, originalError: error.message }
         );
     }
@@ -269,7 +269,7 @@ export async function addReactionRole(client, guildId, messageId, emoji, roleId)
         throw createError(
             `Database error adding reaction role`,
             ErrorTypes.DATABASE,
-            'Impossible d\'ajouter le rôle par réaction. Réessaie.',
+            'Impossible d’ajouter le rôle par réaction. Réessaie.',
             { guildId, messageId, originalError: error.message }
         );
     }

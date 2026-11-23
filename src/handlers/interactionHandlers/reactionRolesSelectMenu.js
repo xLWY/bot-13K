@@ -23,7 +23,7 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
 
         if (!reactionRoleData) {
             logger.warn(`Reaction role data not found for message ${interaction.message.id} in guild ${interaction.guildId}`);
-            return await InteractionHelper.sendErrorNotice(interaction, 'Ce message de rôles de réaction n\'est plus actif.');
+            return await InteractionHelper.sendErrorNotice(interaction, 'Ce message de rôles de réaction n’est plus actif.');
         }
 
         const member = interaction.member;
@@ -35,7 +35,7 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
             throw createError(
                 'Unable to fetch bot member for permission validation',
                 ErrorTypes.PERMISSION,
-                'Je n\'ai pas pu vérifier mes permissions sur le serveur. Réessaie.',
+                'Je n’ai pas pu vérifier mes permissions sur le serveur. Réessaie.',
                 { guildId: interaction.guildId }
             );
         }
@@ -44,7 +44,7 @@ export async function handleReactionRolesSelectMenu(interaction, client) {
             throw createError(
                 'Bot missing ManageRoles permission',
                 ErrorTypes.PERMISSION,
-                'Je n\'ai pas la permission de gérer les rôles sur ce serveur.',
+                'Je n’ai pas la permission de gérer les rôles sur ce serveur.',
                 { guildId: interaction.guildId }
             );
         }

@@ -70,7 +70,7 @@ async function fallbackEligibility(interaction, client) {
     return {
       ok: false,
       title: 'Trop de tickets',
-      message: 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.',
+      message: 'Tu crées des tickets trop rapidement. Attends une minute avant de réessayer.',
     };
   }
 
@@ -82,7 +82,7 @@ async function fallbackEligibility(interaction, client) {
     return {
       ok: false,
       title: '🎫 Limite de tickets atteinte',
-      message: `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.\n\n**Tickets actuels :** ${count}/${maxTicketsPerUser}`,
+      message: `Tu as atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\n\nFerme tes tickets existants avant d’en créer un nouveau.\n\n**Tickets actuels :** ${count}/${maxTicketsPerUser}`,
     };
   }
 
@@ -109,7 +109,7 @@ async function fallbackTicketButton(interaction, client) {
     const type = getTicketTypeForGuild(config, typeId);
 
     if (!type) {
-      return await InteractionHelper.sendErrorNotice(interaction, `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur. Contactez un administrateur.`);
+      return await InteractionHelper.sendErrorNotice(interaction, `Le type de ticket \`${typeId}\` n’existe plus dans la configuration du serveur. Contacte un administrateur.`);
     }
 
     const result = await createTicketFallback(interaction.guild, interaction.member, {
@@ -118,7 +118,7 @@ async function fallbackTicketButton(interaction, client) {
 
     if (result.success) {
       return await interaction.editReply({
-        content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
+        content: `<@${interaction.user.id}>, ton ticket a été créé : <#${result.channel.id}>`,
       }).catch(() => {});
     }
 
@@ -140,7 +140,7 @@ async function createTicketFallback(guild, member, options = {}) {
     if (currentTicketCount >= maxTicketsPerUser) {
       return {
         success: false,
-        error: `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\nVeuillez fermer vos tickets existants avant d'en créer un nouveau.`,
+        error: `Tu as atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}).\nFerme tes tickets existants avant d’en créer un nouveau.`,
       };
     }
 
@@ -194,7 +194,7 @@ async function createTicketFallback(guild, member, options = {}) {
 
     const embed = createEmbed({
       title: `🎫 Ticket #${ticketNumber}`,
-      description: `${member}, un membre de l'équipe va s'occuper de votre demande très vite.\n\nMerci de décrire précisément votre besoin dans ce salon.`,
+      description: `${member}, un membre de l’équipe va s’occuper de ta demande très vite.\n\nDécris précisément ton besoin dans ce salon.`,
       color: 'info',
       fields: [
         { name: '🟢 Statut', value: '🟢 Ouvert', inline: true },
@@ -230,7 +230,7 @@ async function createTicketFallback(guild, member, options = {}) {
     logger.error('Fallback createTicket failed:', detail);
     return {
       success: false,
-      error: 'Impossible de créer le ticket. Réessayez dans un instant.',
+      error: 'Impossible de créer le ticket. Réessaie dans un instant.',
       debug: detail,
     };
   }
@@ -250,7 +250,7 @@ async function fallbackTicketModal(interaction, client) {
 
     if (result.success) {
       return await interaction.reply({
-        content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
+        content: `<@${interaction.user.id}>, ton ticket a été créé : <#${result.channel.id}>`,
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -258,7 +258,7 @@ async function fallbackTicketModal(interaction, client) {
     return await InteractionHelper.sendErrorNotice(interaction, (result.error || 'Impossible de créer le ticket.'));
   } catch (error) {
     logger.error('Fallback ticket modal failed:', error);
-    await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la création de votre ticket.');
+    await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la création de ton ticket.');
   }
 }
 
@@ -266,7 +266,7 @@ async function closeTicketFallback(channel, closer) {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: "Ce canal n'est pas un ticket." };
+      return { success: false, error: "Ce canal n’est pas un ticket." };
     }
     if (ticketData.status === 'closed') {
       return { success: false, error: 'Ce ticket est déjà fermé.' };
@@ -308,7 +308,7 @@ async function closeTicketFallback(channel, closer) {
           embeds: [
             createEmbed({
               title: ticketNumber ? `🎫 Ticket #${ticketNumber}` : '🎫 Ticket fermé',
-              description: `🔒 Ce ticket a été **fermé**.\n\nMerci d'avoir utilisé notre support !`,
+              description: `🔒 Ce ticket a été **fermé**.\n\nMerci d’avoir utilisé notre support !`,
               color: '#e74c3c',
               timestamp: false,
             }),
@@ -350,7 +350,7 @@ async function closeTicketFallback(channel, closer) {
     logger.error('Fallback closeTicket failed:', detail);
     return {
       success: false,
-      error: 'Impossible de fermer le ticket. Réessayez dans un instant.',
+      error: 'Impossible de fermer le ticket. Réessaie dans un instant.',
       debug: detail,
     };
   }
@@ -399,10 +399,10 @@ async function reopenTicketFallback(interaction) {
 
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return await InteractionHelper.sendErrorNotice(interaction, "Ce canal n'est pas un ticket.");
+      return await InteractionHelper.sendErrorNotice(interaction, "Ce canal n’est pas un ticket.");
     }
     if (ticketData.status !== 'closed') {
-      return await InteractionHelper.sendErrorNotice(interaction, "Ce ticket n'est pas fermé.");
+      return await InteractionHelper.sendErrorNotice(interaction, "Ce ticket n’est pas fermé.");
     }
 
     const ticketNumber = ticketData.ticketNumber || '';
@@ -502,7 +502,7 @@ async function fallbackTicketSelect(interaction, client) {
     const type = getTicketTypeForGuild(config, typeId);
 
     if (!type) {
-      return await InteractionHelper.sendErrorNotice(interaction, `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur.`);
+      return await InteractionHelper.sendErrorNotice(interaction, `Le type de ticket \`${typeId}\` n’existe plus dans la configuration du serveur.`);
     }
 
     const result = await createTicketFallback(interaction.guild, interaction.member, {
@@ -511,7 +511,7 @@ async function fallbackTicketSelect(interaction, client) {
 
     if (result.success) {
       return await interaction.editReply({
-        content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
+        content: `<@${interaction.user.id}>, ton ticket a été créé : <#${result.channel.id}>`,
       }).catch(() => {});
     }
 
@@ -558,7 +558,7 @@ export default {
               throw createError(
                 `No command matching ${interaction.commandName} was found.`,
                 ErrorTypes.CONFIGURATION,
-                'Désolé, cette commande n\'existe pas.',
+                'Désolé, cette commande n’existe pas.',
                 withTraceContext({ commandName: interaction.commandName }, interactionTraceContext)
               );
             }
@@ -571,7 +571,7 @@ export default {
               });
               await InteractionHelper.sendErrorNotice(
                 interaction,
-                'Tu n\'as pas la permission d\'utiliser cette commande.'
+                'Tu n’as pas la permission d’utiliser cette commande.'
               );
               return;
             }
@@ -930,7 +930,7 @@ export default {
           });
 
           try {
-            await InteractionHelper.sendErrorNotice(interaction, 'Une erreur inattendue est survenue. Merci de réessayer dans un instant.');
+            await InteractionHelper.sendErrorNotice(interaction, 'Une erreur inattendue est survenue. Réessaie dans un instant.');
           } catch (finalError) {
             logger.error('Final fallback reply failed:', {
               event: 'interaction.error_response_double_failed',

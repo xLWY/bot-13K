@@ -138,7 +138,7 @@ class WelcomeService {
             throw createError(
                 'Invalid image URL',
                 ErrorTypes.VALIDATION,
-                'L\'URL de l\'image doit être un lien http(s) public et ne doit pas pointer vers un hôte local ou privé.',
+                'L’URL de l’image doit être un lien http(s) public et ne doit pas pointer vers un hôte local ou privé.',
                 { url }
             );
         }
@@ -201,7 +201,7 @@ class WelcomeService {
             throw createError(
                 'Invalid channel',
                 ErrorTypes.VALIDATION,
-                'Le salon indiqué n\'existe pas ou n\'est pas un salon textuel.',
+                'Le salon indiqué n’existe pas ou n’est pas un salon textuel.',
                 { channelId: config.channelId, guildId }
             );
         }
@@ -242,7 +242,7 @@ class WelcomeService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Le serveur n\'existe pas.',
+                'Le serveur n’existe pas.',
                 { guildId }
             );
         }
@@ -252,7 +252,7 @@ class WelcomeService {
             throw createError(
                 'Role not found',
                 ErrorTypes.VALIDATION,
-                'Le rôle indiqué n\'existe pas.',
+                'Le rôle indiqué n’existe pas.',
                 { roleId, guildId }
             );
         }
@@ -301,7 +301,7 @@ class WelcomeService {
             throw createError(
                 'Too many roles',
                 ErrorTypes.VALIDATION,
-                `Tu peux configurer jusqu\'à **${this.MAX_ROLES_PER_GUILD}** rôles en attribution automatique.`,
+                `Tu peux configurer jusqu’à **${this.MAX_ROLES_PER_GUILD}** rôles en attribution automatique.`,
                 { current: existingRoles.length, max: this.MAX_ROLES_PER_GUILD }
             );
         }
@@ -348,7 +348,7 @@ class WelcomeService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Le serveur n\'existe pas.',
+                'Le serveur n’existe pas.',
                 { guildId }
             );
         }
@@ -364,7 +364,7 @@ class WelcomeService {
             throw createError(
                 'Role not found',
                 ErrorTypes.VALIDATION,
-                'Ce rôle n\'est pas configuré en attribution automatique.',
+                'Ce rôle n’est pas configuré en attribution automatique.',
                 { roleId }
             );
         }
@@ -408,7 +408,7 @@ class WelcomeService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Le serveur n\'existe pas.',
+                'Le serveur n’existe pas.',
                 { guildId }
             );
         }
@@ -473,7 +473,7 @@ class WelcomeService {
             throw createError(
                 'Preview failed',
                 ErrorTypes.DATABASE,
-                'Impossible de générer l\'aperçu du message. Vérifie le format de ton message.',
+                'Impossible de générer l’aperçu du message. Vérifie le format de ton message.',
                 { error: error.message }
             );
         }
@@ -519,7 +519,7 @@ class WelcomeService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Le serveur n\'existe pas.',
+                'Le serveur n’existe pas.',
                 { guildId }
             );
         }

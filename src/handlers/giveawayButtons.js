@@ -120,7 +120,7 @@ export const giveawayEndHandler = {
                 throw new XlwyBotError(
                     'Giveaway not found in database',
                     ErrorTypes.VALIDATION,
-                    'Ce concours n\'est plus actif.',
+                    'Ce concours n’est plus actif.',
                     { messageId: interaction.message.id, guildId: interaction.guildId }
                 );
             }
@@ -250,7 +250,7 @@ export const giveawayRerollHandler = {
                 throw new XlwyBotError(
                     'Giveaway not found in database',
                     ErrorTypes.VALIDATION,
-                    'Ce concours n\'est plus actif.',
+                    'Ce concours n’est plus actif.',
                     { messageId: interaction.message.id, guildId: interaction.guildId }
                 );
             }
@@ -259,7 +259,7 @@ export const giveawayRerollHandler = {
                 throw new XlwyBotError(
                     'Giveaway still active',
                     ErrorTypes.VALIDATION,
-                    'Ce concours n\'est pas encore terminé. Termine-le d\'abord.',
+                    'Ce concours n’est pas encore terminé. Termine-le d’abord.',
                     { messageId: interaction.message.id }
                 );
             }
@@ -270,7 +270,7 @@ export const giveawayRerollHandler = {
                 throw new XlwyBotError(
                     'No participants to reroll',
                     ErrorTypes.VALIDATION,
-                    'Il n\'y a aucune participation pour refaire un tirage.',
+                    'Il n’y a aucune participation pour refaire un tirage.',
                     { messageId: interaction.message.id }
                 );
             }
@@ -375,13 +375,13 @@ export const giveawayViewHandler = {
             }
 
             if (!giveaway.ended && !giveaway.isEnded && !isGiveawayEnded(giveaway)) {
-                return await InteractionHelper.sendErrorNotice(interaction, 'Ce concours n\'est pas encore terminé, les gagnants ne sont donc pas disponibles.');
+                return await InteractionHelper.sendErrorNotice(interaction, 'Ce concours n’est pas encore terminé, les gagnants ne sont donc pas disponibles.');
             }
 
             const winnerIds = Array.isArray(giveaway.winnerIds) ? giveaway.winnerIds : [];
             const winnerMentions = winnerIds.length > 0
                 ? winnerIds.map(id => `<@${id}>`).join(', ')
-                : 'Aucun gagnant valide n\'a été tiré pour ce concours.';
+                : 'Aucun gagnant valide n’a été tiré pour ce concours.';
 
             await interaction.reply({
                 content: `Gagnants pour ${giveaway.prize || 'ce concours'} 🎉 — ${winnerMentions}`,

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, MessageFlags, PermissionFlagsBits, version as djsVersion } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags, version as djsVersion } from 'discord.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { createEmbed, errorEmbed, infoEmbed } from '../utils/embeds.js';
 import { logger } from '../utils/logger.js';
@@ -26,7 +26,6 @@ export default {
     data: new SlashCommandBuilder()
         .setName('ping')
         .setDescription('Affiche la latence du bot')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .setDMPermission(true),
 
     category: 'general',
@@ -39,9 +38,10 @@ export default {
 
             const waiting = infoEmbed('Calcul de la latence en cours…', 'ℹ️ Ping')
                 .setFooter(brandFooter(CONTEXT));
-            const message = await InteractionHelper.safeEditReply(interaction, { embeds: [waiting] });
+            await InteractionHelper.safeEditReply(interaction, { embeds: [waiting] });
+            const reply = await interaction.fetchReply?.().catch(() => null);
 
-            const roundTrip = round((message?.createdTimestamp || sentAt) - sentAt);
+            const roundTrip = round((reply?.createdTimestamp || sentAt) - sentAt);
             const heartbeat = round(client.ws.ping);
             const isConnected = Number.isFinite(client.ws.ping) && client.ws.ping >= 0;
             const status = isConnected ? '🟢 Connexion active' : '🔴 Websocket indisponible';

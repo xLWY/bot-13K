@@ -16,7 +16,7 @@ export default {
 
         try {
             const triggerChannel = await interaction.guild.channels.create({
-                name: '➕ Créer votre salon',
+                name: '➕ Créer ton salon',
                 type: ChannelType.GuildVoice,
                 parent: category?.id,
                 userLimit: userLimit,

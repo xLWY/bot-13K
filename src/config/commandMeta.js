@@ -27,11 +27,12 @@ export const CATEGORY_LABELS = {
 // Commandes autorisées en message privé (slash + préfixe).
 export const DM_ENABLED_COMMANDS = new Set([
     'ping', 'diag', 'logtest', 'help', 'avatar', 'ownerrole', 'manage',
+    'invite', 'botinfo',
 ]);
 
 // Commandes enregistrées aussi globalement pour fonctionner en MP.
 // Elles restent protégées dans le code par le flag `ownerOnly`.
-export const GLOBAL_COMMANDS = new Set(['ownerrole', 'manage']);
+export const GLOBAL_COMMANDS = new Set(['ownerrole', 'manage', 'invite', 'botinfo']);
 
 export function getCategoryLabel(category) {
     return CATEGORY_LABELS[category] || category || 'Divers';

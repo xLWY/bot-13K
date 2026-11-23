@@ -151,7 +151,7 @@ const wipedataCancelHandler = {
     } catch (error) {
       logger.error('Wipedata cancel button handler error:', error);
       
-      await InteractionHelper.sendErrorNotice(interaction, 'Impossible d\'annuler la suppression des données.');
+      await InteractionHelper.sendErrorNotice(interaction, 'Impossible d’annuler la suppression des données.');
     }
   }
 };

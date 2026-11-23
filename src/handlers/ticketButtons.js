@@ -38,15 +38,15 @@ async function checkTicketPermissionWithTimeout(interaction, client, actionLabel
     const allowed = allowTicketCreator ? context.canCloseTicket : context.canManageTicket;
     if (!allowed) {
       const permissionMessage = allowTicketCreator
-        ? 'Vous devez avoir la permission **Gérer les salons**, le **rôle Staff Tickets** configuré, ou être le **créateur du ticket**.'
-        : 'Vous devez avoir la permission **Gérer les salons** ou le **rôle Staff Tickets** configuré.';
-      return { success: false, error: 'Permission refusée', details: `${permissionMessage}\n\nVous ne pouvez pas ${actionLabel}.` };
+        ? 'Tu dois avoir la permission **Gérer les salons**, le **rôle Staff Tickets** configuré, ou être le **créateur du ticket**.'
+        : 'Tu dois avoir la permission **Gérer les salons** ou le **rôle Staff Tickets** configuré.';
+      return { success: false, error: 'Permission refusée', details: `${permissionMessage}\n\nTu ne peux pas ${actionLabel}.` };
     }
 
     return { success: true, context };
   } catch (error) {
     if (error.message === 'Timeout') {
-      return { success: false, error: 'Délai dépassé', details: 'La vérification des permissions a pris trop de temps. Veuillez réessayer.' };
+      return { success: false, error: 'Délai dépassé', details: 'La vérification des permissions a pris trop de temps. Réessaie.' };
     }
     return { success: false, error: 'Erreur', details: `Échec de la vérification des permissions : ${error.message}` };
   }
@@ -62,7 +62,7 @@ export const createTicketHandler = {
       const rateLimitKey = `${interaction.user.id}:create_ticket`;
       const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
       if (!allowed) {
-        return await InteractionHelper.sendErrorNotice(interaction, 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.');
+        return await InteractionHelper.sendErrorNotice(interaction, 'Tu crées des tickets trop rapidement. Attends une minute avant de réessayer.');
       }
 
       const config = await getGuildConfig(client, interaction.guildId);
@@ -72,7 +72,7 @@ export const createTicketHandler = {
       const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
 
       if (currentTicketCount >= maxTicketsPerUser) {
-        return await InteractionHelper.sendErrorNotice(interaction, `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}). Fermez vos tickets existants avant d'en créer un nouveau. **Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`);
+        return await InteractionHelper.sendErrorNotice(interaction, `Tu as atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}). Ferme tes tickets existants avant d’en créer un nouveau. **Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`);
       }
 
       const type = getTicketTypeForGuild(config, 'support');
@@ -83,14 +83,14 @@ export const createTicketHandler = {
 
       if (result.success) {
         return await interaction.editReply({
-          content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
+          content: `<@${interaction.user.id}>, ton ticket a été créé : <#${result.channel.id}>`,
         }).catch(() => {});
       }
 
       return await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — ' + (result.error || 'Impossible de créer le ticket.'));
     } catch (error) {
       logger.error('Error opening ticket type menu:', error);
-      await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible d\'ouvrir le formulaire de création de ticket.');
+      await InteractionHelper.sendErrorNotice(interaction, 'TF v4 — Impossible d’ouvrir le formulaire de création de ticket.');
     }
   }
 };
@@ -105,7 +105,7 @@ export const createTicketDirectHandler = {
       const rateLimitKey = `${interaction.user.id}:create_ticket`;
       const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
       if (!allowed) {
-        return await InteractionHelper.sendErrorNotice(interaction, 'Vous créez des tickets trop rapidement. Veuillez attendre une minute avant de réessayer.');
+        return await InteractionHelper.sendErrorNotice(interaction, 'Tu crées des tickets trop rapidement. Attends une minute avant de réessayer.');
       }
 
       const config = await getGuildConfig(client, interaction.guildId);
@@ -115,7 +115,7 @@ export const createTicketDirectHandler = {
       const currentTicketCount = await getUserTicketCount(interaction.guildId, interaction.user.id);
 
       if (currentTicketCount >= maxTicketsPerUser) {
-        return await InteractionHelper.sendErrorNotice(interaction, `Vous avez atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}). Fermez vos tickets existants avant d'en créer un nouveau. **Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`);
+        return await InteractionHelper.sendErrorNotice(interaction, `Tu as atteint le nombre maximum de tickets ouverts (${maxTicketsPerUser}). Ferme tes tickets existants avant d’en créer un nouveau. **Tickets actuels :** ${currentTicketCount}/${maxTicketsPerUser}`);
       }
 
       const typeId = interaction.customId.split(':')[1] || 'support';
@@ -127,7 +127,7 @@ export const createTicketDirectHandler = {
 
       if (result.success) {
         return await interaction.editReply({
-          content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
+          content: `<@${interaction.user.id}>, ton ticket a été créé : <#${result.channel.id}>`,
         }).catch(() => {});
       }
 
@@ -158,14 +158,14 @@ export const createTicketModalHandler = {
 
       if (result.success) {
         await interaction.editReply({
-          content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
+          content: `<@${interaction.user.id}>, ton ticket a été créé : <#${result.channel.id}>`,
         });
       } else {
         await InteractionHelper.sendErrorNotice(interaction, result.error || 'Impossible de créer le ticket.');
       }
     } catch (error) {
       logger.error('Error creating ticket:', error);
-      await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la création de votre ticket.');
+      await InteractionHelper.sendErrorNotice(interaction, 'Une erreur est survenue lors de la création de ton ticket.');
     }
   }
 };
@@ -273,7 +273,7 @@ export const claimTicketHandler = {
 
       if (result.success) {
         await interaction.editReply({
-          content: '🙋 Ticket Réclamé — Vous avez réclamé ce ticket.',
+          content: '🙋 Ticket Réclamé — Tu as réclamé ce ticket.',
           flags: MessageFlags.Ephemeral,
         });
       } else {
@@ -312,7 +312,7 @@ export const pinTicketHandler = {
       const category = channel.parent;
 
       if (!category) {
-        await InteractionHelper.sendErrorNotice(interaction, 'Ce ticket n\'est dans aucune catégorie.');
+        await InteractionHelper.sendErrorNotice(interaction, 'Ce ticket n’est dans aucune catégorie.');
         return;
       }
 
@@ -381,7 +381,7 @@ export const pinTicketHandler = {
       });
     } catch (error) {
       logger.error('Error pinning/unpinning ticket:', error);
-      await InteractionHelper.sendErrorNotice(interaction, 'Impossible d\'épingler/désépingler le ticket.');
+      await InteractionHelper.sendErrorNotice(interaction, 'Impossible d’épingler/désépingler le ticket.');
     }
   }
 };
@@ -413,7 +413,7 @@ export const unclaimTicketHandler = {
 
       if (result.success) {
         await interaction.editReply({
-          content: '🔓 Réclamation Retirée — Vous ne réclamez plus ce ticket.',
+          content: '🔓 Réclamation Retirée — Tu ne réclames plus ce ticket.',
           flags: MessageFlags.Ephemeral,
         });
       } else {
@@ -454,7 +454,7 @@ export const reopenTicketHandler = {
       if (result.success) {
         let reopenMessage = 'Le ticket a été rouvert avec succès !';
         if (result.openCategoryMoveFailed) {
-          reopenMessage += '\n\n⚠️ Le ticket a été rouvert, mais il n\'a pas pu être déplacé vers la catégorie configurée des tickets ouverts.';
+          reopenMessage += '\n\n⚠️ Le ticket a été rouvert, mais il n’a pas pu être déplacé vers la catégorie configurée des tickets ouverts.';
         }
 
         await interaction.editReply({

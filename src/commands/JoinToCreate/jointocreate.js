@@ -216,7 +216,7 @@ async function handleSetupSubcommand(interaction, client) {
         // Create the trigger channel
         logger.debug('Creating Join to Create trigger channel...');
         let triggerChannel = await interaction.guild.channels.create({
-            name: '➕ Créer votre salon',
+            name: '➕ Créer ton salon',
             type: ChannelType.GuildVoice,
             parent: category?.id,
             userLimit: 0,

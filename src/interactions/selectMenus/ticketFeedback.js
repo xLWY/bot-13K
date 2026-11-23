@@ -46,7 +46,7 @@ export default {
         // Évite les réponses en double
         if (ticketData.feedback?.rating) {
             await interaction.update({
-                content: `✅ Déjà répondu — Vous avez déjà noté ce ticket **${STAR_LABELS[String(ticketData.feedback.rating)]}**.\nMerci pour votre avis !`,
+                content: `✅ Déjà répondu — Tu as déjà noté ce ticket **${STAR_LABELS[String(ticketData.feedback.rating)]}**.\nMerci pour ton avis !`,
                 components: [],
             });
             return;
@@ -81,7 +81,7 @@ export default {
                 if (logsChannel && logsChannel.isSendable()) {
                     const feedbackEmbed = new EmbedBuilder()
                         .setTitle('📋 Avis reçu')
-                        .setDescription('L\'utilisateur a donné son avis sur un ticket')
+                        .setDescription('L’utilisateur a donné son avis sur un ticket')
                         .setColor(getColor('info'))
                         .addFields(
                             { name: 'ID du ticket', value: `\`${channelId}\``, inline: true },
@@ -102,7 +102,7 @@ export default {
 
         // Modifier le MP pour retirer le menu et afficher les remerciements
         await interaction.update({
-            content: `✅ Merci pour votre avis ! — Vous avez noté votre expérience **${ratingLabel}**.\n\nVotre avis a bien été enregistré et nous aide à nous améliorer !`,
+            content: `✅ Merci pour ton avis ! — Tu as noté ton expérience **${ratingLabel}**.\n\nTon avis a bien été enregistré et nous aide à nous améliorer !`,
             components: [],
         });
 

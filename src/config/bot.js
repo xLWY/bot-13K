@@ -220,7 +220,7 @@ export const botConfig = {
       prize: {
         emoji: "🎁",
         label: "Lot Giveaway",
-        description: "Récupérer un lot gagné lors d'un concours",
+        description: "Récupérer un lot gagné lors d’un concours",
         slug: "lot",
       },
       partner: {
@@ -395,9 +395,9 @@ export const botConfig = {
   // GENERIC BOT MESSAGES
   // =========================
   messages: {
-    noPermission: "Vous n'avez pas la permission d'utiliser cette commande.",
-    cooldownActive: "Veuillez attendre {time} avant d'utiliser cette commande à nouveau.",
-    errorOccurred: "Une erreur s'est produite lors de l'exécution de cette commande.",
+    noPermission: "Tu n’as pas la permission d’utiliser cette commande.",
+    cooldownActive: "Attends {time} avant d’utiliser cette commande à nouveau.",
+    errorOccurred: "Une erreur s’est produite lors de l’exécution de cette commande.",
     missingPermissions:
       "Il me manque les permissions requises pour effectuer cette action.",
     commandDisabled: "Cette commande a été désactivée.",

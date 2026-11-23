@@ -41,7 +41,7 @@ export function validateBirthday(month, day) {
   if (isNaN(date.getTime()) || date.getMonth() !== month - 1 || date.getDate() !== day) {
     return {
       isValid: false,
-      error: 'Date invalide. Vérifie la combinaison mois/jour (par exemple, le 29 février n\'existe que les années bissextiles)'
+      error: 'Date invalide. Vérifie la combinaison mois/jour (par exemple, le 29 février n’existe que les années bissextiles)'
     };
   }
 
@@ -404,7 +404,7 @@ export async function checkBirthdays(client) {
             title: '🎉 Bon anniversaire ! 🎂',
             description: `Très bon anniversaire à ${mentionList} ! Nous te souhaitons une journée incroyable ! 🎈`,
             color: 0xff69b4,
-            footer: { text: 'Bot d\'anniversaire' },
+            footer: { text: 'Bot d’anniversaire' },
             timestamp: new Date()
           }]
         });

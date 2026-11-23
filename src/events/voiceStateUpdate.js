@@ -225,7 +225,7 @@ export default {
                     logger.warn(`Permissions manquantes pour créer un salon temporaire dans le serveur ${guild.name}`);
                     channelCreationCooldown.delete(cooldownKey);
                     await member.send({
-                        content: '❌ Le bot n\'a pas les permissions nécessaires pour créer ton salon vocal. Demande à un administrateur de lui donner **Gérer les salons** et **Déplacer des membres**.'
+                        content: '❌ Le bot n’a pas les permissions nécessaires pour créer ton salon vocal. Demande à un administrateur de lui donner **Gérer les salons** et **Déplacer des membres**.'
                     }).catch(() => {});
                     return;
                 }
@@ -314,7 +314,7 @@ export default {
                 
                 try {
                     await member.send({
-                        content: `❌ Impossible de créer votre salon vocal temporaire. Contactez un administrateur du serveur.`
+                        content: `❌ Impossible de créer ton salon vocal temporaire. Contacte un administrateur du serveur.`
                     });
                 } catch (dmError) {
                     logger.debug(`Unable to send temporary channel failure DM to user ${member.user.tag}:`, dmError.message);

@@ -44,6 +44,13 @@ Emoji belongs in an embed title or a dedicated status field, not sprinkled throu
 - One `ownerOnly` flag and one canonical category map must drive both command registration and `/help`.
 - `/help` filters by DM context and effective permissions; it never claims markers or channels that do not exist.
 
+## Design system v2
+
+- Pure formatting lives in `src/ui/format.js` and can be tested without `discord.js`.
+- Discord primitives live in `src/ui/kit.js`. Prefer `brandedEmbed(options, client, context)`, `statField()`, `cardField()`, `statusField()` and `brandAuthor()` over hand-built fields.
+- A numbered card is `01 · Titre`, never an icon URL in the field name. The thumbnail is the bot avatar, not an arbitrary guild icon.
+- KPI fields are inline and wrapped in backticks so they align across platforms.
+
 ## Current exceptions
 
 A few legacy surfaces still use older wording (notably some moderation dashboards and `\u{...}` escapes). They are being migrated incrementally; new code must follow this guide.

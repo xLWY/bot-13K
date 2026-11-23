@@ -106,48 +106,48 @@ export function categorizeError(error) {
 
 const UserMessages = {
     [ErrorTypes.VALIDATION]: {
-        default: "Veuillez vérifier votre saisie et réessayer.",
-        missing_required: "Il manque des informations obligatoires. Vérifiez les options de la commande.",
-        invalid_format: "Le format fourni est incorrect. Réessayez."
+        default: 'Vérifie ta saisie et réessaie.',
+        missing_required: 'Il manque des informations obligatoires. Vérifie les options de la commande.',
+        invalid_format: 'Le format fourni est incorrect. Réessaie.',
     },
     [ErrorTypes.PERMISSION]: {
-        default: "Je n'ai pas la permission de faire cela. Vérifiez mes permissions sur le serveur.",
-        user_permission: "Vous n'avez pas la permission d'utiliser cette commande.",
-        bot_permission: "J'ai besoin de permissions supplémentaires pour effectuer cette action."
+        default: 'Je n’ai pas la permission de faire cela. Vérifie mes permissions sur le serveur.',
+        user_permission: 'Tu n’as pas la permission d’utiliser cette commande.',
+        bot_permission: 'J’ai besoin de permissions supplémentaires pour effectuer cette action.',
     },
     [ErrorTypes.CONFIGURATION]: {
-        default: "Quelque chose n'est pas correctement configuré. Contactez un administrateur.",
-        missing_config: "Cette fonctionnalité n'a pas encore été configurée. Contactez un administrateur.",
-        invalid_config: "La configuration est invalide. Contactez un administrateur."
+        default: 'Quelque chose n’est pas correctement configuré. Contacte un administrateur.',
+        missing_config: 'Cette fonctionnalité n’a pas encore été configurée. Contacte un administrateur.',
+        invalid_config: 'La configuration est invalide. Contacte un administrateur.',
     },
     [ErrorTypes.DATABASE]: {
-        default: "J'ai un problème avec ma base de données. Réessayez dans un instant.",
-        connection_failed: "J'ai du mal à me connecter à ma base de données. Réessayez plus tard.",
-        timeout: "L'opération a pris trop de temps. Réessayez."
+        default: 'J’ai un problème avec ma base de données. Réessaie dans un instant.',
+        connection_failed: 'J’ai du mal à me connecter à ma base de données. Réessaie plus tard.',
+        timeout: 'L’opération a pris trop de temps. Réessaie.',
     },
     [ErrorTypes.NETWORK]: {
-        default: "J'ai des problèmes de réseau. Réessayez dans un instant.",
-        timeout: "La requête a expiré. Réessayez.",
-        unreachable: "Je n'arrive pas à joindre le service pour le moment. Réessayez plus tard."
+        default: 'J’ai des problèmes de réseau. Réessaie dans un instant.',
+        timeout: 'La requête a expiré. Réessaie.',
+        unreachable: 'Je n’arrive pas à joindre le service pour le moment. Réessaie plus tard.',
     },
     [ErrorTypes.DISCORD_API]: {
-        default: "J'ai un souci avec Discord. Réessayez dans un instant.",
-        rate_limit: "Vous allez trop vite. Patientez un instant avant de réessayer.",
-        forbidden: "Je n'ai pas le droit de faire cela. Vérifiez mes permissions."
+        default: 'J’ai un souci avec Discord. Réessaie dans un instant.',
+        rate_limit: 'Tu vas trop vite. Patiente un instant avant de réessayer.',
+        forbidden: 'Je n’ai pas le droit de faire cela. Vérifie mes permissions.',
     },
     [ErrorTypes.USER_INPUT]: {
-        default: "Il y a un problème avec votre demande. Réessayez.",
-        invalid_user: "Je n'ai pas trouvé cet utilisateur. Vérifiez la mention ou l'ID.",
-        invalid_channel: "Je n'ai pas trouvé ce salon. Vérifiez la mention ou l'ID."
+        default: 'Il y a un problème avec ta demande. Réessaie.',
+        invalid_user: 'Je n’ai pas trouvé cet utilisateur. Vérifie la mention ou l’ID.',
+        invalid_channel: 'Je n’ai pas trouvé ce salon. Vérifie la mention ou l’ID.',
     },
     [ErrorTypes.RATE_LIMIT]: {
-        default: "Vous allez trop vite. Patientez un moment avant de réessayer.",
-        command_cooldown: "Cette commande est en temps de recharge. Patientez avant de réessayer.",
-        global_rate_limit: "Discord vous limite actuellement. Patientez un moment."
+        default: 'Tu vas trop vite. Patiente un moment avant de réessayer.',
+        command_cooldown: 'Cette commande est en temps de recharge. Patiente avant de réessayer.',
+        global_rate_limit: 'Discord te limite actuellement. Patiente un moment.',
     },
     [ErrorTypes.UNKNOWN]: {
-        default: "Quelque chose s'est mal passé. Réessayez dans un instant.",
-        unexpected: "Une erreur inattendue est survenue. Réessayez plus tard."
+        default: 'Quelque chose s’est mal passé. Réessaie dans un instant.',
+        unexpected: 'Une erreur inattendue est survenue. Réessaie plus tard.',
     }
 };
 

@@ -23,7 +23,7 @@ const CHANNEL_TYPE_NAMES = {
   [ChannelType.GuildVoice]: 'Vocal',
   [ChannelType.GuildCategory]: 'Catégorie',
   [ChannelType.GuildAnnouncement]: 'Annonces',
-  [ChannelType.AnnouncementThread]: 'Fil d\'annonces',
+  [ChannelType.AnnouncementThread]: 'Fil d’annonces',
   [ChannelType.PublicThread]: 'Fil public',
   [ChannelType.PrivateThread]: 'Fil privé',
   [ChannelType.GuildStageVoice]: 'Scène',

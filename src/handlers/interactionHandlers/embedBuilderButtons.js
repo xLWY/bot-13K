@@ -154,7 +154,7 @@ function getBuilderComponents() {
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId('embed_channel')
-        .setLabel('Salon d\'envoi')
+        .setLabel('Salon d’envoi')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId('embed_send')
@@ -197,7 +197,7 @@ function getStatusEmbed(data) {
       { name: '📊 Champs', value: fieldValue(String(data.fields.length)), inline: true },
       { name: '🖼️ Image', value: fieldValue(data.image ? 'Définie' : 'Non définie'), inline: true },
       { name: '👾 Miniature', value: fieldValue(data.thumbnail ? 'Définie' : 'Non définie'), inline: true },
-      { name: '📢 Salon d\'envoi', value: data.channelId ? `<#${data.channelId}>` : 'Salon actuel', inline: true }
+      { name: '📢 Salon d’envoi', value: data.channelId ? `<#${data.channelId}>` : 'Salon actuel', inline: true }
     );
 }
 
@@ -403,7 +403,7 @@ async function showFieldModal(interaction) {
 async function showChannelSelect(interaction, data) {
   const channelSelect = new ChannelSelectMenuBuilder()
     .setCustomId('embed_channel_select')
-    .setPlaceholder('Choisis le salon d\'envoi...')
+    .setPlaceholder('Choisis le salon d’envoi…')
     .addChannelTypes(ChannelType.GuildText)
     .setMaxValues(1);
 
@@ -412,8 +412,8 @@ async function showChannelSelect(interaction, data) {
   await refreshBuilderMessage(interaction, data, {
     embeds: [
       new EmbedBuilder()
-        .setTitle('📢 Choisir le salon d\'envoi')
-        .setDescription('Sélectionne le salon où l\'embed sera envoyé.\n\n**Actuel :** ' + (data.channelId ? `<#${data.channelId}>` : 'Salon actuel'))
+        .setTitle('📢 Choisir le salon d’envoi')
+        .setDescription('Sélectionne le salon où l’embed sera envoyé.\n\n**Actuel :** ' + (data.channelId ? `<#${data.channelId}>` : 'Salon actuel'))
         .setColor(getColor('info')),
       getStatusEmbed(data)
     ],
@@ -469,7 +469,7 @@ async function sendEmbed(interaction, data) {
   }
 
   if (!targetChannel?.isTextBased?.() || targetChannel.type === ChannelType.GuildForum) {
-    await InteractionHelper.sendErrorNotice(interaction, 'Le salon choisi est introuvable ou n\'est pas un salon texte.');
+    await InteractionHelper.sendErrorNotice(interaction, 'Le salon choisi est introuvable ou n’est pas un salon texte.');
     return;
   }
 

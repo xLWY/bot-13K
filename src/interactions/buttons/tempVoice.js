@@ -44,7 +44,7 @@ async function resolveTarget(interaction, client, args) {
 
     const tempInfo = await getTemporaryChannelInfo(client, interaction.guild.id, voiceChannelId);
     if (!tempInfo) {
-        return { error: "Ce salon n'est pas un salon temporaire." };
+        return { error: "Ce salon n’est pas un salon temporaire." };
     }
 
     const config = await getJoinToCreateConfig(client, interaction.guild.id);
@@ -180,7 +180,7 @@ const limitHandler = {
 
         const modal = new ModalBuilder()
             .setCustomId(`tv_modal_limit:${voiceChannel.id}`)
-            .setTitle("👥 Limite d'utilisateurs")
+            .setTitle("👥 Limite d’utilisateurs")
             .addComponents(
                 new ActionRowBuilder().addComponents(
                     new TextInputBuilder()
@@ -207,7 +207,7 @@ const limitHandler = {
             const raw = submission.fields.getTextInputValue('tv_limit_input').trim();
             const limit = parseInt(raw, 10);
             if (isNaN(limit) || limit < 0 || limit > 99) {
-                return InteractionHelper.sendErrorNotice(submission, 'Entrez un nombre entre 0 et 99 (0 = illimité).');
+                return InteractionHelper.sendErrorNotice(submission, 'Entre un nombre entre 0 et 99 (0 = illimité).');
             }
 
             await voiceChannel.setUserLimit(limit);
@@ -244,7 +244,7 @@ const transferHandler = {
         }
 
         if (!voiceChannel.members.has(interaction.user.id)) {
-            return replyError(interaction, "Rejoins d'abord le salon vocal pour pouvoir en prendre la propriété.");
+            return replyError(interaction, "Rejoins d’abord le salon vocal pour pouvoir en prendre la propriété.");
         }
 
         const result = await transferTemporaryChannel(
@@ -278,7 +278,7 @@ const blacklistHandler = {
             .filter((member) => !member.user.bot && member.id !== tempInfo.ownerId && member.id !== client.user.id);
 
         if (candidates.length === 0) {
-            return replyError(interaction, "Personne d'autre dans le salon à bannir.");
+            return replyError(interaction, "Personne d’autre dans le salon à bannir.");
         }
 
         const options = candidates.slice(0, 25).map((member) => ({
@@ -318,7 +318,7 @@ const unblacklistHandler = {
         }
 
         if (deniedUsers.length === 0) {
-            return replyError(interaction, "Aucun membre n'est banni de ce salon.");
+            return replyError(interaction, "Aucun membre n’est banni de ce salon.");
         }
 
         const options = [];

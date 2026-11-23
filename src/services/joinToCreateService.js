@@ -90,7 +90,7 @@ export function validateBitrate(bitrate) {
         throw new XlwyBotError(
             'Bitrate must be a valid number',
             ErrorTypes.VALIDATION,
-            'Veuillez saisir un nombre valide pour le débit binaire.'
+            'Saisis un nombre valide pour le débit binaire.'
         );
     }
 
@@ -118,7 +118,7 @@ export function validateUserLimit(limit) {
         throw new XlwyBotError(
             'User limit must be a valid number',
             ErrorTypes.VALIDATION,
-            'Veuillez saisir un nombre valide pour la limite d\'utilisateurs.'
+            'Saisis un nombre valide pour la limite d’utilisateurs.'
         );
     }
 
@@ -126,7 +126,7 @@ export function validateUserLimit(limit) {
         throw new XlwyBotError(
             'User limit out of valid range',
             ErrorTypes.VALIDATION,
-            'La limite d\'utilisateurs doit être comprise entre 0 (aucune limite) et 99.'
+            'La limite d’utilisateurs doit être comprise entre 0 (aucune limite) et 99.'
         );
     }
 
@@ -260,7 +260,7 @@ export async function initializeJoinToCreate(client, guildId, channelId, options
             throw new XlwyBotError(
                 'Guild already has a Join to Create trigger configured',
                 ErrorTypes.VALIDATION,
-                'Ce serveur a déjà un canal Join to Create configuré. Utilise `/jointocreate dashboard` pour le modifier, ou retire-le avant d\'en créer un nouveau.',
+                'Ce serveur a déjà un canal Join to Create configuré. Utilise `/jointocreate dashboard` pour le modifier, ou retire-le avant d’en créer un nouveau.',
                 {
                     guildId,
                     existingTriggerChannelId: config.triggerChannels[0],
@@ -329,7 +329,7 @@ export async function updateChannelConfig(client, guildId, channelId, updates) {
             throw new XlwyBotError(
                 'Channel is not configured as a Join to Create trigger',
                 ErrorTypes.VALIDATION,
-                'Ce salon n\'est pas configuré comme déclencheur Join to Create.'
+                'Ce salon n’est pas configuré comme déclencheur Join to Create.'
             );
         }
 
@@ -500,7 +500,7 @@ export async function getChannelConfiguration(client, guildId, channelId) {
             throw new XlwyBotError(
                 'Channel is not a valid Join to Create trigger',
                 ErrorTypes.VALIDATION,
-                'Ce salon n\'est pas configuré comme déclencheur Join to Create.'
+                'Ce salon n’est pas configuré comme déclencheur Join to Create.'
             );
         }
 

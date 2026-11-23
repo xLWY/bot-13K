@@ -88,7 +88,7 @@ class ConfigService {
             throw createError(
                 'Unsafe setting key',
                 ErrorTypes.VALIDATION,
-                'Cette clé de paramètre n\'est pas autorisée pour des raisons de sécurité.',
+                'Cette clé de paramètre n’est pas autorisée pour des raisons de sécurité.',
                 { key }
             );
         }
@@ -143,7 +143,7 @@ class ConfigService {
                 throw createError(
                     'Invalid channel',
                     ErrorTypes.VALIDATION,
-                    'L\'ID de salon doit être une chaîne de caractères.',
+                    'L’ID de salon doit être une chaîne de caractères.',
                     { key, provided: typeof value }
                 );
             }
@@ -155,7 +155,7 @@ class ConfigService {
                 throw createError(
                     'Channel not found',
                     ErrorTypes.VALIDATION,
-                    'Le salon spécifié n\'existe pas.',
+                    'Le salon spécifié n’existe pas.',
                     { key, channelId }
                 );
             }
@@ -177,7 +177,7 @@ class ConfigService {
                 throw createError(
                     'Invalid role',
                     ErrorTypes.VALIDATION,
-                    'L\'ID de rôle doit être une chaîne de caractères.',
+                    'L’ID de rôle doit être une chaîne de caractères.',
                     { key, provided: typeof value }
                 );
             }
@@ -189,7 +189,7 @@ class ConfigService {
                 throw createError(
                     'Role not found',
                     ErrorTypes.VALIDATION,
-                    'Le rôle spécifié n\'existe pas.',
+                    'Le rôle spécifié n’existe pas.',
                     { key, roleId }
                 );
             }
@@ -254,7 +254,7 @@ class ConfigService {
                 throw createError(
                     'Value too low',
                     ErrorTypes.VALIDATION,
-                    `La valeur doit être d'au moins **${rule.min}**.`,
+                    `La valeur doit être d’au moins **${rule.min}**.`,
                     { key, value, min: rule.min }
                 );
             }
@@ -367,7 +367,7 @@ class ConfigService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Ce serveur n\'existe pas.',
+                'Ce serveur n’existe pas.',
                 { guildId }
             );
         }
@@ -445,7 +445,7 @@ class ConfigService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Ce serveur n\'existe pas.',
+                'Ce serveur n’existe pas.',
                 { guildId }
             );
         }
@@ -619,7 +619,7 @@ class ConfigService {
             throw createError(
                 'Guild not found',
                 ErrorTypes.VALIDATION,
-                'Ce serveur n\'existe pas.',
+                'Ce serveur n’existe pas.',
                 { guildId }
             );
         }

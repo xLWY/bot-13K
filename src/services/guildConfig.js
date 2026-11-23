@@ -59,7 +59,7 @@ export const setGuildConfig = wrapServiceBoundary(async function setGuildConfig(
     service: 'guildConfigService',
     operation: 'setGuildConfig',
     message: 'Failed to save guild configuration',
-    userMessage: 'Impossible d\'enregistrer la configuration du serveur. Réessaie.'
+    userMessage: 'Impossible d’enregistrer la configuration du serveur. Réessaie.'
 });
 
 

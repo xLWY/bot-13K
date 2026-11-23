@@ -144,7 +144,7 @@ class VoiceService {
             throw createError(
                 'Invalid activity type',
                 ErrorTypes.VALIDATION,
-                'Le type d\'activité doit être une chaîne non vide.',
+                'Le type d’activité doit être une chaîne non vide.',
                 { provided: typeof activityType }
             );
         }
@@ -155,7 +155,7 @@ class VoiceService {
             throw createError(
                 'Unknown activity',
                 ErrorTypes.VALIDATION,
-                `L'activité **${activityType}** n'existe pas. Activités disponibles : ${validActivities}`,
+                `L’activité **${activityType}** n’existe pas. Activités disponibles : ${validActivities}`,
                 { activityType, validActivities: Object.keys(ACTIVITIES) }
             );
         }
@@ -247,7 +247,7 @@ class VoiceService {
             throw createError(
                 'Missing permission',
                 ErrorTypes.VALIDATION,
-                'J\'ai besoin de la permission **Créer une invitation** dans ce salon vocal pour lancer une activité.',
+                'J’ai besoin de la permission **Créer une invitation** dans ce salon vocal pour lancer une activité.',
                 {
                     channelId: voiceChannel.id,
                     missingPermission: 'CreateInstantInvite'
@@ -311,7 +311,7 @@ class VoiceService {
             throw createError(
                 'Rate limited',
                 ErrorTypes.RATE_LIMIT,
-                `Veuillez patienter **${Math.ceil(remaining / 1000)}** secondes avant de créer une autre invitation d'activité.`,
+                `Patiente **${Math.ceil(remaining / 1000)}** secondes avant de créer une autre invitation d’activité.`,
                 { remaining, cooldown: INVITE_CREATION_COOLDOWN }
             );
         }
@@ -377,7 +377,7 @@ class VoiceService {
         throw createError(
             'Failed to create activity',
             ErrorTypes.DISCORD_API_ERROR,
-            `Impossible de créer l'activité **${activityName}**. Réessaie dans un instant.`,
+            `Impossible de créer l’activité **${activityName}**. Réessaie dans un instant.`,
             {
                 channelId,
                 activityId,
@@ -413,7 +413,7 @@ class VoiceService {
             throw createError(
                 'Permission denied',
                 ErrorTypes.VALIDATION,
-                'Tu n\'as pas la permission de te connecter à ce salon vocal.',
+                'Tu n’as pas la permission de te connecter à ce salon vocal.',
                 { channelId: voiceStatus.channelId }
             );
         }

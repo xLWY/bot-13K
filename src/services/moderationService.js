@@ -51,7 +51,7 @@ export class ModerationService {
 
     const botMember = target.guild.members.me;
     if (!botMember) {
-      return { valid: false, error: 'Le bot n\'est pas sur le serveur' };
+      return { valid: false, error: 'Le bot n’est pas sur le serveur' };
     }
 
     
@@ -82,7 +82,7 @@ export class ModerationService {
         throw new XlwyBotError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
-          'Le serveur, l\'utilisateur et le modérateur sont requis'
+          'Le serveur, l’utilisateur et le modérateur sont requis'
         );
       }
 
@@ -195,7 +195,7 @@ export class ModerationService {
         throw new XlwyBotError(
           'Cannot kick member',
           ErrorTypes.PERMISSION,
-          'Je n\'ai pas la permission d\'expulser ce membre'
+          'Je n’ai pas la permission d’expulser ce membre'
         );
       }
 
@@ -344,7 +344,7 @@ export class ModerationService {
         throw new XlwyBotError(
           'User not timed out',
           ErrorTypes.VALIDATION,
-          `${member.user.tag} n'est actuellement pas en timeout`
+          `${member.user.tag} n’est actuellement pas en timeout`
         );
       }
 
@@ -395,7 +395,7 @@ export class ModerationService {
         throw new XlwyBotError(
           'Missing required parameters',
           ErrorTypes.VALIDATION,
-          'Le serveur, l\'utilisateur et le modérateur sont requis'
+          'Le serveur, l’utilisateur et le modérateur sont requis'
         );
       }
 
@@ -407,7 +407,7 @@ export class ModerationService {
         throw new XlwyBotError(
           'User not banned',
           ErrorTypes.VALIDATION,
-          `${user.tag} n'est actuellement pas banni de ce serveur`
+          `${user.tag} n’est actuellement pas banni de ce serveur`
         );
       }
 

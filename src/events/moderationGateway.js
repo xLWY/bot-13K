@@ -46,7 +46,7 @@ const AUDIT_ACTION_LABELS = {
   [AuditLogEvent.MemberBan]: 'Membre banni',
   [AuditLogEvent.MemberUnban]: 'Membre débanni',
   [AuditLogEvent.MemberKick]: 'Membre expulsé',
-  [AuditLogEvent.MemberRoleUpdate]: 'Rôles d\'un membre modifiés',
+  [AuditLogEvent.MemberRoleUpdate]: 'Rôles d’un membre modifiés',
   [AuditLogEvent.MemberMove]: 'Membre déplacé',
   [AuditLogEvent.MemberDisconnect]: 'Membre déconnecté',
   [AuditLogEvent.RoleCreate]: 'Rôle créé',
@@ -141,7 +141,7 @@ export default [
           guildId: guild.id,
           eventType: EVENT_TYPES.AUDIT_LOG,
           data: {
-            description: `Action d'administration : **${AUDIT_ACTION_LABELS[entry.action] ?? 'Action inconnue'}**`,
+            description: `Action d’administration : **${AUDIT_ACTION_LABELS[entry.action] ?? 'Action inconnue'}**`,
             userId: entry.executor?.id,
             fields: [
               {

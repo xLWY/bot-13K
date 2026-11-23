@@ -44,7 +44,7 @@ const feedbackHandler = {
 
         if (ticketData.feedback?.rating) {
             await interaction.update({
-                content: `✅ Déjà répondu — Vous avez déjà noté ce ticket **${STAR_LABELS[String(ticketData.feedback.rating)]}**.\nMerci pour votre avis !`,
+                content: `✅ Déjà répondu — Tu as déjà noté ce ticket **${STAR_LABELS[String(ticketData.feedback.rating)]}**.\nMerci pour ton avis !`,
                 components: [],
             });
             return;
@@ -78,7 +78,7 @@ const feedbackHandler = {
                 if (logsChannel && logsChannel.isSendable()) {
                     const feedbackEmbed = new EmbedBuilder()
                         .setTitle('📋 Avis reçu')
-                        .setDescription('L\'utilisateur a donné son avis sur un ticket')
+                        .setDescription('L’utilisateur a donné son avis sur un ticket')
                         .setColor(getColor('info'))
                         .addFields(
                             { name: 'ID du ticket', value: `\`${channelId}\``, inline: true },
@@ -98,7 +98,7 @@ const feedbackHandler = {
         }
 
         await interaction.update({
-            content: `✅ Merci pour votre avis ! — Vous avez noté votre expérience **${ratingLabel}**.\n\nVotre avis a bien été enregistré et nous aide à nous améliorer !`,
+            content: `✅ Merci pour ton avis ! — Tu as noté ton expérience **${ratingLabel}**.\n\nTon avis a bien été enregistré et nous aide à nous améliorer !`,
             components: [],
         });
 
@@ -116,7 +116,7 @@ const declineHandler = {
 
     async execute(interaction) {
         await interaction.update({
-            content: '👋 Pas de souci ! — Vous pouvez nous recontacter à tout moment si vous avez besoin d\'aide.',
+            content: '👋 Pas de souci ! — Tu peux nous recontacter à tout moment si tu as besoin d’aide.',
             components: [],
         });
     },

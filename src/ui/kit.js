@@ -1,11 +1,38 @@
 /**
- * Petite boîte à outils UI partagée par les commandes.
+ * Design system 13K v2.
  *
- * Objectif : une même grammaire visuelle partout (embeds, pagination,
- * badges, formats de nombres) pour éviter que chaque commande réinvente
- * sa propre mise en page.
+ * - `src/ui/format.js` contient le formatage pur (testable sans discord.js).
+ * - Ce module ajoute les composants Discord et les primitives de mise en page
+ *   utilisées par toutes les commandes : en-tête de marque, cartes, KPI,
+ *   états vides/erreur et pagination standardisée.
  */
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } from 'discord.js';
+import { createEmbed } from '../utils/embeds.js';
+import {
+    bulletLines,
+    discordTimestamp,
+    formatDuration,
+    formatNumber,
+    keyValue,
+    percent,
+    plural,
+    progressBar,
+    statusLabel,
+    truncate,
+} from './format.js';
+
+export {
+    bulletLines,
+    discordTimestamp,
+    formatDuration,
+    formatNumber,
+    keyValue,
+    percent,
+    plural,
+    progressBar,
+    statusLabel,
+    truncate,
+};
 
 export const BRAND = Object.freeze({
     name: '13K',
@@ -16,16 +43,40 @@ export function brandFooter(extra = null) {
     return { text: extra ? `${extra} • ${BRAND.footer}` : BRAND.footer };
 }
 
-export function formatNumber(value) {
-    const n = Number(value);
-    return Number.isFinite(n) ? new Intl.NumberFormat('fr-FR').format(n) : '?';
+export function brandAuthor(client, label = BRAND.name) {
+    const iconURL = typeof client?.user?.displayAvatarURL === 'function'
+        ? client.user.displayAvatarURL({ size: 64 })
+        : null;
+    return iconURL ? { name: label, iconURL } : { name: label };
 }
 
-export function discordTimestamp(value, format = 'R') {
-    if (!value) return 'inconnu';
-    const time = new Date(value).getTime();
-    if (!Number.isFinite(time)) return 'inconnu';
-    return `<t:${Math.floor(time / 1000)}:${format}>`;
+/** Embed avec en-tête et pied de page 13K appliqués par défaut. */
+export function brandedEmbed(options = {}, client = null, context = null) {
+    return createEmbed({
+        ...options,
+        author: options.author ?? (client ? brandAuthor(client) : null),
+        footer: options.footer ?? brandFooter(context),
+    });
+}
+
+/** Champ KPI compact, aligné avec ses voisins grâce à `inline: true`. */
+export function statField(name, value) {
+    return { name, value: `\`${value}\``, inline: true };
+}
+
+/** Champ « carte » : index sur deux chiffres, titre court, lignes courtes. */
+export function cardField(index, title, lines, max = 1024) {
+    const position = String(index).padStart(2, '0');
+    return {
+        name: truncate(`${position} · ${title}`, 256),
+        value: truncate((Array.isArray(lines) ? lines : [lines]).join('\n'), max),
+        inline: false,
+    };
+}
+
+/** Champ de statut avec pastille sémantique unique. */
+export function statusField(enabled, label, enabledText = 'Activé', disabledText = 'Désactivé') {
+    return { name: label, value: statusLabel(enabled, enabledText, disabledText), inline: true };
 }
 
 export function guildIconUrl(guild, size = 128) {
@@ -36,14 +87,6 @@ export function guildIconUrl(guild, size = 128) {
     } catch {
         return null;
     }
-}
-
-export function progressBar(value, total, width = 12) {
-    const max = Math.max(0, Number(total) || 0);
-    const current = Math.min(max, Math.max(0, Number(value) || 0));
-    if (max === 0) return '░'.repeat(width);
-    const filled = Math.round((current / max) * width);
-    return '█'.repeat(filled) + '░'.repeat(width - filled);
 }
 
 /**

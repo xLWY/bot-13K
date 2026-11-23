@@ -14,8 +14,8 @@ import { InteractionHelper } from '../utils/interactionHelper.js';
 import { logger } from '../utils/logger.js';
 import { isBotOwner } from '../utils/ownerIds.js';
 import { getCategoryLabel } from '../config/commandMeta.js';
-import { createEmbed, errorEmbed, warningEmbed } from '../utils/embeds.js';
-import { brandFooter, buildNavRow, buildPageJumpRow, formatNumber, progressBar } from '../ui/kit.js';
+import { errorEmbed, warningEmbed } from '../utils/embeds.js';
+import { brandFooter, brandedEmbed, buildNavRow, buildPageJumpRow, formatNumber, progressBar, statField } from '../ui/kit.js';
 
 const PER_PAGE = 8;
 const SESSION_MS = 600_000;
@@ -108,7 +108,7 @@ function cleanDescription(command) {
     return raw.trim();
 }
 
-function buildOverview(categories, total) {
+function buildOverview(categories, total, client = null) {
     if (categories.length === 0) {
         return warningEmbed(
             'Aucune commande n’est disponible avec tes permissions actuelles.',
@@ -120,25 +120,23 @@ function buildOverview(categories, total) {
         `• **${name}** — \`${formatNumber(commands.length)}\` commande(s)`,
     );
 
-    return createEmbed({
+    return brandedEmbed({
         title: 'Commandes du bot',
-        description: [
-            `**${formatNumber(total)}** commandes dans **${formatNumber(categories.length)}** catégorie(s).`,
-            'Choisis une catégorie dans le menu ci-dessous.',
-        ].join('\n'),
+        description: 'Choisis une catégorie dans le menu ci-dessous pour explorer les commandes.',
         color: 'info',
         fields: [
+            statField('Commandes', formatNumber(total)),
+            statField('Catégories', formatNumber(categories.length)),
             {
                 name: 'Catégories',
                 value: truncate(lines.join('\n'), 1000),
                 inline: false,
             },
         ],
-        footer: brandFooter(CONTEXT),
-    });
+    }, client, CONTEXT);
 }
 
-function buildCategoryPage(categoryName, commands, pageIndex, pageCount) {
+function buildCategoryPage(categoryName, commands, pageIndex, pageCount, client = null) {
     const slice = commands.slice(pageIndex * PER_PAGE, (pageIndex + 1) * PER_PAGE);
     const lines = slice.map((command) => {
         const subs = getSubcommandNames(command);
@@ -149,22 +147,22 @@ function buildCategoryPage(categoryName, commands, pageIndex, pageCount) {
         return `${commandLine}\n  Sous-commandes : ${labels}${subs.length > 6 ? '…' : ''}`;
     });
 
-    return createEmbed({
+    return brandedEmbed({
         title: categoryName,
         description: [
-            `Page **${pageIndex + 1}/${pageCount}** ${progressBar(pageIndex + 1, pageCount, 10)}`,
+            `Page **${pageIndex + 1}/${pageCount}** \`${progressBar(pageIndex + 1, pageCount, 10)}\``,
             'Sélectionne une autre catégorie pour changer de rubrique.',
         ].join('\n'),
         color: 'info',
         fields: [
+            statField('Commandes', formatNumber(commands.length)),
             {
                 name: 'Commandes',
                 value: truncate(lines.join('\n\n'), 1000) || 'Aucune commande dans cette catégorie.',
                 inline: false,
             },
         ],
-        footer: brandFooter(CONTEXT),
-    });
+    }, client, CONTEXT);
 }
 
 function buildOverviewRows(categories) {
@@ -231,7 +229,7 @@ async function resolveChannel(interaction) {
 function renderHelp(interaction, client, state, categories = collectCategories(interaction, client)) {
     const total = categories.reduce((sum, [, commands]) => sum + commands.length, 0);
     const overview = () => ({
-        embeds: [buildOverview(categories, total)],
+        embeds: [buildOverview(categories, total, client)],
         components: buildOverviewRows(categories),
         allowedMentions: { parse: [], repliedUser: false },
     });
@@ -251,7 +249,7 @@ function renderHelp(interaction, client, state, categories = collectCategories(i
     state.page = pageIndex;
 
     return {
-        embeds: [buildCategoryPage(name, commands, pageIndex, pageCount)],
+        embeds: [buildCategoryPage(name, commands, pageIndex, pageCount, client)],
         components: buildCategoryNavRows(pageIndex, pageCount, categories),
         allowedMentions: { parse: [], repliedUser: false },
     };

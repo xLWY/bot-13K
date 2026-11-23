@@ -40,7 +40,7 @@ class ShopService {
                 const currency = this.getCurrencyInfo();
                 return { 
                     success: false, 
-                    message: `Tu n'as pas assez de ${currency.namePlural} pour acheter cet article.` 
+                    message: `Tu n’as pas assez de ${currency.namePlural} pour acheter cet article.` 
                 };
             }
 

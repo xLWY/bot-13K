@@ -17,7 +17,7 @@ const ticketTypeSelectHandler = {
       const type = getTicketTypeForGuild(guildConfig, typeId);
 
       if (!type) {
-        return await InteractionHelper.sendErrorNotice(interaction, `Le type de ticket \`${typeId}\` n'existe plus dans la configuration du serveur.`);
+        return await InteractionHelper.sendErrorNotice(interaction, `Le type de ticket \`${typeId}\` n’existe plus dans la configuration du serveur.`);
       }
 
       const result = await createTicket(interaction.guild, interaction.member, {
@@ -26,7 +26,7 @@ const ticketTypeSelectHandler = {
 
       if (result.success) {
         return await interaction.editReply({
-          content: `<@${interaction.user.id}>, votre ticket a été créé : <#${result.channel.id}>`,
+          content: `<@${interaction.user.id}>, ton ticket a été créé : <#${result.channel.id}>`,
         }).catch(() => {});
       }
 

@@ -89,7 +89,7 @@ export async function getLeaderboard(client, guildId, limit = 10) {
       throw new XlwyBotError(
         'Invalid guild ID',
         ErrorTypes.VALIDATION,
-        'L\'ID du serveur est requis.'
+        'L’ID du serveur est requis.'
       );
     }
 
@@ -156,7 +156,7 @@ export function createLeaderboardEmbed(leaderboard, guild) {
     .setTimestamp();
     
   if (!leaderboard || leaderboard.length === 0) {
-    embed.setDescription('Aucun utilisateur dans le classement pour l\'instant !');
+    embed.setDescription('Aucun utilisateur dans le classement pour l’instant !');
     return embed;
   }
   
@@ -308,7 +308,7 @@ export async function saveUserLevelData(client, guildId, userId, data) {
     throw new XlwyBotError(
       `Failed to save user data: ${error.message}`,
       ErrorTypes.DATABASE,
-      'Impossible d\'enregistrer les données de niveau pour le moment.'
+      'Impossible d’enregistrer les données de niveau pour le moment.'
     );
   }
 }
@@ -355,7 +355,7 @@ export async function saveLevelingConfig(client, guildId, config) {
       throw new XlwyBotError(
         `Failed to persist leveling config for guild ${guildId}`,
         ErrorTypes.DATABASE,
-        'Impossible d\'enregistrer la configuration. Vérifie la base de données, puis réessaie.'
+        'Impossible d’enregistrer la configuration. Vérifie la base de données, puis réessaie.'
       );
     }
 
@@ -366,7 +366,7 @@ export async function saveLevelingConfig(client, guildId, config) {
     throw new XlwyBotError(
       `Failed to save config: ${error.message}`,
       ErrorTypes.DATABASE,
-      'Impossible d\'enregistrer la configuration pour le moment.'
+      'Impossible d’enregistrer la configuration pour le moment.'
     );
   }
 }
@@ -427,7 +427,7 @@ export async function addLevels(client, guildId, userId, levels) {
     throw new XlwyBotError(
       `Failed to add levels: ${error.message}`,
       ErrorTypes.DATABASE,
-      'Impossible d\'ajouter les niveaux pour le moment.'
+      'Impossible d’ajouter les niveaux pour le moment.'
     );
   }
 }
