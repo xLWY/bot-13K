@@ -121,14 +121,12 @@ function buildListPayload(guilds, page, client) {
 
     const fields = slice.map((guild, index) => {
         const position = String(currentPage * LIST_PAGE_SIZE + index + 1).padStart(2, '0');
-        const icon = guildIconUrl(guild, 64);
-        const label = cleanName(guild.name);
 
         return {
-            name: `${position} · ${icon ? `${icon} ` : ''}${label}`.slice(0, 256),
+            name: `${position} · ${cleanName(guild.name)}`.slice(0, 256),
             value: [
-                `ID : \`${guild.id}\``,
-                `Membres : \`${formatNumber(guild.memberCount ?? 0)}\` • Propriétaire : <@${guild.ownerId}> • Arrivé ${discordTimestamp(guild.joinedAt)}`,
+                `ID \`${guild.id}\` • 👥 \`${formatNumber(guild.memberCount ?? 0)}\``,
+                `Propriétaire <@${guild.ownerId}> • Arrivé ${discordTimestamp(guild.joinedAt)}`,
             ].join('\n'),
             inline: false,
         };
@@ -142,14 +140,35 @@ function buildListPayload(guilds, page, client) {
     }
 
     const embed = createEmbed({
-        title: 'Serveurs où je suis présent',
+        author: {
+            name: '13K · Gestion des serveurs',
+            iconURL: client?.user?.displayAvatarURL?.({ size: 64 }) ?? undefined,
+        },
+        title: 'Serveurs rejoints',
         description: [
-            `**${formatNumber(guilds.length)}** serveur(s) • **${formatNumber(totalMembers)}** membres au total`,
-            `Page **${currentPage + 1}/${pageCount}** ${progressBar(currentPage + 1, pageCount, 10)}`,
+            'Vue d’ensemble des serveurs. Ouvre une fiche avec `/manage info <serveur>`.',
+            `\`${progressBar(currentPage + 1, pageCount, 12)}\``,
         ].join('\n'),
         color: 'info',
-        thumbnail: guildIconUrl(guilds[0], 128) ?? client?.user?.displayAvatarURL?.({ size: 128 }) ?? null,
-        fields,
+        fields: [
+            {
+                name: 'Serveurs',
+                value: `\`${formatNumber(guilds.length)}\``,
+                inline: true,
+            },
+            {
+                name: 'Membres',
+                value: `\`${formatNumber(totalMembers)}\``,
+                inline: true,
+            },
+            {
+                name: 'Page',
+                value: `\`${currentPage + 1}/${pageCount}\``,
+                inline: true,
+            },
+            ...fields,
+        ],
+        thumbnail: client?.user?.displayAvatarURL?.({ size: 128 }) ?? null,
         footer: brandFooter('Gestion des serveurs'),
     });
 
