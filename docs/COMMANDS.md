@@ -19,6 +19,21 @@ Global commands are sent with explicit `contexts: [0, 1]` (guild + bot DM), and
 `default_member_permissions` is stripped, so `/manage` is visible in DMs. DM
 visibility can take up to an hour to propagate after a global command change.
 
+### DM troubleshooting
+
+If Discord shows « Ton message n'a pas pu être envoyé » when you try to open a
+DM with the bot, the command code is not involved: the DM channel itself is
+refused. Check, in order:
+
+1. You and the bot share at least one server (open the bot profile → *Mutual
+   servers*). If not, add it with
+   `https://discord.com/oauth2/authorize?client_id=<CLIENT_ID>&scope=bot%20applications.commands&permissions=8`.
+2. **Public Bot** is enabled in the Developer Portal → *Bot* tab.
+3. The bot is not in your blocked-users list.
+4. *Allow direct messages from server members* is enabled in your privacy settings.
+5. Test with another account that shares a server with the bot to isolate a
+   per-account configuration issue.
+
 ## Root commands
 
 | Command | Description | DM |
