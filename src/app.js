@@ -12,6 +12,7 @@ import { checkBirthdays } from './services/birthdayService.js';
 import { checkGiveaways } from './services/giveawayService.js';
 import { loadCommands, registerCommands as registerSlashCommands } from './handlers/commandLoader.js';
 import { addBotOwnerIds, getApplicationOwnerIds, getBotOwnerIds } from './utils/ownerIds.js';
+import { buildBotInviteUrl } from './utils/inviteUrl.js';
 
 const presenceDiagWarned = new Map();
 const PRESENCE_DIAG_INTERVAL_MS = 30 * 60 * 1000;
@@ -123,6 +124,13 @@ GatewayIntentBits.GuildBans,
         logger.warn('No bot owner id found from OWNER_IDS or Discord application owner.');
       }
       startupLog(`Bot owner(s): ${getBotOwnerIds().join(', ') || 'none'}`);
+
+      // Le lien est affiché dans les logs : utile quand les MP Discord sont
+      // bloqués et que le propriétaire ne peut pas exécuter /manage invite.
+      const inviteUrl = buildBotInviteUrl(this.config.bot.clientId || this.user?.id);
+      if (inviteUrl) {
+        startupLog(`INVITE LINK: ${inviteUrl}`);
+      }
       
       startupLog('ONLINE - bot is connected and handling messages');
       

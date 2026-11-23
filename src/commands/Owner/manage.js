@@ -13,6 +13,7 @@ import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { createEmbed, errorEmbed, successEmbed, warningEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
+import { buildBotInviteUrl } from '../../utils/inviteUrl.js';
 
 const LIST_PAGE_SIZE = 8;
 const COLLECTOR_MS = 180_000;
@@ -341,12 +342,7 @@ function buildInviteUrl(client, mode) {
     const permissions = new PermissionsBitField(
         INVITE_PERMISSION_SETS[mode] ?? INVITE_PERMISSION_SETS.recommended,
     );
-    const params = new URLSearchParams();
-    params.set('client_id', String(clientId));
-    params.set('scope', 'bot applications.commands');
-    params.set('permissions', permissions.bitfield.toString());
-
-    return `https://discord.com/oauth2/authorize?${params.toString().replace(/\+/g, '%20')}`;
+    return buildBotInviteUrl(clientId, permissions.bitfield);
 }
 
 function buildInvitePayload(url, mode) {
