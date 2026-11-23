@@ -7,9 +7,6 @@
 import {
     getJoinToCreateConfig,
     saveJoinToCreateConfig,
-    updateJoinToCreateConfig,
-    getTemporaryChannelInfo,
-    formatChannelName as formatChannelNameUtil
 } from '../utils/database.js';
 import { logger } from '../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../utils/errorHandler.js';

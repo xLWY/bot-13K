@@ -224,6 +224,7 @@ export default {
         .setDMPermission(true),
 
     category: 'Owner',
+    ownerOnly: true,
     deferEphemeral: true,
 
     async execute(interaction, config, client) {

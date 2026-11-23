@@ -1,7 +1,4 @@
-import {
-  ActionRowBuilder,
-  MessageFlags,
-} from 'discord.js';
+import { MessageFlags } from 'discord.js';
 import { createTicket, getTicketTypeForGuild } from '../../services/ticket.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
 import { logger } from '../../utils/logger.js';

@@ -4,18 +4,13 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import { Collection, PermissionFlagsBits } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { getBotOwnerIds } from '../utils/ownerIds.js';
+import { DM_ENABLED_COMMANDS, GLOBAL_COMMANDS } from '../config/commandMeta.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Commandes autorisees en message prive (slash + prefixe).
-// Celles de GLOBAL_COMMANDS sont enregistrees aussi globalement pour que le
-// slash fonctionne aussi en MP ; les autres restent en mode serveur.
-const DM_ENABLED_COMMANDS = new Set(['ping', 'diag', 'logtest', 'help', 'avatar', 'ownerrole', 'manage']);
-
-// Commandes enregistrees aussi globalement (en plus du serveur) pour pouvoir
-// etre utilisees en MP. Elles restent protegees par le code (owner-only).
-const GLOBAL_COMMANDS = new Set(['ownerrole', 'manage']);
+// Les listes DM/global et les libellés de catégories vivent dans
+// config/commandMeta.js : une seule source de vérité pour les 3 chargeurs.
 
 
 

@@ -247,8 +247,9 @@ export async function getFromDb(key, defaultValue = null) {
 
 export async function setInDb(key, value, ttl = null) {
     try {
-        await db.set(key, value, ttl);
-        return true;
+        // db.set() renvoie false en mode dégradé pour les clés persistantes :
+        // ne pas le propager ferait croire à un succès alors que rien n'est écrit.
+        return (await db.set(key, value, ttl)) !== false;
     } catch (error) {
         logger.error(`Error setting value for key ${key}:`, error);
         return false;
@@ -507,8 +508,7 @@ export async function saveGiveaway(client, guildId, giveawayData) {
         
         giveaways[giveawayData.messageId] = giveawayData;
         
-        await client.db.set(key, giveaways);
-        return true;
+        return (await client.db.set(key, giveaways)) !== false;
     } catch (error) {
         logger.error('Error saving giveaway:', error);
         return false;
@@ -695,7 +695,7 @@ export async function saveTicketData(guildId, channelId, data) {
     }
 
     const key = getTicketKey(guildId, channelId);
-    await db.set(key, data);
+    return (await db.set(key, data)) !== false;
 }
 
 export async function deleteTicketData(guildId, channelId) {
@@ -866,8 +866,7 @@ export async function saveWelcomeConfig(client, guildId, config) {
         const existingConfig = await getWelcomeConfig(client, guildId);
         const mergedConfig = { ...existingConfig, ...config };
         
-        await client.db.set(key, mergedConfig);
-        return true;
+        return (await client.db.set(key, mergedConfig)) !== false;
     } catch (error) {
         logger.error(`Error saving welcome config for guild ${guildId}:`, error);
         return false;

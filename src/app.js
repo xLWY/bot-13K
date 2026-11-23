@@ -6,7 +6,6 @@ import cron from 'node-cron';
 
 import config from './config/application.js';
 import { initializeDatabase, getJoinToCreateConfig, unregisterTemporaryChannel } from './utils/database.js';
-import { getGuildConfig } from './services/guildConfig.js';
 import { getServerCounters, updateCounter, getGuildCounterStats, resolveCounterChannel } from './services/serverstatsService.js';
 import { logger, startupLog, shutdownLog } from './utils/logger.js';
 import { checkBirthdays } from './services/birthdayService.js';

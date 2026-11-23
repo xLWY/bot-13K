@@ -3,7 +3,6 @@ import {
     ActionRowBuilder,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
-    ChannelType,
     MessageFlags,
     ComponentType,
     EmbedBuilder,
@@ -16,8 +15,7 @@ import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
 import { 
     getJoinToCreateConfig, 
     updateJoinToCreateConfig,
-    removeJoinToCreateTrigger,
-    addJoinToCreateTrigger
+    removeJoinToCreateTrigger
 } from '../../../utils/database.js';
 
 export default {

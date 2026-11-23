@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { isBotOwner } from '../../utils/ownerIds.js';
 import { logger } from '../../utils/logger.js';
 import { XlwyBotError, ErrorTypes, handleInteractionError } from '../../utils/errorHandler.js';
@@ -130,7 +130,15 @@ export default {
             );
 
             if (!saved) {
-                logger.warn(`Failed to save giveaway to database: ${giveawayMessage.id}`);
+                // Sans persistance, le concours ne sera jamais tiré : on annule
+                // le message et on le dit clairement au lieu de prétendre un succès.
+                logger.error(`Failed to save giveaway to database: ${giveawayMessage.id}`);
+                await giveawayMessage.delete().catch(() => {});
+                await InteractionHelper.sendErrorNotice(
+                    interaction,
+                    'Impossible d’enregistrer le concours pour le moment. Réessaie dans un instant.'
+                );
+                return;
             }
 
             

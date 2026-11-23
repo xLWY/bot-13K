@@ -1,4 +1,4 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { logger } from '../utils/logger.js';
 import { XlwyBotError, ErrorTypes } from '../utils/errorHandler.js';
 import { getColor } from '../config/bot.js';
@@ -12,6 +12,9 @@ const GIVEAWAY_INTERACTION_TTL = 5 * 60 * 1000;
 const GIVEAWAY_INTERACTION_MAX_ENTRIES = 5000;
 const GIVEAWAY_INTERACTION_CLEANUP_INTERVAL = 60 * 1000;
 let lastInteractionCleanupAt = 0;
+
+// Un concours ne doit etre traite que par une seule execution du cron a la fois.
+const giveawaysInFlight = new Set();
 
 function cleanupInteractionCache(force = false) {
     const now = Date.now();
@@ -420,8 +423,14 @@ export async function checkGiveaways(client) {
     logger.info(`Processing ${endedGiveaways.length} ended giveaways`);
 
     for (const giveawayRecord of endedGiveaways) {
+      const giveawayId = giveawayRecord?.id;
+      if (giveawayId == null || giveawaysInFlight.has(giveawayId)) {
+        logger.debug(`Giveaway ${giveawayId ?? 'inconnu'} deja en cours de traitement, ignore`);
+        continue;
+      }
+      giveawaysInFlight.add(giveawayId);
       try {
-        const { id: giveawayId, guild_id: guildId, message_id: messageId, data: giveawayData } = giveawayRecord;
+        const { guild_id: guildId, message_id: messageId, data: giveawayData } = giveawayRecord;
         const giveaway = typeof giveawayData === 'string' ? JSON.parse(giveawayData) : giveawayData;
 
         const guild = client.guilds.cache.get(guildId);
@@ -445,36 +454,34 @@ export async function checkGiveaways(client) {
         const participants = giveaway.participants || [];
         const winners = selectWinners(participants, giveaway.winnerCount || 1);
 
-        const winnerMentions = winners.length > 0
-          ? winners.map(id => `<@${id}>`).join(', ')
-          : 'Aucune participation valide !';
+        // On réclame le concours en base AVANT tout effet Discord : sans cela,
+        // un échec d'écriture ou un cron chevauchant tirerait de nouveaux
+        // gagnants et posterait une deuxième annonce pour le même concours.
+        giveaway.ended = true;
+        giveaway.isEnded = true;
+        giveaway.winnerIds = winners;
+        giveaway.endedAt = new Date().toISOString();
 
-        
+        const markedSuccess = await markGiveawayEnded(client, giveawayId, giveaway);
+        if (!markedSuccess) {
+          logger.warn(`Failed to mark giveaway ${messageId} as ended in database — skipping Discord side effects`);
+          continue;
+        }
+
         const endedEmbed = createGiveawayEmbed(giveaway, 'ended', winners);
-
         await message.edit({
           content: '',
           embeds: [endedEmbed],
           components: [createGiveawayButtons(true)]
         });
 
-        
-        giveaway.ended = true;
-        giveaway.isEnded = true;
-        giveaway.winnerIds = winners;
-        giveaway.endedAt = new Date().toISOString();
-        
-        // Update in database with SQL
-        const markedSuccess = await markGiveawayEnded(client, giveawayId, giveaway);
-        if (!markedSuccess) {
-          logger.warn(`Failed to mark giveaway ${messageId} as ended in database`);
-        }
-
         if (winners.length > 0) {
           const winnerAnnouncement = `🎉 Félicitations ${winners.map(id => `<@${id}>`).join(', ')} ! Tu as gagné le concours **${giveaway.prize || 'Concours mystère'}** ! Crée un ticket pour récupérer ton lot 🎁`;
           const winnerPingMsg = await channel.send({ content: winnerAnnouncement });
           giveaway.winnerPingMessageId = winnerPingMsg.id;
-          await markGiveawayEnded(client, giveawayId, giveaway);
+          if (!(await markGiveawayEnded(client, giveawayId, giveaway))) {
+            logger.warn(`Failed to persist winner ping for giveaway ${messageId}`);
+          }
 
           
           try {
@@ -514,6 +521,8 @@ export async function checkGiveaways(client) {
         logger.info(`Ended giveaway ${messageId} in guild ${guildId}`);
       } catch (error) {
         logger.error(`Error processing giveaway:`, error);
+      } finally {
+        giveawaysInFlight.delete(giveawayId);
       }
     }
   } catch (error) {

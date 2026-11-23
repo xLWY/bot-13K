@@ -6,6 +6,7 @@ import { handleInteractionError } from './errorHandler.js';
 import { enforceAbuseProtection, formatCooldownDuration } from './abuseProtection.js';
 import { isBotOwner } from './ownerIds.js';
 import { markMessageDeletionSilent, clearMessageDeletionSilent } from './messageCache.js';
+import { DM_ENABLED_COMMANDS as DM_SAFE_COMMANDS } from '../config/commandMeta.js';
 
 const OPTION_TYPE = {
     SUBCOMMAND: 1,
@@ -372,8 +373,6 @@ async function replyWithNotice(message, text) {
     });
     scheduleNoticeDeletion(sent);
 }
-
-const DM_SAFE_COMMANDS = new Set(['ping', 'diag', 'logtest', 'help', 'avatar', 'ownerrole', 'manage']);
 
 export async function handlePrefixCommand(message, client) {
     if (message.author.bot) return false;

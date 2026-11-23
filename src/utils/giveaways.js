@@ -93,7 +93,11 @@ export async function saveGiveaway(client, guildId, giveawayData) {
         const giveawayMap = arrayToGiveawayMap(giveaways);
         giveawayMap[giveawayData.messageId] = giveawayData;
         
-        await client.db.set(key, giveawayMap);
+        const saved = await client.db.set(key, giveawayMap);
+        if (saved === false) {
+            logger.error(`Refused to save giveaway ${giveawayData.messageId} in guild ${guildId}: database write failed (degraded mode?)`);
+            return false;
+        }
         
         logger.debug(`Saved giveaway ${giveawayData.messageId} in guild ${guildId}`);
         return true;

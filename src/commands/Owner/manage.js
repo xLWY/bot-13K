@@ -316,6 +316,7 @@ export default {
                 .setRequired(true))),
 
     category: 'Owner',
+    ownerOnly: true,
     deferEphemeral: true,
 
     async execute(interaction, config, client) {

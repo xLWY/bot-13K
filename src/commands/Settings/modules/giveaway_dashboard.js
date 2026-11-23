@@ -16,7 +16,7 @@ import {
 } from 'discord.js';
 import { InteractionHelper } from '../../../utils/interactionHelper.js';
 import { logger } from '../../../utils/logger.js';
-import { XlwyBotError, ErrorTypes } from '../../../utils/errorHandler.js';
+import { XlwyBotError } from '../../../utils/errorHandler.js';
 import {
     getGuildGiveaways,
     saveGiveaway,

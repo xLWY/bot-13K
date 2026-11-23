@@ -1,4 +1,3 @@
-import { getColor } from './database.js';
 import { BotConfig } from '../config/bot.js';
 import { normalizeEconomyData } from './schemas.js';
 import { logger } from './logger.js';

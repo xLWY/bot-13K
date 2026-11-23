@@ -13,6 +13,7 @@ export default {
         .setDMPermission(true),
 
     category: 'debug',
+    ownerOnly: true,
 
     async execute(interaction, config, client) {
         if (!isBotOwner(interaction.user.id)) {

@@ -61,7 +61,9 @@ export default {
                 rating,
                 submittedAt: new Date().toISOString(),
             };
-            await saveTicketData(guildId, channelId, ticketData);
+            if (!(await saveTicketData(guildId, channelId, ticketData))) {
+                throw new Error('Database write refused');
+            }
         } catch (err) {
             logger.error('ticketFeedback: failed to save feedback', { guildId, channelId, rating, error: err.message });
             await InteractionHelper.sendErrorNotice(

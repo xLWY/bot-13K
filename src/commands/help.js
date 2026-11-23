@@ -15,27 +15,11 @@ import { getColor } from '../config/bot.js';
 import { InteractionHelper } from '../utils/interactionHelper.js';
 import { logger } from '../utils/logger.js';
 import { isBotOwner } from '../utils/ownerIds.js';
+import { getCategoryLabel } from '../config/commandMeta.js';
 
 const PER_PAGE = 8;
 const SESSION_MS = 600_000;
-const OWNER_ONLY_COMMANDS = new Set(['diag', 'logtest', 'ownerrole', 'manage']);
 const activeHelpCollectors = new Map();
-const CATEGORY_LABELS = {
-    commands: 'Général',
-    general: 'Général',
-    debug: 'Diagnostic',
-    Owner: 'Propriétaire',
-    Moderation: 'Modération',
-    Reaction_roles: 'Rôles par réaction',
-    JoinToCreate: 'Salons temporaires',
-    ServerStats: 'Statistiques',
-    Settings: 'Paramètres',
-    Ticket: 'Tickets',
-    Utility: 'Utilitaire',
-    Utilitaire: 'Utilitaire',
-    Giveaway: 'Giveaways',
-    Welcome: 'Bienvenue',
-};
 
 function getCommandDefaultPermissions(command) {
     const json = typeof command.data?.toJSON === 'function' ? command.data.toJSON() : command.data;
@@ -51,7 +35,7 @@ function getCommandDefaultPermissions(command) {
 }
 
 function canUseCommand(interaction, command) {
-    if (OWNER_ONLY_COMMANDS.has(command.data.name)) {
+    if (command.ownerOnly === true) {
         return isBotOwner(interaction.user?.id);
     }
 
@@ -75,7 +59,7 @@ function collectCategories(interaction, client) {
         if (command.hiddenFromSlash) continue;
         if (!canUseCommand(interaction, command)) continue;
 
-        const category = CATEGORY_LABELS[command.category] || command.category || 'Divers';
+        const category = getCategoryLabel(command.category);
         if (!groups.has(category)) groups.set(category, []);
         groups.get(category).push(command);
     }

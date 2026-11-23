@@ -28,6 +28,7 @@ export default {
         .setDMPermission(true),
 
     category: 'debug',
+    ownerOnly: true,
     hiddenFromSlash: false,
 
     async execute(interaction, config, client) {
