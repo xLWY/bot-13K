@@ -33,8 +33,8 @@ A modular Discord.js v14 bot for moderation, tickets, giveaways, leveling, serve
 | Welcome | greeting messages, auto roles and the `greet` dashboard |
 | Join-to-create | temporary voice channels created on demand |
 | Settings | prefix, logs, anti-spam and dashboards for most modules |
-| Utilities | `embedbuilder`, `serverinfo`, `userinfo`, `avatar`, `hoxley`, `wipedata`, `/invite`, `/botinfo` |
-| Owner tools | `/diag`, `/ownerrole` and `/manage` (list / info / leave servers, plus an OAuth2 invite link, usable in DMs) |
+| Utilities | `embedbuilder`, `serverinfo`, `userinfo`, `avatar`, `hoxley`, `wipedata`, `/invite` |
+| Owner tools | `/diag`, `/ownerrole`, `/botinfo` and `/manage` (list / info / leave servers, plus an OAuth2 invite link, usable in DMs) |
 
 The authoritative command inventory is in [docs/COMMANDS.md](docs/COMMANDS.md).
 

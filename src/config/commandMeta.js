@@ -31,7 +31,8 @@ export const DM_ENABLED_COMMANDS = new Set([
 ]);
 
 // Commandes enregistrées aussi globalement pour fonctionner en MP.
-// Elles restent protégées dans le code par le flag `ownerOnly`.
+// Les commandes owner sont protégées par `ownerOnly` et un contrôle
+// `isBotOwner()` dans leur `execute()` : le flag seul ne suffit pas.
 export const GLOBAL_COMMANDS = new Set(['ownerrole', 'manage', 'invite', 'botinfo']);
 
 export function getCategoryLabel(category) {

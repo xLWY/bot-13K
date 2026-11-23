@@ -12,6 +12,7 @@ import {
     statusField,
 } from '../ui/kit.js';
 import { logger } from '../utils/logger.js';
+import { isBotOwner } from '../utils/ownerIds.js';
 
 const CONTEXT = 'Informations du bot';
 
@@ -21,10 +22,19 @@ export default {
         .setDescription('Affiche les informations et l’état du bot')
         .setDMPermission(true),
 
-    category: 'general',
+    category: 'Owner',
+    ownerOnly: true,
     aliases: ['botstats'],
 
     async execute(interaction, config, client) {
+        if (!isBotOwner(interaction.user.id)) {
+            await InteractionHelper.sendErrorNotice(
+                interaction,
+                'Cette commande est réservée au propriétaire du bot.',
+            );
+            return;
+        }
+
         try {
             const clientId = client?.config?.bot?.clientId || process.env.CLIENT_ID || client?.user?.id;
             const inviteUrl = buildBotInviteUrl(clientId, RECOMMENDED_INVITE_PERMISSIONS);

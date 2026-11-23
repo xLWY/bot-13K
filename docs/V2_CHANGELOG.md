@@ -18,7 +18,7 @@ Cette note couvre la passe d’amélioration générale qui suit la refonte UI d
 | Commande | Rôle |
 | --- | --- |
 | `/invite` | Génère le lien OAuth2 `bot + applications.commands` avec les permissions recommandées. Utilisable par tout le monde, en serveur et en MP. Alias préfixé : `!botinvite`. |
-| `/botinfo` | État du gateway, nombre de serveurs et de commandes, latence, uptime, mode de base de données, bouton d’invitation. Alias préfixé : `!botstats`. |
+| `/botinfo` | **Réservée au propriétaire.** État du gateway, nombre de serveurs et de commandes, latence, uptime, mode de base de données, bouton d’invitation. Alias préfixé : `!botstats`. |
 
 Les deux commandes sont ajoutées à `DM_ENABLED_COMMANDS` et `GLOBAL_COMMANDS` dans `src/config/commandMeta.js`. L’enregistrement global garde `contexts: [0, 1]` et retire `default_member_permissions`.
 

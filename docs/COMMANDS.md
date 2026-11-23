@@ -41,7 +41,7 @@ refused. Check, in order:
 | `/ping` | Bot latency | yes |
 | `/help` | Interactive command browser | yes |
 | `/invite` | Get the OAuth2 link to add the bot to a server | yes |
-| `/botinfo` | Status, guild count, commands, uptime and database mode | yes |
+| `/botinfo` | Status, guild count, commands, uptime and database mode | yes, owner |
 | `/diag` | Owner diagnostic (guilds, commands, logs, uptime) | yes, owner |
 | `/logtest` | Verify owner DM log delivery | yes, owner |
 
